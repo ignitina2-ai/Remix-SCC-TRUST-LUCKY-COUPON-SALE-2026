@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3 & 4: Helper primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+        request.auth.token.email != null && (
+          request.auth.token.email == 'ignitina2@gmail.com' ||
+          request.auth.token.email == 'ignitina2@mail.com'
+        );
+    }
+
+    function isAllowedUser() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (
+          request.auth.token.email != null && 
+          exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)) &&
+          (!('disabled' in get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data) || 
+           get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.disabled != true)
+        )
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Entity Validations ---
+
+    function isValidAllowedUser(data) {
+      return data.email is string && data.email.size() <= 128;
+    }
+
+    function isValidTransaction(data) {
+      return data.id is string
+        && data.date is string
+        && data.name is string && data.name.size() <= 100
+        && data.area is string && data.area.size() <= 100
+        && data.books is int && data.books >= 0
+        && data.coupons is int && data.coupons >= 0
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.paidAmount is number && data.paidAmount >= 0
+        && data.creditAmount is number && data.creditAmount >= 0
+        && data.paymentMethod is string
+        && data.paidToTreasurer is bool;
+    }
+
+    function isValidSponsor(data) {
+      return data.id is string
+        && data.name is string && data.name.size() <= 100
+        && data.area is string && data.area.size() <= 100
+        && data.prizeDescription is string
+        && data.amount is number && data.amount >= 0
+        && data.collectedAmount is number && data.collectedAmount >= 0
+        && data.status is string
+        && data.status in ['COLLECTED', 'PENDING', 'FLAGGED'];
+    }
+
+    function isValidIncomeExpense(data) {
+      return data.id is string
+        && data.date is string
+        && data.description is string && data.description.size() <= 500
+        && data.amount is number && data.amount >= 0
+        && data.type is string
+        && data.type in ['INCOME', 'EXPENSE'];
+    }
+
+    function isValidSecretaryHandover(data) {
+      return data.id is string
+        && data.date is string
+        && data.name is string && data.name.size() <= 100
+        && data.description is string && data.description.size() <= 500
+        && data.amount is number && data.amount >= 0;
+    }
+
+    function isValidAppSettings(data) {
+      return data.id is string;
+    }
+
+    // --- Match Rules ---
+
+    match /allowedUsers/{emailId} {
+      allow read: if isSignedIn() && (isAdmin() || (request.auth.token.email != null && request.auth.token.email == emailId));
+      allow write: if isAdmin() && isValidAllowedUser(incoming());
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAllowedUser();
+      allow create: if isAllowedUser() && isValidId(transactionId) && isValidTransaction(incoming());
+      allow update: if isAllowedUser() && isValidTransaction(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /sponsors/{sponsorId} {
+      allow read: if isAllowedUser();
+      allow create: if isAllowedUser() && isValidId(sponsorId) && isValidSponsor(incoming());
+      allow update: if isAllowedUser() && isValidSponsor(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /incomeExpenses/{incomeExpenseId} {
+      allow read: if isAllowedUser();
+      allow create: if isAllowedUser() && isValidId(incomeExpenseId) && isValidIncomeExpense(incoming());
+      allow update: if isAllowedUser() && isValidIncomeExpense(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /secretaryHandovers/{secretaryHandoverId} {
+      allow read: if isAllowedUser();
+      allow create: if isAllowedUser() && isValidId(secretaryHandoverId) && isValidSecretaryHandover(incoming());
+      allow update: if isAllowedUser() && isValidSecretaryHandover(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingsId} {
+      allow read: if isAllowedUser();
+      allow write: if isAdmin() && isValidId(settingsId) && isValidAppSettings(incoming());
+    }
+  }
+}

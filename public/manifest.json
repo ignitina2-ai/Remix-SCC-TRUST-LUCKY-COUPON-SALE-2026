@@ -1,0 +1,36 @@
+{
+  "name": "SCC Trust Lucky Coupon Sale 2026",
+  "short_name": "SCC Coupons",
+  "description": "Comprehensive Coupon Sale Management app with dashboard, credit management, prize sponsors, and export features.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/isometric/192/ticket.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://img.icons8.com/isometric/512/ticket.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://img.icons8.com/isometric/192/ticket.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://img.icons8.com/isometric/512/ticket.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

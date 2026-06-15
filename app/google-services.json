@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "287461567164",
+    "project_id": "scc-trust-coupon-sale-2026",
+    "storage_bucket": "scc-trust-coupon-sale-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287461567164:android:50035ec8a10c06e6083eb9",
+        "android_client_info": {
+          "package_name": "scctrust_coupon_sale_2026.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "287461567164-f0ch34paq1ci0vlaed06ve03umpj7qss.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "scctrust_coupon_sale_2026.app",
+            "certificate_hash": "22680f697105ee89695fef4b27e9687ee7054fd8"
+          }
+        },
+        {
+          "client_id": "287461567164-qmufk40tuvp13h9li14pr0hu15ta59ht.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7Lm-VoSjZzRScl423sXaXxtu_xEjQ_z0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "287461567164-qmufk40tuvp13h9li14pr0hu15ta59ht.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

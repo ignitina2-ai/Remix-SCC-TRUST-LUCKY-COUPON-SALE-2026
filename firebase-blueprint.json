@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Lucky coupon sale transaction details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique transaction ID" },
+        "date": { "type": "string", "description": "ISO timestamp of purchase" },
+        "name": { "type": "string", "description": "Customer Name" },
+        "phone": { "type": "string", "description": "Customer Phone" },
+        "email": { "type": "string", "description": "Customer Email" },
+        "area": { "type": "string", "description": "Area code or name" },
+        "books": { "type": "number", "description": "Number of books purchased" },
+        "coupons": { "type": "number", "description": "Number of coupons" },
+        "bookNumber": { "type": "string", "description": "Physical book series/serial number" },
+        "totalAmount": { "type": "number", "description": "Total purchase cost" },
+        "paidAmount": { "type": "number", "description": "Paid amount so far" },
+        "creditAmount": { "type": "number", "description": "Outstanding balance" },
+        "paymentMethod": { "type": "string", "enum": ["CASH", "CREDIT", "GOOGLE_PAY", "PHONE_PAY", "PAYTM", "OTHER_UPI"], "description": "Method used for initial settlement" },
+        "paidToTreasurer": { "type": "boolean", "description": "Whether handed over to the Treasurer" },
+        "treasurerPaidDate": { "type": "string", "description": "When handed to the Treasurer" },
+        "paymentHistory": { "type": "array", "description": "Partial payment histories for outstanding credit" }
+      },
+      "required": ["id", "date", "name", "area", "books", "coupons", "totalAmount", "paidAmount", "creditAmount", "paymentMethod", "paidToTreasurer"]
+    },
+    "Sponsor": {
+      "title": "Sponsor",
+      "description": "Sponsor contributing to the lucky coupon sale",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique sponsor ID" },
+        "name": { "type": "string", "description": "Sponsor name" },
+        "area": { "type": "string", "description": "Sponsor location area" },
+        "prizeDescription": { "type": "string", "description": "A description of the prize sponsored" },
+        "prizeNumber": { "type": "number", "description": "Optional assigned prize order or index" },
+        "amount": { "type": "number", "description": "Promised premium or monetary support" },
+        "collectedAmount": { "type": "number", "description": "Amount collected from the sponsor so far" },
+        "status": { "type": "string", "enum": ["COLLECTED", "PENDING", "FLAGGED"] },
+        "collectedDate": { "type": "string", "description": "Optional collection date" }
+      },
+      "required": ["id", "name", "area", "prizeDescription", "amount", "collectedAmount", "status"]
+    },
+    "IncomeExpense": {
+      "title": "IncomeExpense",
+      "description": "General non-coupon income and expense entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["INCOME", "EXPENSE"] },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "date", "description", "amount", "type"]
+    },
+    "SecretaryHandover": {
+      "title": "SecretaryHandover",
+      "description": "Handovers of cash from secretary to trust",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" }
+      },
+      "required": ["id", "date", "name", "description", "amount"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "General global app metadata, custom settings, and labels",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "logo": { "type": "string" },
+        "notificationsEnabled": { "type": "boolean" },
+        "creditSettings": { "type": "object" },
+        "customPaymentLabels": { "type": "object" }
+      },
+      "required": ["id"]
+    },
+    "AllowedUser": {
+      "title": "AllowedUser",
+      "description": "User email address allowed to login and synchronize",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Email address of the allowed user" },
+        "addedAt": { "type": "string", "description": "ISO timestamp when added" },
+        "addedBy": { "type": "string", "description": "User who added this account" }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/allowedUsers/{emailId}": {
+      "schema": "AllowedUser",
+      "description": "Allowlisted users for cloud sync connection"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Coupon purchase transactions"
+    },
+    "/sponsors/{sponsorId}": {
+      "schema": "Sponsor",
+      "description": "Prize or donation sponsors"
+    },
+    "/incomeExpenses/{incomeExpenseId}": {
+      "schema": "IncomeExpense",
+      "description": "Track other income and expenses"
+    },
+    "/secretaryHandovers/{secretaryHandoverId}": {
+      "schema": "SecretaryHandover",
+      "description": "Track cash handovers to the treasurer or trust"
+    },
+    "/settings/{settingsId}": {
+      "schema": "AppSettings",
+      "description": "App configuration"
+    }
+  }
+}
