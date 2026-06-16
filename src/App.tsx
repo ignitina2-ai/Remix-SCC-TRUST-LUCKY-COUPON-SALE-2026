@@ -173,8 +173,15 @@ export default function App() {
     if (!user || user.isLocal) return;
 
     const syncLocalToCloud = async () => {
+      // ONLY perform migration if they were previously in local-bypass mode!
+      const isMigrationNeeded = !!localStorage.getItem('scc_local_verified_user');
+      if (!isMigrationNeeded) return;
+
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
+      if (!saved) {
+        localStorage.removeItem('scc_local_verified_user');
+        return;
+      }
 
       try {
         const parsed = JSON.parse(saved) as AppData;
@@ -217,18 +224,9 @@ export default function App() {
           await Promise.all(promises);
         }
 
-        if (syncedCount > 0) {
-          // Clear local storage list arrays cleanly since they are successfully synchronized to the Cloud!
-          const cleanData: AppData = {
-            ...parsed,
-            transactions: [],
-            sponsors: [],
-            incomeExpenses: [],
-            secretaryHandovers: []
-          };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanData));
-          console.log(`Successfully synced ${syncedCount} offline records from local storage to Firestore!`);
-        }
+        // Clean local/bypass session indicator only after successful synchronization to Firestore in the cloud
+        localStorage.removeItem('scc_local_verified_user');
+        console.log(`Successfully migrated ${syncedCount} offline/local records to Firestore cloud sync!`);
       } catch (e) {
         console.error("Failed to sync offline local storage data to Cloud:", e);
       }

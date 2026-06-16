@@ -97,6 +97,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     }
   };
 
+  // Generate today Ist string for form defaults
+  const getTodayISTStr = () => {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -106,7 +111,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     bookNumber: '',
     paymentMethod: 'CASH' as PaymentMethod,
     paidAmount: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayISTStr(),
   });
 
   useEffect(() => {
@@ -120,7 +125,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         bookNumber: editingTransaction.bookNumber || '',
         paymentMethod: editingTransaction.paymentMethod,
         paidAmount: editingTransaction.paidAmount,
-        date: editingTransaction.date ? editingTransaction.date.split('T')[0] : new Date().toISOString().split('T')[0],
+        date: editingTransaction.date ? editingTransaction.date.split('T')[0] : getTodayISTStr(),
       });
     }
   }, [editingTransaction]);

@@ -52,12 +52,16 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const getTodayISTStr = () => {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  };
+
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
     type: 'EXPENSE' as EntryType,
     category: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayISTStr(),
     receiptUrl: '',
     receiptName: ''
   });
@@ -209,7 +213,7 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
       amount: '',
       type: 'EXPENSE',
       category: '',
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayISTStr(),
       receiptUrl: '',
       receiptName: ''
     });

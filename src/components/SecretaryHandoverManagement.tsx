@@ -51,11 +51,15 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
   const [endDate, setEndDate] = useState('');
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const getTodayISTStr = () => {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0]
+    date: getTodayISTStr()
   });
   const [showSuccess, setShowSuccess] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -158,7 +162,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
       name: '',
       description: '',
       amount: '',
-      date: new Date().toISOString().split('T')[0]
+      date: getTodayISTStr()
     });
     setShowForm(false);
     setShowSuccess(true);

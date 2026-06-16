@@ -157,108 +157,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         </div>
 
-        {/* Internal Core form for email authorization */}
-        <form onSubmit={handleLocalEmailSubmit} className="w-full space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block pl-1">
-              Permitted Google Email ID
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <Mail size={16} />
-              </span>
-              <input
-                id="login-email-input"
-                type="email"
-                value={email}
-                autoFocus
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setErrorLocal(null);
-                }}
-                disabled={isVerifyingLocal || verificationSuccess}
-                placeholder="helper@gmail.com"
-                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:bg-white rounded-2xl text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
-              />
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {errorLocal && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="bg-rose-50 border border-rose-100 p-3.5 rounded-2xl text-rose-700 text-xs font-semibold flex items-start gap-2.5 leading-relaxed"
-              >
-                <AlertTriangle className="stroke-[2.5] mt-0.5 shrink-0 text-rose-500" size={14} />
-                <span>{errorLocal}</span>
-              </motion.div>
-            )}
-
-            {authError && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="bg-amber-50 border border-amber-100 p-3.5 rounded-2xl text-amber-800 text-xs font-semibold flex items-start gap-2.5 leading-relaxed"
-              >
-                <AlertTriangle className="stroke-[2.5] mt-0.5 shrink-0 text-amber-600" size={14} />
-                <span>{authError.message}</span>
-              </motion.div>
-            )}
-
-            {verificationSuccess && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-emerald-50 border border-emerald-100 p-3.5 rounded-2xl text-emerald-800 text-xs font-black flex items-center gap-2.5"
-              >
-                <CheckCircle className="text-emerald-500 shrink-0" size={16} />
-                <span>Authorized! Redirecting you now...</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <button
-            id="login-verify-button"
-            type="submit"
-            disabled={isVerifyingLocal || verificationSuccess}
-            className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-slate-950/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-          >
-            {isVerifyingLocal ? (
-              <>
-                <Loader2 size={14} className="animate-spin text-white" />
-                <span>Verifying Access Rights...</span>
-              </>
-            ) : (
-              <>
-                <span>Verify & Open App</span>
-                <ArrowRight size={14} />
-              </>
-            )}
-          </button>
-          
-          <p className="text-[9px] text-amber-600 font-extrabold text-center uppercase tracking-wider bg-amber-50/70 py-1 px-3 rounded-md mt-2 mx-auto w-fit border border-amber-100">
-            ⚠️ Local Bypass: Stored on this device only. Will NOT sync with mobile/desktop.
-          </p>
-        </form>
-
-        {/* Divider lines */}
-        <div className="w-full flex items-center justify-between my-5 opacity-40">
-          <div className="h-[1px] bg-slate-200 flex-1" />
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3">or</span>
-          <div className="h-[1px] bg-slate-200 flex-1" />
-        </div>
-
-        {/* Google Sync Sign In Option */}
-        <div className="w-full space-y-2">
+        {/* Google Sync Sign In Option - Primary */}
+        <div className="w-full space-y-2 mb-6">
           <button
             id="login-google-button"
             onClick={handleGoogleLogin}
             type="button"
             disabled={isLoggingIn || verificationSuccess}
-            className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-2xl text-xs font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer animate-fade-in"
+            className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer animate-fade-in"
           >
             {isLoggingIn ? (
               <>
@@ -290,10 +196,112 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             )}
           </button>
           
-          <p className="text-[9px] text-emerald-600 font-extrabold text-center uppercase tracking-wider bg-emerald-50/70 py-1 px-3 rounded-md mx-auto w-fit border border-emerald-100 flex items-center justify-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span>
-            ✨ Recommended: Syncs all mobile & desktop devices in real time.
+          <p className="text-[9.5px] text-emerald-700 font-extrabold text-center uppercase tracking-wider bg-emerald-50/80 py-1.5 px-3 rounded-xl mx-auto w-fit border border-emerald-100 flex items-center justify-center gap-1 shadow-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            ✨ RECOMMENDED: Syncs all mobile & desktop devices in real time.
           </p>
+        </div>
+
+        {/* Divider lines */}
+        <div className="w-full flex items-center justify-between my-4 opacity-40">
+          <div className="h-[1px] bg-slate-200 flex-1" />
+          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-3">or</span>
+          <div className="h-[1px] bg-slate-200 flex-1" />
+        </div>
+
+        {/* Internal Core form for email authorization - Fallback / Local Mode */}
+        <div id="offline-bypass-container" className="w-full bg-slate-50/50 border border-slate-100 rounded-3xl p-4 md:p-5">
+          <div className="mb-3.5 text-left">
+            <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Device-Isolated Offline Mode</h3>
+            <p className="text-[10px] text-slate-500 leading-normal font-semibold mt-0.5">
+              Ideal if Google Sign-In is blocked inside iframes (such as Google AI Studio previews) or if you are offline.
+            </p>
+          </div>
+
+          <form onSubmit={handleLocalEmailSubmit} className="w-full space-y-3">
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block pl-1">
+                Enter Authorized Email ID
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <Mail size={14} />
+                </span>
+                <input
+                  id="login-email-input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErrorLocal(null);
+                  }}
+                  disabled={isVerifyingLocal || verificationSuccess}
+                  placeholder="helper@gmail.com"
+                  className="w-full pl-10 pr-3 py-3 bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
+                />
+              </div>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {errorLocal && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="bg-rose-50 border border-rose-100 p-3 rounded-xl text-rose-700 text-[11px] font-semibold flex items-start gap-2 leading-relaxed"
+                >
+                  <AlertTriangle className="stroke-[2.5] mt-0.5 shrink-0 text-rose-500" size={13} />
+                  <span>{errorLocal}</span>
+                </motion.div>
+              )}
+
+              {authError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-amber-800 text-[11px] font-semibold flex items-start gap-2 leading-relaxed"
+                >
+                  <AlertTriangle className="stroke-[2.5] mt-0.5 shrink-0 text-amber-600" size={13} />
+                  <span>{authError.message}</span>
+                </motion.div>
+              )}
+
+              {verificationSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-emerald-800 text-[11px] font-black flex items-center gap-2"
+                >
+                  <CheckCircle className="text-emerald-500 shrink-0" size={14} />
+                  <span>Authorized! Redirecting you now...</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <button
+              id="login-verify-button"
+              type="submit"
+              disabled={isVerifyingLocal || verificationSuccess}
+              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              {isVerifyingLocal ? (
+                <>
+                  <Loader2 size={13} className="animate-spin text-white" />
+                  <span>Verifying Access Rights...</span>
+                </>
+              ) : (
+                <>
+                  <span>Verify & Open App (Offline Device-Only)</span>
+                  <ArrowRight size={13} />
+                </>
+              )}
+            </button>
+            
+            <p className="text-[8.5px] text-amber-600 font-extrabold text-center uppercase tracking-wider bg-amber-50/70 py-1 px-2.5 rounded-lg w-fit mx-auto border border-amber-100/60 leading-normal">
+              ⚠️ Warning: Saves ONLY to this browser; will NOT sync cross-device.
+            </p>
+          </form>
         </div>
 
         {/* Informative Footer Support */}

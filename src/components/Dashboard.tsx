@@ -51,18 +51,26 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [timeframe, setTimeframe] = useState<'overall' | 'today'>('overall');
 
+  // Unified string-based date helpers for consistent calculation across timezones to match Asia/Kolkata perfectly
+  const getTodayISTStr = () => {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  };
+
+  const getLocalDatePart = (dateString: string) => {
+    if (!dateString) return '';
+    return dateString.split('T')[0];
+  };
+
   // Filter lists based on timeframe
   const filteredTransactionsList = timeframe === 'today' 
     ? transactions.filter(t => {
-        const d = new Date(t.date);
-        const today = new Date();
-        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
-        return formatter.format(d) === formatter.format(today);
+        return getLocalDatePart(t.date) === getTodayISTStr();
       })
     : transactions;
 
   // Helper to calculate total received amount for a payment method across the filtered transactions
   const getAmountByMethod = (method: PaymentMethod, viewTimeframe: 'overall' | 'today') => {
+    const todayIST = getTodayISTStr();
     return (transactions || []).reduce((acc, t) => {
       // 1. Filter payment history entries based on timeframe
       const relevantHistory = (t.paymentHistory || []).filter(entry => {
@@ -70,10 +78,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         if (!matchesMethod) return false;
         
         if (viewTimeframe === 'today') {
-          const d = new Date(entry.date);
-          const today = new Date();
-          const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
-          return formatter.format(d) === formatter.format(today);
+          return getLocalDatePart(entry.date) === todayIST;
         }
         return true; // overall
       });
@@ -88,10 +93,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       if (unaccountedPaid > 0) {
         let timeframeMatches = true;
         if (viewTimeframe === 'today') {
-          const d = new Date(t.date);
-          const today = new Date();
-          const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
-          timeframeMatches = formatter.format(d) === formatter.format(today);
+          timeframeMatches = getLocalDatePart(t.date) === todayIST;
         }
 
         if (timeframeMatches) {
@@ -123,10 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const totalHandover = timeframe === 'today'
     ? (secretaryHandovers || []).filter(h => {
-        const d = new Date(h.date);
-        const today = new Date();
-        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
-        return formatter.format(d) === formatter.format(today);
+        return getLocalDatePart(h.date) === getTodayISTStr();
       }).reduce((acc, h) => acc + h.amount, 0)
     : (secretaryHandovers || []).reduce((acc, h) => acc + h.amount, 0);
 
@@ -150,16 +149,22 @@ const Dashboard: React.FC<DashboardProps> = ({
       };
     });
 
-    // Populate with transaction data
+    // Populate with transaction data using exact string-based Asia/Kolkata split to be immune to timezone shifts
     (transactions || []).forEach(t => {
       if (!t.date) return;
-      const d = new Date(t.date);
-      // Verify same month and year
-      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-        const dayIndex = d.getDate() - 1;
-        if (dayIndex >= 0 && dayIndex < totalDays) {
-          chartData[dayIndex]['Total Sales'] += t.totalAmount || 0;
-          chartData[dayIndex]['Amount Collected'] += t.paidAmount || 0;
+      const datePart = getLocalDatePart(t.date);
+      const parts = datePart.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // 0-indexed month
+        const day = parseInt(parts[2], 10);
+        
+        if (month === currentMonth && year === currentYear) {
+          const dayIndex = day - 1;
+          if (dayIndex >= 0 && dayIndex < totalDays) {
+            chartData[dayIndex]['Total Sales'] += t.totalAmount || 0;
+            chartData[dayIndex]['Amount Collected'] += t.paidAmount || 0;
+          }
         }
       }
     });

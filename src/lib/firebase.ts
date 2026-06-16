@@ -1,16 +1,33 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, Firestore, getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json'; // Located in the root workspace folder
 
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
-  ignoreUndefinedProperties: true,
-}, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+
+let db: Firestore;
+
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+    ignoreUndefinedProperties: true,
+  }, firebaseConfig.firestoreDatabaseId);
+} catch (e: any) {
+  console.warn("Firebase persistentLocalCache initialization failed, falling back to basic/default cache:", e);
+  try {
+    db = initializeFirestore(app, {
+      ignoreUndefinedProperties: true,
+    }, firebaseConfig.firestoreDatabaseId);
+  } catch (err) {
+    console.warn("Second firebase initialization attempt failed, utilizing basic getFirestore:", err);
+    db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  }
+}
+
+export { db };
 export const auth = getAuth();
 export const storage = getStorage(app);
 
