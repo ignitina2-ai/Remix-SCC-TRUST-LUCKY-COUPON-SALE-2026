@@ -117,7 +117,8 @@ service cloud.firestore {
     // --- Path Rules Matchers ---
 
     match /allowedUsers/{emailId} {
-      allow read: if isAdmin() || (isSignedIn() && 'email' in request.auth.token && request.auth.token.email == emailId);
+      allow get: if true;
+      allow list: if isAdmin();
       allow write: if isAdmin() && isValidAllowedUser(incoming());
     }
 
@@ -152,6 +153,11 @@ service cloud.firestore {
     match /settings/{settingsId} {
       allow read: if isAdmin() || isAllowedUserNonAdmin();
       allow write: if (isAdmin() || isAllowedUserNonAdmin()) && isValidId(settingsId) && isValidAppSettings(incoming());
+    }
+
+    match /userSessions/{sessionId} {
+      allow read: if isAdmin() || isAllowedUserNonAdmin();
+      allow write: if (isAdmin() || isAllowedUserNonAdmin());
     }
   }
 }

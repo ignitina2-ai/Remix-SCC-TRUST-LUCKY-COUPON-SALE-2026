@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, HelpCircle, Shield, AlertTriangle, CheckCircle, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { TrustLogo } from './TrustLogo';
 import { useActiveResponsiveLogo } from '@/lib/logo-resolver';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface LoginPageProps {
   onLoginSuccess: (user: any) => void;
@@ -60,16 +62,40 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
     setIsVerifyingLocal(true);
 
-    // Primary Admin match or cached matches list
-    const isPrimaryAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@mail.com';
-    const cachedAllowed = getCachedEmails();
-    const isAllowedCached = cachedAllowed.includes(cleanEmail);
+    try {
+      // Primary Admin match or cached matches list
+      const isPrimaryAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@mail.com';
+      const cachedAllowed = getCachedEmails();
+      let isAllowed = isPrimaryAdmin || cachedAllowed.includes(cleanEmail);
 
-    // Emulate validation animation
-    setTimeout(() => {
-      setIsVerifyingLocal(false);
-      
-      if (isPrimaryAdmin || isAllowedCached) {
+      if (!isAllowed) {
+        // Query Firestore directly to see if this email exists and is not disabled
+        const docSnap = await getDoc(doc(db, 'allowedUsers', cleanEmail));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data && data.disabled !== true) {
+            isAllowed = true;
+            // Cache it locally so subsequent entries are instant
+            try {
+              const saved = localStorage.getItem('scc_permitted_emails');
+              let list = saved ? JSON.parse(saved) : [];
+              if (!Array.isArray(list)) list = [];
+              if (!list.includes(cleanEmail)) {
+                list.push(cleanEmail);
+                localStorage.setItem('scc_permitted_emails', JSON.stringify(list));
+              }
+            } catch (e) {
+              console.error("Failed to cache email locally", e);
+            }
+          } else if (data && data.disabled === true) {
+            setErrorLocal('Access Denied: This account has been disabled by the administrator.');
+            setIsVerifyingLocal(false);
+            return;
+          }
+        }
+      }
+
+      if (isAllowed) {
         setVerificationSuccess(true);
         setTimeout(() => {
           // Log in with offline session structure
@@ -83,12 +109,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           onLoginSuccess(mockUser);
         }, 800);
       } else {
-        // If it was not found, guide the user about the Google Sign-In or contact admin
         setErrorLocal(
-          `Unauthorized Email: "${cleanEmail}" is not listed in the permitted users directory. If you are an authorized helper, please connect with Google first or request the admin (${"ignitina2@gmail.com"}) to add you.`
+          `Unauthorized Email: "${cleanEmail}" is not listed in the permitted users directory. If you are an authorized helper, please connect with Google first or request the admin (ignitina2@gmail.com) to add you.`
         );
       }
-    }, 1200);
+    } catch (err: any) {
+      console.error("Verifying email against directory failed:", err);
+      setErrorLocal("Permission verification failed. Please check your internet connection or try connecting with Google.");
+    } finally {
+      setIsVerifyingLocal(false);
+    }
   };
 
   return (

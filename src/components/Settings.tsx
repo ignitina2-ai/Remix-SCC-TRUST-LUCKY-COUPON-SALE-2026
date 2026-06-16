@@ -42,6 +42,7 @@ interface SettingsProps {
   onAddAllowedUser?: (email: string) => Promise<void>;
   onDeleteAllowedUser?: (email: string) => Promise<void>;
   onToggleAllowedUserDisabled?: (email: string, disabled: boolean) => Promise<void>;
+  activeSessions?: any[];
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
@@ -62,7 +63,8 @@ const Settings: React.FC<SettingsProps> = ({
   allowedUsers = [],
   onAddAllowedUser,
   onDeleteAllowedUser,
-  onToggleAllowedUserDisabled
+  onToggleAllowedUserDisabled,
+  activeSessions = []
 }) => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [syncingCloud, setSyncingCloud] = useState(false);
@@ -205,6 +207,112 @@ const Settings: React.FC<SettingsProps> = ({
 
         {/* Danger Zone */}
         <DangerSettings onClearAll={onClearData} onBackup={onBackup} showNotification={showNotification} />
+
+        {/* Active Logged-in Users & History */}
+        <div id="settings-card-sessions" className="md:col-span-2 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600">
+              <CheckCircle2 size={20} />
+            </div>
+            <div className="text-left">
+              <h3 className="text-lg font-bold text-slate-900">Active Login Sessions</h3>
+              <p className="text-slate-500 text-xs font-semibold">Real-time listing of administrators and helpers connected to this trust registry</p>
+            </div>
+          </div>
+
+          <div className="border border-slate-100 rounded-2xl bg-slate-50/50 overflow-hidden divide-y divide-slate-100 max-h-80 overflow-y-auto">
+            {activeSessions.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs font-bold">
+                No active session logs saved in Cloud database.
+              </div>
+            ) : (
+              activeSessions.map((sessionObj) => {
+                const isOnline = sessionObj.online === true;
+                const formattedTime = sessionObj.lastLoginAt 
+                  ? new Date(sessionObj.lastLoginAt).toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })
+                  : 'Never';
+
+                const formattedLogout = sessionObj.lastLogoutAt
+                  ? new Date(sessionObj.lastLogoutAt).toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })
+                  : '';
+
+                return (
+                  <div key={sessionObj.email} className={cn("p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors", !isOnline && "opacity-85")}>
+                    <div className="flex items-center gap-3 text-left min-w-0">
+                      <div className="relative shrink-0">
+                        <img 
+                          src={sessionObj.photoURL || `https://picsum.photos/seed/${sessionObj.email.replace(/[^a-zA-Z0-9]/g, '_')}/100/100`} 
+                          alt="Avatar" 
+                          referrerPolicy="no-referrer"
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200"
+                        />
+                        {isOnline ? (
+                          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
+                        ) : (
+                          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-slate-400 border-2 border-white" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-xs font-bold text-slate-900 truncate">
+                            {sessionObj.displayName}
+                          </p>
+                          <span className={cn(
+                            "text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded",
+                            sessionObj.role === 'Primary Admin' 
+                              ? "bg-blue-100 text-blue-700" 
+                              : "bg-emerald-100 text-emerald-700"
+                          )}>
+                            {sessionObj.role}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-semibold truncate">
+                          {sessionObj.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-left sm:text-right text-[10px] font-semibold text-slate-500 space-y-0.5 min-w-[140px]">
+                      <div className="flex sm:justify-end items-center gap-1.5 flex-wrap">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide",
+                          isOnline ? "bg-emerald-50 text-emerald-700 border border-emerald-100 animate-pulse" : "bg-slate-100 text-slate-500 border border-slate-200/50"
+                        )}>
+                          {isOnline ? 'Online Now' : 'Disconnected'}
+                        </span>
+                        <span className="text-slate-400 text-[9px] bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                          {sessionObj.platform || 'Desktop'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        Last Active: <span className="font-bold text-slate-600">{formattedTime}</span>
+                      </p>
+                      {!isOnline && formattedLogout && (
+                        <p className="text-[9px] text-slate-400 font-medium">
+                          Logged out: {formattedLogout}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
 
         {/* Allowed Users Center (Authorized Emails) */}
         {isPrimaryAdmin && (

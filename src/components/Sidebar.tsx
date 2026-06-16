@@ -37,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'income-expense', label: 'Income & Expense', icon: Banknote },
     { id: 'secretary-handover', label: 'Secretary Handover', icon: Users },
     { id: 'sponsors', label: 'Prize Sponsors', icon: Trophy },
-    ...(isPrimaryAdmin ? [{ id: 'settings', label: 'Settings & Backup', icon: SettingsIcon }] : []),
+    { id: 'settings', label: 'Settings & Backup', icon: SettingsIcon },
   ];
 
   return (

@@ -79,6 +79,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string }[]>([]);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const isPrimaryAdmin = !!(user && user.email && (
@@ -123,7 +124,7 @@ export default function App() {
           setAuthLoading(true);
           try {
             const docSnap = await getDoc(doc(db, 'allowedUsers', cleanEmail));
-            if (docSnap.exists()) {
+            if (docSnap.exists() && docSnap.data()?.disabled !== true) {
               setUser(currentUser);
               // Save to local cache of permitted emails for seamless subsequent entries
               try {
@@ -138,8 +139,11 @@ export default function App() {
             } else {
               await signOut(auth);
               setUser(null);
+              const isUserDisabled = docSnap.exists() && docSnap.data()?.disabled === true;
               setAuthError({
-                message: `Access Denied: The Google Account (${currentUser.email}) is not on the allowed users directory. Please contact the administrator.`
+                message: isUserDisabled
+                  ? `Access Denied: This account (${currentUser.email}) has been disabled by the administrator.`
+                  : `Access Denied: The Google Account (${currentUser.email}) is not on the allowed users directory. Please contact the administrator.`
               });
             }
           } catch (err: any) {
@@ -268,6 +272,61 @@ export default function App() {
     return () => unsubAllowed();
   }, [user]);
 
+  // Hook 1: Register active session in Firestore when user changes/logs in
+  useEffect(() => {
+    if (!user) return;
+    
+    const registerSession = async () => {
+      const cleanEmail = user.email ? user.email.toLowerCase().trim() : '';
+      if (!cleanEmail) return;
+      
+      const safeSessionId = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
+      const isSuperAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@mail.com';
+      
+      try {
+        await setDoc(doc(db, 'userSessions', safeSessionId), {
+          email: cleanEmail,
+          displayName: user.displayName || user.name || cleanEmail.split('@')[0],
+          photoURL: user.photoURL || `https://picsum.photos/seed/${safeSessionId}/100/100`,
+          role: isSuperAdmin ? 'Primary Admin' : 'Authorized Helper',
+          lastLoginAt: new Date().toISOString(),
+          online: true,
+          platform: window.innerWidth < 768 ? 'Mobile App' : 'Desktop Hub'
+        }, { merge: true });
+      } catch (err) {
+        console.warn("Could not register session (might be offline/local bypass):", err);
+      }
+    };
+
+    registerSession();
+  }, [user]);
+
+  // Hook 2: Subscribe to userSessions in real-time for any logged in user
+  useEffect(() => {
+    if (!user) {
+      setActiveSessions([]);
+      return;
+    }
+
+    const unsubSessions = onSnapshot(collection(db, 'userSessions'), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((d) => {
+        list.push(d.data());
+      });
+      // Sort sessions by lastLoginAt descending so newest logging appears first
+      list.sort((a, b) => {
+        const dateA = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
+        const dateB = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      setActiveSessions(list);
+    }, (error) => {
+      console.warn("Failed to listen to userSessions:", error);
+    });
+
+    return () => unsubSessions();
+  }, [user]);
+
   const addAllowedUser = async (email: string) => {
     if (!user) return;
     const cleanEmail = email.toLowerCase().trim();
@@ -362,6 +421,20 @@ export default function App() {
 
   const handleGoogleLogout = async () => {
     try {
+      if (user) {
+        const cleanEmail = user.email ? user.email.toLowerCase().trim() : '';
+        if (cleanEmail) {
+          const safeSessionId = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
+          try {
+            await setDoc(doc(db, 'userSessions', safeSessionId), {
+              online: false,
+              lastLogoutAt: new Date().toISOString()
+            }, { merge: true });
+          } catch (e) {
+            console.warn("Could not flag session offline:", e);
+          }
+        }
+      }
       localStorage.removeItem('scc_local_verified_user');
       setUser(null);
       await signOut(auth);
@@ -1016,25 +1089,6 @@ export default function App() {
           />
         );
       case 'settings':
-        if (!isPrimaryAdmin) {
-          return (
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto my-12">
-              <div className="bg-rose-50 p-4 rounded-full text-rose-500">
-                <AlertCircle size={40} className="stroke-[2.5]" />
-              </div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">Access Denied</h3>
-              <p className="text-slate-500 text-sm font-semibold max-w-sm leading-relaxed">
-                Only the Primary System Administrator has permission to access the Settings, allowed helper directory, and database controls.
-              </p>
-              <button 
-                onClick={() => setActiveTab('dashboard')}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md transition-all cursor-pointer active:scale-95"
-              >
-                Go to Dashboard
-              </button>
-            </div>
-          );
-        }
         return (
           <Settings 
             appData={appData}
@@ -1055,6 +1109,7 @@ export default function App() {
             onAddAllowedUser={addAllowedUser}
             onDeleteAllowedUser={deleteAllowedUser}
             onToggleAllowedUserDisabled={toggleAllowedUserDisabled}
+            activeSessions={activeSessions}
           />
         );
       default:
@@ -1079,7 +1134,7 @@ export default function App() {
     return (
       <SplashComponent 
         onComplete={() => setShowSplash(false)} 
-        logoUrl={appData.logo} 
+        appData={appData} 
       />
     );
   }
@@ -1095,7 +1150,7 @@ export default function App() {
         isLoggingIn={isLoggingIn}
         authError={authError}
         setAuthError={setAuthError}
-        logoUrl={appData.logo}
+        appData={appData}
       />
     );
   }
@@ -1134,23 +1189,18 @@ export default function App() {
           
           <div className="flex items-center gap-2">
             {user ? (
-              isPrimaryAdmin ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold text-slate-700 max-w-[80px] truncate" title={user.displayName || user.email}>
+                  {user.displayName || user.email?.split('@')[0]}
+                </span>
                 <button
                   onClick={handleGoogleLogout}
-                  title={`Cloud Connected: ${user.displayName || user.email}`}
-                  className="w-7 h-7 rounded-full border border-emerald-300 overflow-hidden shrink-0 shadow-sm"
+                  title={`Logout (${user.email || 'offline'})`}
+                  className="w-7 h-7 rounded-full border border-emerald-300 overflow-hidden shrink-0 shadow-sm relative focus:ring-2 focus:ring-emerald-400 focus:outline-none"
                 >
-                  <img src={user.photoURL || "https://picsum.photos/seed/admin/100/100"} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  <img src={user.photoURL || `https://picsum.photos/seed/${(user.email || 'local').replace(/[^a-zA-Z0-9]/g, '_')}/100/100`} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 </button>
-              ) : (
-                <button
-                  onClick={handleGoogleLogout}
-                  title="Disconnect Cloud Sync"
-                  className="p-1 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg text-[9px] font-black tracking-wide shrink-0 transition-all active:scale-95 shadow-sm"
-                >
-                  Disconnect
-                </button>
-              )
+              </div>
             ) : (
               <button 
                 onClick={handleGoogleLogin}
@@ -1202,36 +1252,27 @@ export default function App() {
             </div>
 
             {user ? (
-              isPrimaryAdmin ? (
-                <div className="flex items-center gap-3 bg-white border border-slate-100 shadow-sm pl-4 pr-1.5 py-1 rounded-2xl">
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Cloud Connected
-                    </p>
-                    <p className="text-[11px] font-bold text-slate-700 max-w-[120px] truncate">{user.displayName || user.email}</p>
-                  </div>
-                  <button
-                    onClick={handleGoogleLogout}
-                    title="Logout Cloud Sync"
-                    className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden hover:opacity-80 transition-all shrink-0 relative group shadow-inner"
-                  >
-                    <img src={user.photoURL || "https://picsum.photos/seed/admin/100/100"} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
-                      <LogOut size={12} className="text-white" />
-                    </div>
-                  </button>
+              <div className="flex items-center gap-3 bg-white border border-slate-100 shadow-sm pl-4 pr-1.5 py-1 rounded-2xl">
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {isPrimaryAdmin ? 'Primary Admin' : 'Authorized Helper'}
+                  </p>
+                  <p className="text-[11px] font-bold text-slate-700 max-w-[150px] truncate" title={user.displayName || user.email}>
+                    {user.displayName || user.email?.split('@')[0] || 'Helper'}
+                  </p>
                 </div>
-              ) : (
                 <button
                   onClick={handleGoogleLogout}
-                  title="Disconnect Cloud Sync"
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 px-5 py-2.5 rounded-2xl text-xs font-black tracking-wide transition-all active:scale-95 cursor-pointer shadow-sm"
+                  title={`Logout (${user.email || 'offline'})`}
+                  className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden hover:opacity-80 transition-all shrink-0 relative group shadow-inner focus:ring-2 focus:ring-emerald-400 focus:outline-none"
                 >
-                  <LogOut size={14} />
-                  <span>Disconnect</span>
+                  <img src={user.photoURL || `https://picsum.photos/seed/${(user.email || 'helper').replace(/[^a-zA-Z0-9]/g, '_')}/100/100`} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+                    <LogOut size={12} className="text-white" />
+                  </div>
                 </button>
-              )
+              </div>
             ) : (
               <button 
                 onClick={handleGoogleLogin}

@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react';
  *   4. Fallback system svg (null)
  */
 export function useActiveResponsiveLogo(appData: any) {
+  const safeData = appData || {};
   const [isMobile, setIsMobile] = useState(false);
   const [resolvedLogo, setResolvedLogo] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(true);
@@ -38,7 +39,7 @@ export function useActiveResponsiveLogo(appData: any) {
 
     // Define all folders/files candidates for both devices
     const mobileCandidates = [
-      appData.logoMobile,
+      safeData.logoMobile,
       '/splash/mobile.png',
       '/splash/mobile.jpg',
       '/splash/mobile.webp',
@@ -47,11 +48,11 @@ export function useActiveResponsiveLogo(appData: any) {
       '/logo/mobile.jpg',
       '/logo/mobile.webp',
       '/logo/mobile.svg',
-      appData.logo
+      safeData.logo
     ].filter(Boolean);
 
     const desktopCandidates = [
-      appData.logoDesktop,
+      safeData.logoDesktop,
       '/splash/desktop.png',
       '/splash/desktop.jpg',
       '/splash/desktop.webp',
@@ -60,7 +61,7 @@ export function useActiveResponsiveLogo(appData: any) {
       '/logo/desktop.jpg',
       '/logo/desktop.webp',
       '/logo/desktop.svg',
-      appData.logo
+      safeData.logo
     ].filter(Boolean);
 
     const activeList = isMobile ? mobileCandidates : desktopCandidates;
@@ -106,7 +107,7 @@ export function useActiveResponsiveLogo(appData: any) {
     return () => {
       isCurrent = false;
     };
-  }, [isMobile, appData.logo, appData.logoMobile, appData.logoDesktop]);
+  }, [isMobile, safeData.logo, safeData.logoMobile, safeData.logoDesktop]);
 
   return { resolvedLogo, isMobile, isValidating };
 }
