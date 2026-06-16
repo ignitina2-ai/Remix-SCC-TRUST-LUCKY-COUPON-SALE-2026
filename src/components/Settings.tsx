@@ -194,7 +194,7 @@ const Settings: React.FC<SettingsProps> = ({
         />
 
         {/* Danger Zone */}
-        <DangerSettings onClearAll={onClearData} showNotification={showNotification} />
+        <DangerSettings onClearAll={onClearData} onBackup={onBackup} showNotification={showNotification} />
 
         {/* Allowed Users Center (Authorized Emails) */}
         {isPrimaryAdmin && (

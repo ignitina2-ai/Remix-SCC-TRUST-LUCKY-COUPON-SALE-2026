@@ -34,10 +34,15 @@ interface TransactionFormProps {
 const AREAS = [
   'Kadavoor',
   'Mathilil',
+  'Chirakkara, Mathilil',
   'Kureepuzha',
-  'Kottayathu Kadavu',
+  'Neeravil',
+  'Kottayathu Kadavu, Mathilil',
   'Thevally',
-  'Penayam',
+  'Penayazhikam, Mathilil',
+  'Venkkekkara, Mathilil',
+  '18 padi, Mathilil',
+  'Kollam Area',
   'Areekkakuzhi',
   'Venkekkara',
   'Sakthikulangara',
@@ -188,6 +193,55 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     setTimeout(() => setShowSuccess(false), 5000);
   };
 
+  const getTodaySalesStats = () => {
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    
+    const todayTransactions = (transactions || []).filter(t => {
+      try {
+        const transDate = new Date(t.date).toLocaleDateString('en-CA');
+        return transDate === todayStr;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    const totalAmount = todayTransactions.reduce((sum, t) => sum + t.totalAmount, 0);
+    const totalCredit = todayTransactions.reduce((sum, t) => sum + t.creditAmount, 0);
+    
+    // Support either primary paymentMethod or payment history entries
+    const totalGooglePay = todayTransactions.reduce((sum, t) => {
+      const pm = (t.paymentMethod || '').toUpperCase();
+      const isGPayObj = pm.includes('GPAY') || pm.includes('GOOGLE') || pm.includes('G_PAY');
+      
+      // Calculate how much was paid via GPay
+      let gpayPaid = 0;
+      if (t.paymentHistory && t.paymentHistory.length > 0) {
+        gpayPaid = t.paymentHistory.reduce((histSum, h) => {
+          const hPm = (h.paymentMethod || '').toUpperCase();
+          if (hPm.includes('GPAY') || hPm.includes('GOOGLE') || hPm.includes('G_PAY')) {
+            return histSum + h.amount;
+          }
+          return histSum;
+        }, 0);
+      } else if (isGPayObj) {
+        gpayPaid = t.paymentMethod === 'CREDIT' ? t.paidAmount : t.totalAmount;
+      }
+      return sum + gpayPaid;
+    }, 0);
+
+    const secretaryHandled = totalAmount - totalCredit;
+
+    return {
+      totalAmount,
+      totalCredit,
+      totalGooglePay,
+      secretaryHandled,
+      count: todayTransactions.length
+    };
+  };
+
+  const todayStats = getTodaySalesStats();
+
   return (
     <div className="max-w-2xl mx-auto space-y-4 md:space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <header className="flex items-center justify-between">
@@ -204,6 +258,45 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           </button>
         )}
       </header>
+
+      {/* Today's Sales Ledger Summary Grid (Requested inside the add sale page) */}
+      <div id="today-sales-summary-grid" className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest">Today's Sales Summary ({todayStats.count} Sale{todayStats.count === 1 ? '' : 's'})</h3>
+          </div>
+          <span className="text-[10px] bg-blue-100/80 text-blue-700 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+            {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </span>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          {/* Total Amount */}
+          <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
+            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Total Amount</p>
+            <h4 className="text-xs sm:text-sm md:text-base font-black text-slate-800 mt-1 truncate">₹{todayStats.totalAmount.toLocaleString('en-IN')}</h4>
+          </div>
+
+          {/* Total Credit */}
+          <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
+            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Total Credit</p>
+            <h4 className="text-xs sm:text-sm md:text-base font-black text-amber-600 mt-1 truncate">₹{todayStats.totalCredit.toLocaleString('en-IN')}</h4>
+          </div>
+
+          {/* Total Google Pay */}
+          <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
+            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Total Google Pay</p>
+            <h4 className="text-xs sm:text-sm md:text-base font-black text-blue-600 mt-1 truncate">₹{todayStats.totalGooglePay.toLocaleString('en-IN')}</h4>
+          </div>
+
+          {/* Secretary Handover Total */}
+          <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
+            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Secretary Handover</p>
+            <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-600 mt-1 truncate">₹{todayStats.secretaryHandled.toLocaleString('en-IN')}</h4>
+          </div>
+        </div>
+      </div>
 
       {showSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-2.5 rounded-xl flex items-center justify-between gap-3 animate-in fade-in zoom-in duration-300">

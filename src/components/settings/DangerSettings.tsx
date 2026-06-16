@@ -3,12 +3,14 @@ import { ShieldAlert, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface DangerSettingsProps {
   onClearAll: () => void;
+  onBackup?: () => void;
   showNotification: (type: 'success' | 'error', message: string) => void;
 }
 
-export const DangerSettings: React.FC<DangerSettingsProps> = ({ onClearAll, showNotification }) => {
+export const DangerSettings: React.FC<DangerSettingsProps> = ({ onClearAll, onBackup, showNotification }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmInput, setConfirmInput] = useState('');
+  const [downloadBackup, setDownloadBackup] = useState(true);
 
   const handleClearAllConfirm = () => {
     if (confirmInput.trim().toUpperCase() !== 'RESET') {
@@ -16,10 +18,18 @@ export const DangerSettings: React.FC<DangerSettingsProps> = ({ onClearAll, show
       return;
     }
     
+    if (downloadBackup && onBackup) {
+      try {
+        onBackup();
+      } catch (err) {
+        console.error('Pre-reset backup failed:', err);
+      }
+    }
+
     onClearAll();
     setShowConfirm(false);
     setConfirmInput('');
-    showNotification('success', 'All local state databases fully reset!');
+    showNotification('success', downloadBackup && onBackup ? 'Backup downloaded & local state databases fully reset!' : 'All local state databases fully reset!');
   };
 
   return (
@@ -40,10 +50,33 @@ export const DangerSettings: React.FC<DangerSettingsProps> = ({ onClearAll, show
             <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={18} />
             <div>
               <h4 className="text-rose-900 font-bold text-sm">Are you absolutely sure?</h4>
-              <p className="text-rose-700 text-xs font-medium mt-1">This will permanently clear all your offline local and custom parameters unless backed up.</p>
+              <p className="text-rose-700 text-xs font-medium mt-1">This will permanently clear all your offline local and custom parameters.</p>
             </div>
           </div>
           
+          <div className="border-t border-rose-100 pt-3 space-y-2">
+            <label id="backup-checkbox-label" className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input 
+                type="checkbox"
+                checked={downloadBackup}
+                onChange={(e) => setDownloadBackup(e.target.checked)}
+                className="rounded border-rose-200 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
+              />
+              <span className="text-xs font-bold text-rose-800">
+                Auto-download JSON backup before resetting (Recommended)
+              </span>
+            </label>
+            {onBackup && (
+              <button
+                type="button"
+                onClick={onBackup}
+                className="text-[10px] font-black text-rose-700 hover:text-rose-800 underline block cursor-pointer text-left pl-6.5"
+              >
+                Download JSON Backup First
+              </button>
+            )}
+          </div>
+
           <div className="space-y-2">
             <label className="block text-[10px] font-bold text-rose-900 uppercase tracking-wider">
               Type RESET to confirm deletion

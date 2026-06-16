@@ -13,9 +13,12 @@ import {
   FileText,
   Download,
   Eye,
-  EyeOff
+  EyeOff,
+  CreditCard,
+  Wallet,
+  QrCode
 } from 'lucide-react';
-import { SecretaryHandover } from '@/types';
+import { SecretaryHandover, Transaction, CustomPaymentMethod, PaymentMethod, DEFAULT_PAYMENT_LABELS, getDefaultPaymentMethodsList } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
@@ -28,13 +31,19 @@ interface SecretaryHandoverManagementProps {
   onAddHandover: (handover: Omit<SecretaryHandover, 'id'>) => void;
   onUpdateHandover?: (id: string, updates: Partial<SecretaryHandover>) => void;
   onDeleteHandover: (ids: string[]) => void;
+  transactions?: Transaction[];
+  paymentMethodsList?: CustomPaymentMethod[];
+  customPaymentLabels?: Record<PaymentMethod, string>;
 }
 
 const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = ({ 
   handovers = [], 
   onAddHandover, 
   onUpdateHandover,
-  onDeleteHandover 
+  onDeleteHandover,
+  transactions = [],
+  paymentMethodsList,
+  customPaymentLabels = DEFAULT_PAYMENT_LABELS
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,6 +73,40 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
   };
 
   const totalHandover = (handovers || []).reduce((acc, h) => acc + h.amount, 0);
+
+  // Helper to calculate total received amount for a payment method
+  const getAmountByMethod = (method: PaymentMethod) => {
+    return (transactions || []).reduce((acc, t) => {
+      const relevantHistory = (t.paymentHistory || []).filter(entry => entry.paymentMethod === method);
+      const historySum = relevantHistory.reduce((sum, entry) => sum + entry.amount, 0);
+
+      const totalHistoryAmount = (t.paymentHistory || []).reduce((sum, entry) => sum + entry.amount, 0);
+      const unaccountedPaid = Math.max(0, t.paidAmount - totalHistoryAmount);
+
+      let initialPaidAllocated = 0;
+      if (unaccountedPaid > 0) {
+        if (t.paymentMethod === method) {
+          initialPaidAllocated = unaccountedPaid;
+        } else if (t.paymentMethod === 'CREDIT' && method === 'CASH') {
+          initialPaidAllocated = unaccountedPaid;
+        }
+      }
+
+      return acc + historySum + initialPaidAllocated;
+    }, 0);
+  };
+
+  const totalSales = (transactions || []).reduce((acc, t) => acc + t.totalAmount, 0);
+  const totalCredit = (transactions || []).reduce((acc, t) => acc + t.creditAmount, 0);
+  const totalCash = getAmountByMethod('CASH');
+
+  const methods = paymentMethodsList && paymentMethodsList.length > 0
+    ? paymentMethodsList
+    : getDefaultPaymentMethodsList(customPaymentLabels);
+
+  const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
+  const totalUPI = nonCashCreditMethods.reduce((sum, m) => sum + getAmountByMethod(m.id), 0);
+  const totalCashSale = totalCash + totalUPI;
 
   const handleEdit = (handover: SecretaryHandover) => {
     setFormData({
@@ -378,7 +421,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Secretary Handover</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Sec Handover</h1>
           <p className="text-slate-500 mt-0.5 font-semibold text-xs">Record cash handed over to the secretary</p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -425,14 +468,63 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
         </div>
       )}
 
-      {/* Summary Card */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-3.5 md:p-5 rounded-xl md:rounded-2xl text-white shadow-md shadow-slate-900/10">
-        <div className="flex items-center justify-between mb-1">
-          <Users size={20} className="text-blue-400" />
-          <span className="text-[8px] font-black uppercase tracking-widest bg-white/10 px-1.5 py-0.5 rounded text-blue-300">Total</span>
+      {/* Summary Cards Grid (Requested as another grid) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
+          <div className="p-2 rounded-lg shrink-0 bg-emerald-600">
+            <IndianRupee className="text-white w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Consolidated Coupon Revenue</span>
+            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{(totalSales + totalHandover).toLocaleString('en-IN')}</h3>
+            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
+              <span>Coupon Sell Sales:</span>
+              <span className="text-slate-700 font-extrabold">₹{totalSales.toLocaleString('en-IN')}</span>
+            </p>
+          </div>
         </div>
-        <h2 className="text-lg md:text-2xl font-black">₹{totalHandover.toLocaleString('en-IN')}</h2>
-        <p className="text-slate-400 text-[8px] font-bold uppercase tracking-wider mt-0.5">Total Handed Over</p>
+
+        <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
+          <div className="p-2 rounded-lg shrink-0 bg-amber-500">
+            <CreditCard className="text-white w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Book Credit</span>
+            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalCredit.toLocaleString('en-IN')}</h3>
+            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
+              <span>Secretary Handover:</span>
+              <span className="text-slate-700 font-extrabold">₹{totalHandover.toLocaleString('en-IN')}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
+          <div className="p-2 rounded-lg shrink-0 bg-teal-600">
+            <Wallet className="text-white w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Cash Sale</span>
+            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalCashSale.toLocaleString('en-IN')}</h3>
+            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
+              <span>Hard Cash:</span>
+              <span className="text-slate-700 font-extrabold">₹{totalCash.toLocaleString('en-IN')}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
+          <div className="p-2 rounded-lg shrink-0 bg-indigo-600">
+            <QrCode className="text-white w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Total UPI Receipts</span>
+            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalUPI.toLocaleString('en-IN')}</h3>
+            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
+              <span>UPI Receipts:</span>
+              <span className="text-slate-700 font-extrabold">₹{totalUPI.toLocaleString('en-IN')}</span>
+            </p>
+          </div>
+        </div>
       </div>
 
       {showForm && (

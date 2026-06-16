@@ -76,9 +76,9 @@ export interface AppData {
 export const DEFAULT_PAYMENT_LABELS: Record<PaymentMethod, string> = {
   CASH: 'Cash',
   CREDIT: 'Credit',
-  GOOGLE_PAY: 'Google Pay',
-  PHONE_PAY: 'PhonePe',
-  PAYTM: 'Paytm',
+  'TRUST GPAY': 'TRUST GPAY',
+  'SOFIA GPAY': 'SOFIA GPAY',
+  'JOHNY GPAY': 'JOHNY GPAY',
   OTHER_UPI: 'Other UPI',
 };
 
@@ -86,9 +86,9 @@ export const getDefaultPaymentMethodsList = (customPaymentLabels?: Record<string
   return [
     { id: 'CASH', label: customPaymentLabels?.CASH || 'Cash', isDisabled: false, isSystem: true },
     { id: 'CREDIT', label: customPaymentLabels?.CREDIT || 'Credit', isDisabled: false, isSystem: true },
-    { id: 'GOOGLE_PAY', label: customPaymentLabels?.GOOGLE_PAY || 'Google Pay', isDisabled: false, isSystem: false },
-    { id: 'PHONE_PAY', label: customPaymentLabels?.PHONE_PAY || 'PhonePe', isDisabled: false, isSystem: false },
-    { id: 'PAYTM', label: customPaymentLabels?.PAYTM || 'Paytm', isDisabled: false, isSystem: false },
+    { id: 'TRUST GPAY', label: customPaymentLabels?.['TRUST GPAY'] || 'TRUST GPAY', isDisabled: false, isSystem: false },
+    { id: 'SOFIA GPAY', label: customPaymentLabels?.['SOFIA GPAY'] || 'SOFIA GPAY', isDisabled: false, isSystem: false },
+    { id: 'JOHNY GPAY', label: customPaymentLabels?.['JOHNY GPAY'] || 'JOHNY GPAY', isDisabled: false, isSystem: false },
     { id: 'OTHER_UPI', label: customPaymentLabels?.OTHER_UPI || 'Other UPI', isDisabled: false, isSystem: false }
   ];
 };

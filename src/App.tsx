@@ -923,6 +923,9 @@ export default function App() {
             onAddHandover={addSecretaryHandover}
             onUpdateHandover={updateSecretaryHandover}
             onDeleteHandover={deleteSecretaryHandover}
+            transactions={appData.transactions}
+            paymentMethodsList={appData.paymentMethodsList}
+            customPaymentLabels={labels}
           />
         );
       case 'settings':

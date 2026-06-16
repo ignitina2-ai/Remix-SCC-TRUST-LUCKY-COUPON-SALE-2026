@@ -16,9 +16,16 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
 }) => {
   const [newMethodLabel, setNewMethodLabel] = useState('');
 
-  const methodsList = appData.paymentMethodsList && appData.paymentMethodsList.length > 0
+  const rawMethodsList = appData.paymentMethodsList && appData.paymentMethodsList.length > 0
     ? appData.paymentMethodsList
     : getDefaultPaymentMethodsList(appData.customPaymentLabels);
+
+  const allowedSystemIds = ['CASH', 'CREDIT', 'TRUST GPAY', 'SOFIA GPAY', 'JOHNY GPAY', 'OTHER_UPI'];
+
+  // Only show what has been configured/added to the transaction sales form (plus any custom user methods)
+  const methodsList = rawMethodsList.filter(m => 
+    allowedSystemIds.includes(m.id) || m.id.startsWith('CUSTOM_')
+  );
 
   const handleAddPaymentMethod = () => {
     if (!newMethodLabel.trim()) return;

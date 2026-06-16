@@ -7,7 +7,10 @@ import {
   TrendingUp,
   TrendingDown,
   Smartphone,
-  QrCode
+  QrCode,
+  PlusCircle,
+  History,
+  Users
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -120,6 +123,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
   const totalUPI = nonCashCreditMethods.reduce((sum, m) => sum + getAmountByMethod(m.id, timeframe), 0);
   const totalCashSale = totalCash + totalUPI;
+  const totalHandover = (secretaryHandovers || []).reduce((acc, h) => acc + h.amount, 0);
 
   // calculations for monthly chart
   const getMonthlyChartData = () => {
@@ -183,17 +187,17 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const StatCard = ({ title, value, icon: Icon, color, subValue, subLabel }: any) => (
-    <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
-      <div className={cn("p-2 rounded-lg shrink-0", color)}>
-        <Icon className="text-white w-4 h-4" />
+    <div className="bg-white p-2.5 sm:p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-2 sm:gap-3 transition-all hover:shadow-md">
+      <div className={cn("p-1.5 sm:p-2 rounded-lg shrink-0", color)}>
+        <Icon className="text-white w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </div>
       <div className="min-w-0 flex-1 text-left">
-        <span className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider block truncate">{title}</span>
-        <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{value.toLocaleString('en-IN')}</h3>
+        <span className="text-slate-500 text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider block truncate">{title}</span>
+        <h3 className="text-xs sm:text-sm md:text-base font-black text-slate-900 tracking-tight">₹{value.toLocaleString('en-IN')}</h3>
         {subValue !== undefined && subLabel && (
-          <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
+          <p className="text-[8px] sm:text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
             <span>{subLabel}:</span>
-            <span className="text-slate-700 font-extrabold">₹{subValue.toLocaleString('en-IN')}</span>
+            <span className="text-slate-705 font-extrabold">₹{subValue.toLocaleString('en-IN')}</span>
           </p>
         )}
       </div>
@@ -240,20 +244,20 @@ const Dashboard: React.FC<DashboardProps> = ({
       </header>
 
       {/* Quick Actions (Requested by user) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
         <button 
           onClick={() => (window as any).setActiveTab?.('add-transaction')}
           className="flex flex-col items-center justify-center p-3 md:p-4 bg-blue-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-blue-700 transition-all active:scale-95 cursor-pointer text-center"
         >
-          <TrendingUp className="mb-1.5 w-5 h-5" />
+          <PlusCircle className="mb-1.5 w-5 h-5" />
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Add Sale</span>
         </button>
         <button 
-          onClick={() => document.getElementById('transaction-history-section')?.scrollIntoView({ behavior: 'smooth' })}
+          onClick={() => (window as any).setActiveTab?.('transactions')}
           className="flex flex-col items-center justify-center p-3 md:p-4 bg-slate-800 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-slate-900 transition-all active:scale-95 cursor-pointer text-center"
         >
-          <ArrowUpRight className="mb-1.5 w-5 h-5" />
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">History</span>
+          <History className="mb-1.5 w-5 h-5" />
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Sales History</span>
         </button>
         <button 
           onClick={() => (window as any).setActiveTab?.('credit')}
@@ -269,6 +273,13 @@ const Dashboard: React.FC<DashboardProps> = ({
           <TrendingDown className="mb-1.5 w-5 h-5" />
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Income & Expense</span>
         </button>
+        <button 
+          onClick={() => (window as any).setActiveTab?.('secretary-handover')}
+          className="flex flex-col items-center justify-center p-3 md:p-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 cursor-pointer text-center col-span-2 sm:col-span-1"
+        >
+          <Users className="mb-1.5 w-5 h-5" />
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Sec Handover</span>
+        </button>
       </div>
 
       {/* SECTION 1: Coupon Sales Ledger */}
@@ -276,38 +287,30 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex items-center gap-2 border-l-4 border-blue-600 pl-2">
           <h3 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">Coupon Sales</h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           <StatCard 
             title="Total Coupon Revenue" 
             value={totalSales} 
             icon={IndianRupee} 
             color="bg-blue-600" 
-            subValue={totalCredit}
-            subLabel="Outstanding Credit"
           />
           <StatCard 
             title="Scc Book Credits" 
             value={totalCredit} 
             icon={CreditCard} 
             color="bg-amber-500" 
-            subValue={totalSales - totalCredit}
-            subLabel="Collected Tickets"
           />
           <StatCard 
             title="Total Cash sales" 
             value={totalCashSale} 
             icon={Wallet} 
             color="bg-emerald-600" 
-            subValue={totalCash}
-            subLabel="Hard Cash only"
           />
           <StatCard 
             title="Total UPI Receipts" 
             value={totalUPI} 
             icon={QrCode} 
             color="bg-indigo-600" 
-            subValue={totalCashSale}
-            subLabel="Cash + UPI Revenue"
           />
         </div>
 
@@ -317,7 +320,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center gap-2 border-l-4 border-indigo-600 pl-2">
               <h4 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">UPI App Channel Receipts</h4>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               {nonCashCreditMethods
                 .filter(m => !m.isDisabled || getAmountByMethod(m.id, timeframe) > 0)
                 .map(method => {

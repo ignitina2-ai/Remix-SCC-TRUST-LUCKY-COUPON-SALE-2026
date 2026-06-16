@@ -27,6 +27,26 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
     setUploadError(null);
 
     if (user) {
+      // 2.5 second timeout safeguard to prevent hanging
+      const uploadWithTimeout = (fileObj: File, filePath: string, ms: number): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            reject(new Error("Storage upload timed out"));
+          }, ms);
+          
+          uploadFile(fileObj, filePath).then(
+            (url) => {
+              clearTimeout(timer);
+              resolve(url);
+            },
+            (err) => {
+              clearTimeout(timer);
+              reject(err);
+            }
+          );
+        });
+      };
+
       try {
         // Sanitize name a bit
         const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -37,15 +57,13 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
           await deleteFileFromStorage(appData.logo);
         }
 
-        const downloadUrl = await uploadFile(file, uniquePath);
+        const downloadUrl = await uploadWithTimeout(file, uniquePath, 2500);
         onUpdateLogo(downloadUrl);
-      } catch (err: any) {
-        console.error("Failed to upload logo to Firebase Storage:", err);
-        setUploadError("Cloud upload failed. Using local storage instead.");
-        // Fallback to local image reader if storage upload failed
-        readAndSetLocal(file);
-      } finally {
         setIsUploading(false);
+      } catch (err: any) {
+        console.warn("Failed to upload logo to Firebase Storage or timed out, using local fallback:", err);
+        // Fallback to local image reader if storage upload failed or timed out
+        readAndSetLocal(file);
       }
     } else {
       readAndSetLocal(file);
@@ -87,9 +105,14 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
       
       <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 transition-all hover:bg-slate-100 relative">
         {isUploading ? (
-          <div className="flex flex-col items-center justify-center space-y-3 p-8">
-            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-            <p className="text-slate-650 font-extrabold text-xs">Uploading to Cloud Storage...</p>
+          <div className="flex flex-col items-center justify-center space-y-4 p-8">
+            <div className="relative flex items-center justify-center w-16 h-16">
+              <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin absolute" />
+              <ImageIcon className="w-6 h-6 text-blue-600 animate-pulse animate-duration-1000" />
+            </div>
+            <p className="text-blue-600 font-extrabold text-xs uppercase tracking-wider animate-pulse pt-2 text-center">
+              Uploading to Cloud Storage...
+            </p>
           </div>
         ) : appData.logo ? (
           <div className="relative group">
