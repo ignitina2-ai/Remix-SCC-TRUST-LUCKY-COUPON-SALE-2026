@@ -238,52 +238,63 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </>
             )}
           </button>
+          
+          <p className="text-[9px] text-amber-600 font-extrabold text-center uppercase tracking-wider bg-amber-50/70 py-1 px-3 rounded-md mt-2 mx-auto w-fit border border-amber-100">
+            ⚠️ Local Bypass: Stored on this device only. Will NOT sync with mobile/desktop.
+          </p>
         </form>
 
         {/* Divider lines */}
-        <div className="w-full flex items-center justify-between my-6 opacity-40">
+        <div className="w-full flex items-center justify-between my-5 opacity-40">
           <div className="h-[1px] bg-slate-200 flex-1" />
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3">or</span>
           <div className="h-[1px] bg-slate-200 flex-1" />
         </div>
 
         {/* Google Sync Sign In Option */}
-        <button
-          id="login-google-button"
-          onClick={handleGoogleLogin}
-          type="button"
-          disabled={isLoggingIn || verificationSuccess}
-          className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-2xl text-xs font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer animate-fade-in"
-        >
-          {isLoggingIn ? (
-            <>
-              <Loader2 size={16} className="animate-spin text-blue-600" />
-              <span>Connecting Google Cloud...</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#EA4335"
-                  d="M12 5.04c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.5 15 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.9 3C6.4 7.4 9 5.04 12 5.04z"
-                />
-                <path
-                  fill="#4285F4"
-                  d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.1-2 3.7-4.9 3.7-8.7z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.5 14.6c-.2-.7-.4-1.4-.4-2.1s.2-1.4.4-2.1L1.6 7.4C.6 9.3 0 11.6 0 14s.6 4.7 1.6 6.6l3.9-3z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.6-2.4-6.5-5.36l-3.9 3C3.5 20.4 7.4 23 12 23z"
-                />
-              </svg>
-              <span>Connect & Sync with Google</span>
-            </>
-          )}
-        </button>
+        <div className="w-full space-y-2">
+          <button
+            id="login-google-button"
+            onClick={handleGoogleLogin}
+            type="button"
+            disabled={isLoggingIn || verificationSuccess}
+            className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-2xl text-xs font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer animate-fade-in"
+          >
+            {isLoggingIn ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-blue-600" />
+                <span>Connecting Google Cloud...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.04c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.5 15 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.9 3C6.4 7.4 9 5.04 12 5.04z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.1-2 3.7-4.9 3.7-8.7z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.5 14.6c-.2-.7-.4-1.4-.4-2.1s.2-1.4.4-2.1L1.6 7.4C.6 9.3 0 11.6 0 14s.6 4.7 1.6 6.6l3.9-3z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.6-2.4-6.5-5.36l-3.9 3C3.5 20.4 7.4 23 12 23z"
+                  />
+                </svg>
+                <span>Connect & Sync with Google</span>
+              </>
+            )}
+          </button>
+          
+          <p className="text-[9px] text-emerald-600 font-extrabold text-center uppercase tracking-wider bg-emerald-50/70 py-1 px-3 rounded-md mx-auto w-fit border border-emerald-100 flex items-center justify-center gap-1">
+            <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span>
+            ✨ Recommended: Syncs all mobile & desktop devices in real time.
+          </p>
+        </div>
 
         {/* Informative Footer Support */}
         <div className="mt-8 text-center max-w-[280px]">

@@ -300,7 +300,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             color="bg-blue-600" 
           />
           <StatCard 
-            title="Scc Book Credits" 
+            title="Total Credits" 
             value={totalCredit} 
             icon={CreditCard} 
             color="bg-amber-500" 
@@ -312,7 +312,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             color="bg-emerald-600" 
           />
           <StatCard 
-            title="Total UPI Receipts" 
+            title="All UPI Receipts" 
             value={totalUPI} 
             icon={QrCode} 
             color="bg-indigo-600" 
@@ -329,7 +329,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         {nonCashCreditMethods.filter(m => !m.isDisabled || getAmountByMethod(m.id, timeframe) > 0).length > 0 && (
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-2 border-l-4 border-indigo-600 pl-2">
-              <h4 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">UPI App Channel Receipts</h4>
+              <h4 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">Each UPI Receipts</h4>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               {nonCashCreditMethods

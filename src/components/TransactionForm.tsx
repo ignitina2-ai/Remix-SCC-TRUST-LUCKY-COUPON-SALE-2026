@@ -12,7 +12,10 @@ import {
   Mail,
   CheckCircle2,
   AlertCircle,
-  Calendar
+  Calendar,
+  QrCode,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Transaction, PaymentMethod, COUPON_PRICE, COUPONS_PER_BOOK, CustomPaymentMethod } from '@/types';
 import { cn } from '@/lib/utils';
@@ -126,6 +129,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   const [creditAmount, setCreditAmount] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastTransactionType, setLastTransactionType] = useState<PaymentMethod | null>(null);
+  const [showQr, setShowQr] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setShowQr(false);
+    setCopied(false);
+  }, [formData.paymentMethod]);
 
   useEffect(() => {
     const total = (formData.books * COUPONS_PER_BOOK + formData.coupons) * COUPON_PRICE;
@@ -431,6 +441,105 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             })}
           </div>
         </div>
+
+        {formData.paymentMethod !== 'CASH' && formData.paymentMethod !== 'CREDIT' && (() => {
+          const matchedMethod = (paymentMethodsList || []).find(m => m.id === formData.paymentMethod);
+          const currentUpiId = matchedMethod?.upiId;
+          const currentLabel = matchedMethod?.label || formData.paymentMethod;
+
+          return (
+            <div className="bg-slate-50 p-4 rounded-xl md:rounded-2xl border border-slate-100 flex flex-col gap-3 text-left animate-in fade-in-50 duration-300">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="bg-blue-50 p-1.5 rounded-lg text-blue-600">
+                    <QrCode size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800">QR Code Payment Option</h4>
+                    <p className="text-[10px] text-slate-500 font-medium">Generate instant scan-and-pay code</p>
+                  </div>
+                </div>
+                {currentUpiId ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowQr(!showQr)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer",
+                      showQr 
+                        ? "bg-slate-200 text-slate-700 hover:bg-slate-300" 
+                        : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                    )}
+                  >
+                    {showQr ? 'Hide QR' : 'Display QR'}
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-md flex items-center gap-1">
+                    <AlertCircle size={12} />
+                    Not Set Up
+                  </span>
+                )}
+              </div>
+
+              {!currentUpiId ? (
+                <p className="text-[10px] text-amber-700 font-semibold leading-relaxed bg-amber-50/50 p-2.5 rounded-xl border border-dashed border-amber-200">
+                  ⚠️ No UPI ID has been configured for <strong>{currentLabel}</strong> in your settings. 
+                  Go to <strong>Settings &gt; Payment Methods Manager</strong> to add a UPI ID or mobile number to enable scan-and-pay.
+                </p>
+              ) : showQr ? (
+                <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-3 animate-in zoom-in-95 duration-200">
+                  <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    Scan With Any UPI App
+                  </div>
+                  
+                  {/* QR Code Container */}
+                  <div className="p-3 bg-white border border-slate-100 rounded-2xl shadow-inner flex items-center justify-center">
+                    {totalAmount > 0 ? (
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                          `upi://pay?pa=${currentUpiId}&pn=${encodeURIComponent(currentLabel)}&am=${totalAmount}&cu=INR`
+                        )}`}
+                        alt="UPI Payment QR Code"
+                        className="w-44 h-44 object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-44 h-44 flex flex-col items-center justify-center text-slate-400 gap-1">
+                        <AlertCircle size={24} />
+                        <span className="text-[10px] font-bold">Add books/coupons first</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 w-full max-w-xs">
+                    <div className="text-sm font-black text-slate-800">
+                      ₹{totalAmount.toLocaleString('en-IN')}
+                    </div>
+                    <div className="flex items-center justify-center gap-1 bg-slate-50 border border-slate-100 rounded-lg py-1 px-3.5 w-fit mx-auto">
+                      <span className="font-mono text-[10px] text-slate-600 font-semibold">{currentUpiId}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(currentUpiId);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="text-slate-400 hover:text-blue-600 p-1 rounded transition-all cursor-pointer"
+                        title="Copy UPI ID"
+                      >
+                        {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                    {copied && (
+                      <p className="text-[9px] text-emerald-600 font-extrabold uppercase tracking-wider animate-bounce">
+                        Copied to Clipboard!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        })()}
 
         {formData.paymentMethod === 'CREDIT' && (
           <div className="animate-in slide-in-from-top-2 duration-300">

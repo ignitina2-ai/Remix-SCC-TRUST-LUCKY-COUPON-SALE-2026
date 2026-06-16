@@ -5,6 +5,7 @@ export interface CustomPaymentMethod {
   label: string;
   isDisabled: boolean;
   isSystem: boolean;
+  upiId?: string;
 }
 
 export interface PaymentHistoryEntry {

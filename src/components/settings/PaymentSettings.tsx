@@ -15,6 +15,7 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
   onUpdatePaymentMethodsList,
 }) => {
   const [newMethodLabel, setNewMethodLabel] = useState('');
+  const [newMethodUpiId, setNewMethodUpiId] = useState('');
 
   const rawMethodsList = appData.paymentMethodsList && appData.paymentMethodsList.length > 0
     ? appData.paymentMethodsList
@@ -34,7 +35,8 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
       id: newId,
       label: newMethodLabel.trim(),
       isDisabled: false,
-      isSystem: false
+      isSystem: false,
+      upiId: newMethodUpiId.trim() || undefined
     };
     const updatedList = [...methodsList, newMethodObj];
     onUpdatePaymentMethodsList?.(updatedList);
@@ -44,6 +46,7 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
     };
     onUpdatePaymentLabels(updatedLabels);
     setNewMethodLabel('');
+    setNewMethodUpiId('');
   };
 
   const handleRenamePaymentMethod = (id: string, newLabel: string) => {
@@ -54,6 +57,11 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
       [id]: newLabel
     };
     onUpdatePaymentLabels(updatedLabels);
+  };
+
+  const handleUpdateUpiId = (id: string, upiId: string) => {
+    const updatedList = methodsList.map(m => m.id === id ? { ...m, upiId: upiId.trim() } : m);
+    onUpdatePaymentMethodsList?.(updatedList);
   };
 
   const handleTogglePaymentMethod = (id: string) => {
@@ -86,19 +94,34 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
       {/* Add Custom Payment Mode Form */}
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3 text-left">
         <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Add Custom Payment Mode</h4>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newMethodLabel}
-            onChange={(e) => setNewMethodLabel(e.target.value)}
-            placeholder="e.g. Airtel Money, Amazon Pay"
-            className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Mode Label</label>
+            <input
+              type="text"
+              value={newMethodLabel}
+              onChange={(e) => setNewMethodLabel(e.target.value)}
+              placeholder="e.g. Airtel Money, Amazon Pay"
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">UPI ID or Mobile (Optional)</label>
+            <input
+              type="text"
+              value={newMethodUpiId}
+              onChange={(e) => setNewMethodUpiId(e.target.value)}
+              placeholder="e.g. 9876543210@paytm"
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end pt-1">
           <button
             onClick={handleAddPaymentMethod}
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-extrabold hover:bg-blue-700 transition-all cursor-pointer shadow-sm shrink-0"
+            className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-extrabold hover:bg-blue-700 transition-all cursor-pointer shadow-sm shrink-0 uppercase tracking-wider"
           >
-            Add Mode
+            Add Mode & Save
           </button>
         </div>
       </div>
@@ -108,8 +131,8 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
         <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden max-h-96 overflow-y-auto">
           {methodsList.map((method) => (
             <div key={method.id} className={cn("p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white", method.isDisabled && "bg-slate-50/40")}>
-              <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", method.id === 'CASH' ? 'bg-emerald-50 text-emerald-600' : method.id === 'CREDIT' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600')}>
+              <div className="flex items-start gap-3 flex-1 min-w-0 text-left">
+                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1", method.id === 'CASH' ? 'bg-emerald-50 text-emerald-600' : method.id === 'CREDIT' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600')}>
                   {method.id === 'CASH' ? '₵' : method.id === 'CREDIT' ? '💳' : '📱'}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -123,13 +146,30 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
                       </span>
                     )}
                   </div>
-                  <input
-                    type="text"
-                    value={method.label}
-                    onChange={(e) => handleRenamePaymentMethod(method.id, e.target.value)}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-slate-850"
-                    placeholder="Display Name"
-                  />
+                  <div className="space-y-2 mt-1.5">
+                    <div>
+                      <label className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">Payment Label</label>
+                      <input
+                        type="text"
+                        value={method.label}
+                        onChange={(e) => handleRenamePaymentMethod(method.id, e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-slate-850"
+                        placeholder="Display Name"
+                      />
+                    </div>
+                    {method.id !== 'CASH' && method.id !== 'CREDIT' && (
+                      <div>
+                        <label className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">UPI ID or Mobile (for QR code)</label>
+                        <input
+                          type="text"
+                          value={method.upiId || ''}
+                          onChange={(e) => handleUpdateUpiId(method.id, e.target.value)}
+                          className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-slate-700"
+                          placeholder="e.g. name@upi or 9876543215@paytm"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

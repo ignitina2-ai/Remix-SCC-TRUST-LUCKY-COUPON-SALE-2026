@@ -19,7 +19,10 @@ import {
   Download,
   Eye,
   EyeOff,
-  Edit2
+  Edit2,
+  QrCode,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Transaction, CreditSettings, PaymentMethod, DEFAULT_PAYMENT_LABELS, CustomPaymentMethod } from '@/types';
 import { cn } from '@/lib/utils';
@@ -52,6 +55,8 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
   const [isCollapsedMode, setIsCollapsedMode] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [creditShowQr, setCreditShowQr] = useState(false);
+  const [creditCopied, setCreditCopied] = useState(false);
 
   const toggleExpand = (id: string) => {
     const newSet = new Set(expandedIds);
@@ -579,9 +584,13 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
                       <button
                         key={method}
                         type="button"
-                        onClick={() => setPaymentModal({ ...paymentModal, paymentMethod: method })}
+                        onClick={() => {
+                          setPaymentModal({ ...paymentModal, paymentMethod: method });
+                          setCreditShowQr(false);
+                          setCreditCopied(false);
+                        }}
                         className={cn(
-                          "px-3 py-2 border rounded-xl text-[10px] font-bold transition-all text-center truncate",
+                          "px-3 py-2 border rounded-xl text-[10px] font-bold transition-all text-center truncate cursor-pointer",
                           paymentModal.paymentMethod === method
                             ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                             : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
@@ -593,6 +602,103 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
                   })}
                 </div>
               </div>
+
+              {paymentModal.paymentMethod !== 'CASH' && (() => {
+                const matchedMethod = (paymentMethodsList || []).find(m => m.id === paymentModal.paymentMethod);
+                const currentUpiId = matchedMethod?.upiId;
+                const currentLabel = matchedMethod?.label || paymentModal.paymentMethod;
+
+                return (
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col gap-2.5 text-left animate-in fade-in-50 duration-300">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-blue-50 p-1 rounded-lg text-blue-600">
+                          <QrCode size={14} />
+                        </div>
+                        <div>
+                          <h4 className="text-[11px] font-bold text-slate-800">QR Code for Credit Payment</h4>
+                          <p className="text-[9px] text-slate-500 font-medium">Scan-and-pay for credit clearance</p>
+                        </div>
+                      </div>
+                      {currentUpiId ? (
+                        <button
+                          type="button"
+                          onClick={() => setCreditShowQr(!creditShowQr)}
+                          className={cn(
+                            "px-2 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all cursor-pointer",
+                            creditShowQr 
+                              ? "bg-slate-200 text-slate-700 hover:bg-slate-300" 
+                              : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                          )}
+                        >
+                          {creditShowQr ? 'Hide' : 'Show'}
+                        </button>
+                      ) : (
+                        <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                          <AlertCircle size={10} />
+                          Not Set Up
+                        </span>
+                      )}
+                    </div>
+
+                    {!currentUpiId ? (
+                      <p className="text-[9px] text-amber-700 font-semibold leading-relaxed bg-amber-50/50 p-2 rounded-xl border border-dashed border-amber-200">
+                        ⚠️ No UPI ID has been configured for <strong>{currentLabel}</strong> under Settings &gt; Payment Methods Manager.
+                      </p>
+                    ) : creditShowQr ? (
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-2 animate-in zoom-in-95 duration-200">
+                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                          Scan With Any UPI App
+                        </div>
+                        
+                        <div className="p-2 bg-white border border-slate-100 rounded-xl shadow-inner flex items-center justify-center">
+                          {paymentModal.amount > 0 ? (
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                                `upi://pay?pa=${currentUpiId}&pn=${encodeURIComponent(currentLabel)}&am=${paymentModal.amount}&cu=INR`
+                              )}`}
+                              alt="Credit Payment QR Code"
+                              className="w-36 h-36 object-contain"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-36 h-36 flex flex-col items-center justify-center text-slate-400 gap-1">
+                              <AlertCircle size={20} />
+                              <span className="text-[9px] font-bold">Enter amount first</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1 w-full max-w-xs">
+                          <div className="text-xs font-black text-slate-800">
+                            ₹{paymentModal.amount.toLocaleString('en-IN')}
+                          </div>
+                          <div className="flex items-center justify-center gap-1 bg-slate-50 border border-slate-100 rounded-lg py-0.5 px-2.5 w-fit mx-auto">
+                            <span className="font-mono text-[9px] text-slate-600 font-semibold">{currentUpiId}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(currentUpiId);
+                                setCreditCopied(true);
+                                setTimeout(() => setCreditCopied(false), 2000);
+                              }}
+                              className="text-slate-400 hover:text-blue-600 p-0.5 rounded transition-all cursor-pointer"
+                              title="Copy UPI ID"
+                            >
+                              {creditCopied ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                            </button>
+                          </div>
+                          {creditCopied && (
+                            <p className="text-[8px] text-emerald-600 font-extrabold uppercase tracking-wider">
+                              Copied!
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
 
               <div className="flex items-center gap-3">
                 <button 

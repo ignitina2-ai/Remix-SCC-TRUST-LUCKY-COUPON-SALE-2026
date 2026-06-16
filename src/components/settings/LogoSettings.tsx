@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle, Laptop, Smartphone } from 'lucide-react';
+import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle, Laptop, Smartphone, Settings } from 'lucide-react';
 import { AppData } from '@/types';
 import { uploadFile, deleteFileFromStorage } from '@/lib/storage';
+import { cn } from '@/lib/utils';
 
 interface LogoSettingsProps {
   appData: AppData;
@@ -19,9 +20,10 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
   user 
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'desktop' | 'mobile'>('desktop');
+  const [activeTab, setActiveTab ] = useState<'desktop' | 'mobile'>('desktop');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const isMobileLogo = activeTab === 'mobile';
   const currentLogo = isMobileLogo 
@@ -129,98 +131,181 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
 
   return (
     <div id="settings-card-logo" className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
             <ImageIcon size={20} />
           </div>
-          <h3 className="text-lg font-bold text-slate-900">App Open Logo Options</h3>
+          <div className="text-left font-sans">
+            <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">App Open Logos</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Customize splash & header icons</p>
+          </div>
+        </div>
+
+        {/* Toggle Switch */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">
+            {isExpanded ? "Setup open" : "Setup hidden"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={cn(
+              "w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out shrink-0 cursor-pointer shadow-inner",
+              isExpanded ? "bg-blue-600" : "bg-slate-300"
+            )}
+            title={isExpanded ? "Collapse Logo Settings" : "Expand Logo Settings"}
+          >
+            <div className={cn(
+              "w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-md",
+              isExpanded ? "translate-x-6" : "translate-x-0"
+            )} />
+          </button>
         </div>
       </div>
 
-      {/* Tabs Selector */}
-      <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/40">
-        <button
-          onClick={() => { setActiveTab('desktop'); setUploadError(null); }}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'desktop'
-              ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Laptop size={14} />
-          Desktop & default Layout
-        </button>
-        <button
-          onClick={() => { setActiveTab('mobile'); setUploadError(null); }}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'mobile'
-              ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Smartphone size={14} />
-          Mobile Phone Layout
-        </button>
-      </div>
-      
-      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 transition-all hover:bg-slate-100 relative">
-        {isUploading ? (
-          <div className="flex flex-col items-center justify-center space-y-4 p-8">
-            <div className="relative flex items-center justify-center w-16 h-16">
-              <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin absolute" />
-              <ImageIcon className="w-6 h-6 text-blue-600 animate-pulse animate-duration-1000" />
+      {!isExpanded ? (
+        /* Collapsed summary layout to save massive amount of space */
+        <div className="p-4 bg-slate-50/75 hover:bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors animate-in fade-in duration-300 text-left font-sans">
+          <div className="space-y-1.5 w-full sm:w-auto">
+            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Brand Logo Configuration</h4>
+            <div className="flex flex-wrap items-center gap-2.5 font-mono text-[9px] text-slate-500 font-bold">
+              <span className={cn(
+                "flex items-center gap-1.5 border px-2 py-0.5 rounded-lg",
+                (appData.logoDesktop || appData.logo) ? "bg-blue-50/50 text-blue-700 border-blue-100" : "bg-white text-slate-400 border-slate-200/50"
+              )}>
+                <Laptop size={11} /> Desktop: {(appData.logoDesktop || appData.logo) ? "CUSTOM" : "SYSTEM DEFAULT"}
+              </span>
+              <span className={cn(
+                "flex items-center gap-1.5 border px-2 py-0.5 rounded-lg",
+                appData.logoMobile ? "bg-indigo-50/50 text-indigo-700 border-indigo-100" : "bg-white text-slate-400 border-slate-200/50"
+              )}>
+                <Smartphone size={11} /> Mobile: {appData.logoMobile ? "CUSTOM" : "SYSTEM DEFAULT"}
+              </span>
             </div>
-            <p className="text-blue-600 font-extrabold text-xs uppercase tracking-wider animate-pulse pt-2 text-center">
-              Uploading to Cloud Storage...
-            </p>
           </div>
-        ) : currentLogo ? (
-          <div className="relative group">
-            <img src={currentLogo} alt="App Logo" className="w-32 h-32 object-contain rounded-xl shadow-md" />
-            <button 
-              onClick={handleDeleteLogo}
-              className="absolute -top-2 -right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+          
+          {(appData.logoDesktop || appData.logo || appData.logoMobile) ? (
+            <div className="flex items-center gap-2 self-end sm:self-center bg-white border border-slate-200/60 p-1.5 rounded-xl">
+              {(appData.logoDesktop || appData.logo) && (
+                <div className="text-center">
+                  <img 
+                    src={appData.logoDesktop || appData.logo} 
+                    alt="Desktop" 
+                    className="w-10 h-10 object-contain mx-auto border border-slate-100 rounded bg-slate-50 p-0.5" 
+                    referrerPolicy="no-referrer"
+                  />
+                  <p className="text-[7px] text-slate-400 font-black tracking-widest uppercase mt-0.5">Desktop</p>
+                </div>
+              )}
+              {appData.logoMobile && (
+                <div className="text-center">
+                  <img 
+                    src={appData.logoMobile} 
+                    alt="Mobile" 
+                    className="w-10 h-10 object-contain mx-auto border border-slate-100 rounded bg-slate-50 p-0.5" 
+                    referrerPolicy="no-referrer"
+                  />
+                  <p className="text-[7px] text-slate-400 font-black tracking-widest uppercase mt-0.5">Mobile</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="self-end sm:self-center text-[9px] text-slate-500 font-black uppercase tracking-wider bg-slate-200/50 border border-slate-200/20 px-3 py-1.5 rounded-xl">
+              Default System Slates
+            </span>
+          )}
+        </div>
+      ) : (
+        /* Fully expanded layout to modify details */
+        <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* Tabs Selector */}
+          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/40">
+            <button
+              onClick={() => { setActiveTab('desktop'); setUploadError(null); }}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-4 transition-all cursor-pointer ${
+                activeTab === 'desktop'
+                  ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
             >
-              <Trash2 size={14} />
+              <Laptop size={14} />
+              Desktop & default Layout
+            </button>
+            <button
+              onClick={() => { setActiveTab('mobile'); setUploadError(null); }}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-4 transition-all cursor-pointer ${
+                activeTab === 'mobile'
+                  ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Smartphone size={14} />
+              Mobile Phone Layout
             </button>
           </div>
-        ) : (
-          <div className="text-center space-y-3">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-slate-300 shadow-sm">
-              <Upload size={24} />
-            </div>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">No custom logo configured</p>
-            <p className="text-[10px] text-slate-400 font-bold max-w-xs mx-auto">
-              {isMobileLogo 
-                ? "If empty, mobile phones will display target file from `/splash/mobile.png` folder path or fall back to system defaults." 
-                : "If empty, desktop devices will display target file from `/splash/desktop.png` folder path or the custom attached image settings."}
-            </p>
-          </div>
-        )}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleLogoUpload} 
-          accept="image/*" 
-          className="hidden" 
-          disabled={isUploading}
-        />
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="mt-6 bg-white border border-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all shadow-sm cursor-pointer disabled:opacity-50 uppercase tracking-widest"
-        >
-          {currentLogo ? 'Change Selected Logo' : 'Upload custom logo'}
-        </button>
+          
+          <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 transition-all hover:bg-slate-100 relative">
+            {isUploading ? (
+              <div className="flex flex-col items-center justify-center space-y-4 p-8">
+                <div className="relative flex items-center justify-center w-16 h-16">
+                  <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin absolute" />
+                  <ImageIcon className="w-6 h-6 text-blue-600 animate-pulse" />
+                </div>
+                <p className="text-blue-600 font-extrabold text-xs uppercase tracking-wider animate-pulse pt-2 text-center">
+                  Uploading to Cloud Storage...
+                </p>
+              </div>
+            ) : currentLogo ? (
+              <div className="relative group">
+                <img src={currentLogo} alt="App Logo" className="w-32 h-32 object-contain rounded-xl shadow-md" referrerPolicy="no-referrer" />
+                <button 
+                  onClick={handleDeleteLogo}
+                  className="absolute -top-2 -right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg opacity-100 group-hover:opacity-100 transition-all cursor-pointer"
+                  title="Remove Logo File"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-slate-300 shadow-sm">
+                  <Upload size={24} />
+                </div>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">No custom logo configured</p>
+                <p className="text-[10px] text-slate-400 font-bold max-w-xs mx-auto">
+                  {isMobileLogo 
+                    ? "If empty, mobile phones will display target file from `/splash/mobile.png` folder path or fall back to system defaults." 
+                    : "If empty, desktop devices will display target file from `/splash/desktop.png` folder path or the custom attached image settings."}
+                </p>
+              </div>
+            )}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleLogoUpload} 
+              accept="image/*" 
+              className="hidden" 
+              disabled={isUploading}
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="mt-6 bg-white border border-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all shadow-sm cursor-pointer disabled:opacity-50 uppercase tracking-widest"
+            >
+              {currentLogo ? 'Change Selected Logo' : 'Upload custom logo'}
+            </button>
 
-        {uploadError && (
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 animate-slide-in">
-            <AlertCircle size={12} />
-            <span>{uploadError}</span>
+            {uploadError && (
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 animate-slide-in">
+                <AlertCircle size={12} />
+                <span>{uploadError}</span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
       <p className="text-[10px] text-slate-400 text-center font-bold uppercase tracking-widest">
         {user ? "Saved securely in Firebase Cloud Storage." : "Saved locally on your browser database."}
       </p>

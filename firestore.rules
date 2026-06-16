@@ -106,7 +106,7 @@ service cloud.firestore {
     }
 
     function isValidAppSettings(data) {
-      return data.id is string && data.id.size() <= 128
+      return (!('id' in data) || (data.id is string && data.id.size() <= 128))
         && (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000))
         && (!('notificationsEnabled' in data) || data.notificationsEnabled is bool)
         && (!('creditSettings' in data) || data.creditSettings is map)

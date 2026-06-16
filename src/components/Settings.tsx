@@ -126,10 +126,17 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="space-y-2 text-left">
           <div className="flex items-center gap-2.5">
             {user ? (
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Cloud Server Linked
-              </span>
+              user.isLocal ? (
+                <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                  Local Session Only (Not Synced)
+                </span>
+              ) : (
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Cloud Server Linked
+                </span>
+              )
             ) : (
               <span className="text-[10px] bg-slate-700/50 text-slate-300 border border-slate-600/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
                 Offline Mode (Local Storage Only)
@@ -137,11 +144,15 @@ const Settings: React.FC<SettingsProps> = ({
             )}
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-            {user ? 'Cloud Sync & Storage Center' : 'Go Cloud and Secure Data'}
+            {user 
+              ? (user.isLocal ? 'Device-Isolated Local Mode' : 'Cloud Sync & Storage Center')
+              : 'Go Cloud and Secure Data'}
           </h2>
           <p className="text-slate-300 text-xs font-semibold max-w-xl leading-relaxed">
             {user 
-              ? `Connected, logged in as ${user.displayName || user.email}. All local sales and catalogs are backed up to Google Firestore secure server cloud storage.`
+              ? (user.isLocal 
+                  ? `Logged in as "${user.displayName || user.email}" (Local Bypass). Data is stored locally on this physical browser and DOES NOT sync to other devices. Disconnect and log in with Google to sync in real time across mobile & desktop.`
+                  : `Connected, logged in as ${user.displayName || user.email}. All transactions, catalogs, and helper entries are backed up to Google Firestore secure cloud storage and synchronized in real-time.`)
               : 'Link your Google account to secure transaction logs across multiple admins with automatic cloud backups in real time.'}
           </p>
         </div>
@@ -149,14 +160,24 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center shrink-0">
           {user ? (
             <>
-              <button
-                onClick={handleSyncCloud}
-                disabled={syncingCloud}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-500/10 disabled:opacity-50"
-              >
-                <Cloud size={15} className={cn(syncingCloud && "animate-bounce")} />
-                {syncingCloud ? 'Syncing...' : 'Force Cloud Sync'}
-              </button>
+              {(!user.isLocal) ? (
+                <button
+                  onClick={handleSyncCloud}
+                  disabled={syncingCloud}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-500/10 disabled:opacity-50"
+                >
+                  <Cloud size={15} className={cn(syncingCloud && "animate-bounce")} />
+                  {syncingCloud ? 'Syncing...' : 'Force Cloud Sync'}
+                </button>
+              ) : (
+                <button
+                  onClick={onGoogleLogin}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-blue-600/20"
+                >
+                  <LogIn size={15} />
+                  Connect Google Cloud
+                </button>
+              )}
               <button
                 onClick={onGoogleLogout}
                 className="bg-transparent hover:bg-white/10 text-white border border-white/20 text-xs font-extrabold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
