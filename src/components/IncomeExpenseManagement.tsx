@@ -16,7 +16,10 @@ import {
   FileText,
   Download,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2,
+  X,
+  Upload
 } from 'lucide-react';
 import { IncomeExpense, EntryType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -25,6 +28,8 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import ConfirmationModal from './ConfirmationModal';
+import { auth } from '@/lib/firebase';
+import { uploadFile, deleteFileFromStorage } from '@/lib/storage';
 
 interface IncomeExpenseManagementProps {
   entries: IncomeExpense[];
@@ -52,9 +57,69 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
     amount: '',
     type: 'EXPENSE' as EntryType,
     category: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    receiptUrl: '',
+    receiptName: ''
   });
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingReceipt(true);
+    try {
+      if (auth.currentUser) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const uniquePath = `receipts/receipt_${Date.now()}_${safeName}`;
+        const downloadUrl = await uploadFile(file, uniquePath);
+        setFormData(prev => ({
+          ...prev,
+          receiptUrl: downloadUrl,
+          receiptName: file.name
+        }));
+      } else {
+        // Local base64 mode
+        if (file.size > 512 * 1024) {
+          alert("Offline preview limit: 512KB. Connect cloud server to lift constraints.");
+          setIsUploadingReceipt(false);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFormData(prev => ({
+            ...prev,
+            receiptUrl: reader.result as string,
+            receiptName: file.name
+          }));
+          setIsUploadingReceipt(false);
+        };
+        reader.readAsDataURL(file);
+        return; // Avoid executing finally block synchronously
+      }
+    } catch (err) {
+      console.error("Receipt upload failed:", err);
+      alert("Billing storage failed.");
+    } finally {
+      setIsUploadingReceipt(false);
+    }
+  };
+
+  const handleDeleteReceipt = async () => {
+    if (formData.receiptUrl && formData.receiptUrl.startsWith('http')) {
+      try {
+        await deleteFileFromStorage(formData.receiptUrl);
+      } catch (err) {
+        console.warn("Could not delete receipt from cloud storage:", err);
+      }
+    }
+    setFormData(prev => ({
+      ...prev,
+      receiptUrl: '',
+      receiptName: ''
+    }));
+  };
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCollapsedMode, setIsCollapsedMode] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -87,7 +152,9 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
       amount: entry.amount.toString(),
       type: entry.type,
       category: entry.category || '',
-      date: entry.date.split('T')[0]
+      date: entry.date.split('T')[0],
+      receiptUrl: entry.receiptUrl || '',
+      receiptName: entry.receiptName || ''
     });
     setEditingId(entry.id);
     setShowForm(true);
@@ -115,12 +182,14 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
     if (!formData.description || !formData.amount) return;
 
     if (editingId && onUpdateEntry) {
-      onUpdateEntry(editingId, {
+       onUpdateEntry(editingId, {
         description: formData.description,
         amount: Number(formData.amount),
         type: formData.type,
         category: formData.category,
-        date: new Date(formData.date).toISOString()
+        date: new Date(formData.date).toISOString(),
+        receiptUrl: formData.receiptUrl || undefined,
+        receiptName: formData.receiptName || undefined
       });
       setEditingId(null);
     } else {
@@ -129,7 +198,9 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
         amount: Number(formData.amount),
         type: formData.type,
         category: formData.category,
-        date: new Date(formData.date).toISOString()
+        date: new Date(formData.date).toISOString(),
+        receiptUrl: formData.receiptUrl || undefined,
+        receiptName: formData.receiptName || undefined
       });
     }
 
@@ -138,7 +209,9 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
       amount: '',
       type: 'EXPENSE',
       category: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      receiptUrl: '',
+      receiptName: ''
     });
     setShowForm(false);
     setShowSuccess(true);
@@ -585,6 +658,55 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
               </div>
             </div>
 
+            {/* Receipt Attachment Section */}
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-bold text-slate-700 block uppercase tracking-wider">Receipt / Attachment (Optional)</span>
+                <p className="text-slate-450 text-[10px] font-medium leading-relaxed">
+                  Securely upload bill invoice, cash proof, or digital receipt onto the Cloud.
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {isUploadingReceipt ? (
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50/50 px-3 py-2 rounded-xl">
+                    <Loader2 size={13} className="animate-spin" />
+                    <span className="text-[10px]">Cloud Uploading...</span>
+                  </div>
+                ) : formData.receiptUrl ? (
+                  <div className="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-100/60 px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm">
+                    <span className="max-w-[130px] truncate text-[11px] font-black">{formData.receiptName || 'receipt.pdf'}</span>
+                    <button 
+                      type="button"
+                      onClick={handleDeleteReceipt}
+                      className="text-rose-500 hover:text-rose-700 transition cursor-pointer"
+                      title="Remove attachment"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input 
+                      type="file"
+                      id="receipt-file-input"
+                      onChange={handleReceiptUpload}
+                      className="hidden"
+                      accept="image/*,application/pdf"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('receipt-file-input')?.click()}
+                      className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl font-bold text-[11px] flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                    >
+                      <Upload size={12} />
+                      <span>Upload Receipt</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button 
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md shadow-blue-600/15 transition-all active:scale-95 text-xs cursor-pointer"
@@ -731,6 +853,11 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
                               <Tag size={6} /> {entry.category}
                             </span>
                           )}
+                          {entry.receiptUrl && (
+                            <span className="inline-flex items-center gap-0.5 text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-sans uppercase">
+                              <FileText size={8} /> Attachment
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -765,6 +892,26 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
                         </p>
                       </div>
                     </div>
+
+                    {entry.receiptUrl && (
+                      <div className="bg-blue-50/40 p-2 rounded-lg flex items-center justify-between border border-blue-100/30">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <FileText size={12} className="text-blue-500 shrink-0" />
+                          <span className="text-[10px] font-bold text-slate-700 truncate max-w-[150px] md:max-w-[200px]">
+                            {entry.receiptName || 'Receipt Attachment'}
+                          </span>
+                        </div>
+                        <a 
+                          href={entry.receiptUrl} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="text-blue-505 hover:text-blue-700 text-[10px] font-black shrink-0 flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <Eye size={12} />
+                          <span>View Receipt</span>
+                        </a>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-slate-100">
                       <button 

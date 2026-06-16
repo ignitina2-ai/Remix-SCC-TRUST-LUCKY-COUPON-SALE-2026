@@ -7,136 +7,150 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Phase 3 & 4: Helper primitives
+    // --- Helper Primitives & Security Gates ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isEmailVerified() {
-      return request.auth.token.email_verified == true;
-    }
-
     function isAdmin() {
-      return isSignedIn() && 
-        request.auth.token.email != null && (
+      return isSignedIn() && (
+        request.auth.uid == 'bCCFuZOFKsPeZ2Go7eSvXlnHOOS2' ||
+        (request.auth.token.email != null && (
           request.auth.token.email == 'ignitina2@gmail.com' ||
           request.auth.token.email == 'ignitina2@mail.com'
-        );
+        ))
+      );
     }
 
-    function isAllowedUser() {
-      return isSignedIn() && (
-        isAdmin() ||
-        (
-          request.auth.token.email != null && 
-          exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)) &&
-          (!('disabled' in get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data) || 
-           get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.disabled != true)
-        )
-      );
+    function isEmailAllowed(email) {
+      return exists(/databases/$(database)/documents/allowedUsers/$(email)) &&
+        get(/databases/$(database)/documents/allowedUsers/$(email)).data.get('disabled', false) != true;
+    }
+
+    function isAllowedUserNonAdmin() {
+      return isSignedIn() && 
+        !isAdmin() &&
+        request.auth.token.email != null && 
+        request.auth.token.email != '' && 
+        isEmailAllowed(request.auth.token.email);
     }
 
     function incoming() {
       return request.resource.data;
     }
 
-    function existing() {
-      return resource.data;
-    }
+    // --- Detail/Entity Validations ---
 
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // --- Entity Validations ---
-
     function isValidAllowedUser(data) {
-      return data.email is string && data.email.size() <= 128;
+      return data.email is string && data.email.size() <= 128
+        && (!('addedAt' in data) || (data.addedAt is string && data.addedAt.size() <= 64))
+        && (!('addedBy' in data) || (data.addedBy is string && data.addedBy.size() <= 128))
+        && (!('disabled' in data) || data.disabled is bool);
     }
 
     function isValidTransaction(data) {
-      return data.id is string
-        && data.date is string
+      return data.id is string && data.id.size() <= 128
+        && data.date is string && data.date.size() <= 64
         && data.name is string && data.name.size() <= 100
         && data.area is string && data.area.size() <= 100
-        && data.books is int && data.books >= 0
-        && data.coupons is int && data.coupons >= 0
+        && data.books is number && data.books >= 0
+        && data.coupons is number && data.coupons >= 0
         && data.totalAmount is number && data.totalAmount >= 0
         && data.paidAmount is number && data.paidAmount >= 0
         && data.creditAmount is number && data.creditAmount >= 0
-        && data.paymentMethod is string
-        && data.paidToTreasurer is bool;
+        && data.paymentMethod is string && data.paymentMethod.size() <= 50
+        && data.paidToTreasurer is bool
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 32))
+        && (!('email' in data) || (data.email is string && data.email.size() <= 128))
+        && (!('bookNumber' in data) || (data.bookNumber is string && data.bookNumber.size() <= 64))
+        && (!('treasurerPaidDate' in data) || (data.treasurerPaidDate is string && data.treasurerPaidDate.size() <= 64))
+        && (!('paymentHistory' in data) || data.paymentHistory is list);
     }
 
     function isValidSponsor(data) {
-      return data.id is string
+      return data.id is string && data.id.size() <= 128
         && data.name is string && data.name.size() <= 100
         && data.area is string && data.area.size() <= 100
-        && data.prizeDescription is string
+        && data.prizeDescription is string && data.prizeDescription.size() <= 500
         && data.amount is number && data.amount >= 0
         && data.collectedAmount is number && data.collectedAmount >= 0
-        && data.status is string
-        && data.status in ['COLLECTED', 'PENDING', 'FLAGGED'];
+        && data.status is string && data.status in ['COLLECTED', 'PENDING', 'FLAGGED']
+        && (!('prizeNumber' in data) || data.prizeNumber is number)
+        && (!('collectedDate' in data) || (data.collectedDate is string && data.collectedDate.size() <= 64))
+        && (!('prizeImageUrl' in data) || (data.prizeImageUrl is string && data.prizeImageUrl.size() <= 1000))
+        && (!('prizeImageName' in data) || (data.prizeImageName is string && data.prizeImageName.size() <= 256));
     }
 
     function isValidIncomeExpense(data) {
-      return data.id is string
-        && data.date is string
+      return data.id is string && data.id.size() <= 128
+        && data.date is string && data.date.size() <= 64
         && data.description is string && data.description.size() <= 500
         && data.amount is number && data.amount >= 0
-        && data.type is string
-        && data.type in ['INCOME', 'EXPENSE'];
+        && data.type is string && data.type in ['INCOME', 'EXPENSE']
+        && (!('category' in data) || (data.category is string && data.category.size() <= 100))
+        && (!('receiptUrl' in data) || (data.receiptUrl is string && data.receiptUrl.size() <= 1000))
+        && (!('receiptName' in data) || (data.receiptName is string && data.receiptName.size() <= 256));
     }
 
+    // --- Handover Validations ---
     function isValidSecretaryHandover(data) {
-      return data.id is string
-        && data.date is string
+      return data.id is string && data.id.size() <= 128
+        && data.date is string && data.date.size() <= 64
         && data.name is string && data.name.size() <= 100
         && data.description is string && data.description.size() <= 500
         && data.amount is number && data.amount >= 0;
     }
 
     function isValidAppSettings(data) {
-      return data.id is string;
+      return data.id is string && data.id.size() <= 128
+        && (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000))
+        && (!('notificationsEnabled' in data) || data.notificationsEnabled is bool)
+        && (!('creditSettings' in data) || data.creditSettings is map)
+        && (!('customPaymentLabels' in data) || data.customPaymentLabels is map)
+        && (!('paymentMethodsList' in data) || data.paymentMethodsList is list);
     }
 
-    // --- Match Rules ---
+    // --- Path Rules Matchers ---
 
     match /allowedUsers/{emailId} {
-      allow read: if isSignedIn() && (isAdmin() || (request.auth.token.email != null && request.auth.token.email == emailId));
+      allow read: if isAdmin() || (isSignedIn() && 'email' in request.auth.token && request.auth.token.email == emailId);
       allow write: if isAdmin() && isValidAllowedUser(incoming());
     }
 
     match /transactions/{transactionId} {
-      allow read: if isAllowedUser();
-      allow create: if isAllowedUser() && isValidId(transactionId) && isValidTransaction(incoming());
-      allow update: if isAllowedUser() && isValidTransaction(incoming());
+      allow read: if isAdmin() || isAllowedUserNonAdmin();
+      allow create: if (isAdmin() || isAllowedUserNonAdmin()) && isValidId(transactionId) && isValidTransaction(incoming());
+      allow update: if (isAdmin() || isAllowedUserNonAdmin()) && isValidTransaction(incoming());
       allow delete: if isAdmin();
     }
 
     match /sponsors/{sponsorId} {
-      allow read: if isAllowedUser();
-      allow create: if isAllowedUser() && isValidId(sponsorId) && isValidSponsor(incoming());
-      allow update: if isAllowedUser() && isValidSponsor(incoming());
+      allow read: if isAdmin() || isAllowedUserNonAdmin();
+      allow create: if (isAdmin() || isAllowedUserNonAdmin()) && isValidId(sponsorId) && isValidSponsor(incoming());
+      allow update: if (isAdmin() || isAllowedUserNonAdmin()) && isValidSponsor(incoming());
       allow delete: if isAdmin();
     }
 
     match /incomeExpenses/{incomeExpenseId} {
-      allow read: if isAllowedUser();
-      allow create: if isAllowedUser() && isValidId(incomeExpenseId) && isValidIncomeExpense(incoming());
-      allow update: if isAllowedUser() && isValidIncomeExpense(incoming());
+      allow read: if isAdmin() || isAllowedUserNonAdmin();
+      allow create: if (isAdmin() || isAllowedUserNonAdmin()) && isValidId(incomeExpenseId) && isValidIncomeExpense(incoming());
+      allow update: if (isAdmin() || isAllowedUserNonAdmin()) && isValidIncomeExpense(incoming());
       allow delete: if isAdmin();
     }
 
     match /secretaryHandovers/{secretaryHandoverId} {
-      allow read: if isAllowedUser();
-      allow create: if isAllowedUser() && isValidId(secretaryHandoverId) && isValidSecretaryHandover(incoming());
-      allow update: if isAllowedUser() && isValidSecretaryHandover(incoming());
+      allow read: if isAdmin() || isAllowedUserNonAdmin();
+      allow create: if (isAdmin() || isAllowedUserNonAdmin()) && isValidId(secretaryHandoverId) && isValidSecretaryHandover(incoming());
+      allow update: if (isAdmin() || isAllowedUserNonAdmin()) && isValidSecretaryHandover(incoming());
       allow delete: if isAdmin();
     }
 
     match /settings/{settingsId} {
-      allow read: if isAllowedUser();
+      allow read: if isAdmin() || isAllowedUserNonAdmin();
       allow write: if isAdmin() && isValidId(settingsId) && isValidAppSettings(incoming());
     }
   }

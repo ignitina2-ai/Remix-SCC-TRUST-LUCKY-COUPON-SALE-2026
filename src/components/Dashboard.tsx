@@ -1,29 +1,24 @@
 import React, { useState } from 'react';
 import { 
-  BarChart, 
-  Bar, 
+  IndianRupee, 
+  CreditCard, 
+  Wallet, 
+  ArrowUpRight, 
+  TrendingUp,
+  TrendingDown,
+  Smartphone,
+  QrCode
+} from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer, 
-  Cell,
-  PieChart,
-  Pie
+  Legend 
 } from 'recharts';
-import { 
-  IndianRupee, 
-  CreditCard, 
-  Wallet, 
-  UserCheck, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  TrendingUp,
-  TrendingDown,
-  Users,
-  Smartphone,
-  QrCode
-} from 'lucide-react';
 import { Transaction, Sponsor, IncomeExpense, SecretaryHandover, PaymentMethod, DEFAULT_PAYMENT_LABELS, CustomPaymentMethod, getDefaultPaymentMethodsList } from '@/types';
 import { cn } from '@/lib/utils';
 import TransactionList from './TransactionList';
@@ -63,37 +58,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                d.getFullYear() === today.getFullYear();
       })
     : transactions;
-
-  const filteredSponsorsList = timeframe === 'today'
-    ? sponsors.filter(s => {
-        if (!s.collectedDate) return false;
-        const d = new Date(s.collectedDate);
-        const today = new Date();
-        return d.getDate() === today.getDate() &&
-               d.getMonth() === today.getMonth() &&
-               d.getFullYear() === today.getFullYear();
-      })
-    : sponsors;
-
-  const filteredIncomeExpensesList = timeframe === 'today'
-    ? incomeExpenses.filter(e => {
-        const d = new Date(e.date);
-        const today = new Date();
-        return d.getDate() === today.getDate() &&
-               d.getMonth() === today.getMonth() &&
-               d.getFullYear() === today.getFullYear();
-      })
-    : incomeExpenses;
-
-  const filteredSecretaryHandoversList = timeframe === 'today'
-    ? secretaryHandovers.filter(h => {
-        const d = new Date(h.date);
-        const today = new Date();
-        return d.getDate() === today.getDate() &&
-               d.getMonth() === today.getMonth() &&
-               d.getFullYear() === today.getFullYear();
-      })
-    : secretaryHandovers;
 
   // Helper to calculate total received amount for a payment method across the filtered transactions
   const getAmountByMethod = (method: PaymentMethod, viewTimeframe: 'overall' | 'today') => {
@@ -156,127 +120,93 @@ const Dashboard: React.FC<DashboardProps> = ({
   const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
   const totalUPI = nonCashCreditMethods.reduce((sum, m) => sum + getAmountByMethod(m.id, timeframe), 0);
   const totalCashSale = totalCash + totalUPI;
-  
-  const cashPaidToTreasurer = (transactions || [])
-    .reduce((acc, t) => {
-      if (!t.paidToTreasurer) return acc;
 
-      let timeframeMatches = true;
-      if (timeframe === 'today') {
-        if (!t.treasurerPaidDate) {
-          const d = new Date(t.date);
-          const today = new Date();
-          timeframeMatches = d.getDate() === today.getDate() &&
-                             d.getMonth() === today.getMonth() &&
-                             d.getFullYear() === today.getFullYear();
-        } else {
-          const d = new Date(t.treasurerPaidDate);
-          const today = new Date();
-          timeframeMatches = d.getDate() === today.getDate() &&
-                             d.getMonth() === today.getMonth() &&
-                             d.getFullYear() === today.getFullYear();
+  // calculations for monthly chart
+  const getMonthlyChartData = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    // Get number of days in the current month
+    const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // Initialize array of days
+    const chartData = Array.from({ length: totalDays }, (_, i) => {
+      const day = i + 1;
+      return {
+        day,
+        dateLabel: `${day} ${today.toLocaleString('en-IN', { month: 'short' })}`,
+        'Total Sales': 0,
+        'Amount Collected': 0,
+      };
+    });
+
+    // Populate with transaction data
+    (transactions || []).forEach(t => {
+      if (!t.date) return;
+      const d = new Date(t.date);
+      // Verify same month and year
+      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+        const dayIndex = d.getDate() - 1;
+        if (dayIndex >= 0 && dayIndex < totalDays) {
+          chartData[dayIndex]['Total Sales'] += t.totalAmount || 0;
+          chartData[dayIndex]['Amount Collected'] += t.paidAmount || 0;
         }
       }
+    });
 
-      if (!timeframeMatches) return acc;
+    return chartData;
+  };
 
-      const historyCash = (t.paymentHistory || [])
-        .filter(entry => {
-          if (entry.paymentMethod !== 'CASH') return false;
-          if (timeframe === 'today') {
-            const d = new Date(entry.date);
-            const today = new Date();
-            return d.getDate() === today.getDate() &&
-                   d.getMonth() === today.getMonth() &&
-                   d.getFullYear() === today.getFullYear();
-          }
-          return true;
-        })
-        .reduce((sum, entry) => sum + entry.amount, 0);
-      
-      const totalHistoryAmount = (t.paymentHistory || []).reduce((sum, entry) => sum + entry.amount, 0);
-      const unaccountedPaid = Math.max(0, t.paidAmount - totalHistoryAmount);
+  const monthlyChartData = getMonthlyChartData();
+  const currentMonthTotalSales = monthlyChartData.reduce((sum, item) => sum + item['Total Sales'], 0);
+  const currentMonthTotalCollected = monthlyChartData.reduce((sum, item) => sum + item['Amount Collected'], 0);
+  const currentMonthCollectionRate = currentMonthTotalSales > 0 
+    ? Math.round((currentMonthTotalCollected / currentMonthTotalSales) * 100) 
+    : 0;
 
-      let initialCash = 0;
-      if (unaccountedPaid > 0) {
-        let initTimeframeMatches = true;
-        if (timeframe === 'today') {
-          const d = new Date(t.date);
-          const today = new Date();
-          initTimeframeMatches = d.getDate() === today.getDate() &&
-                                 d.getMonth() === today.getMonth() &&
-                                 d.getFullYear() === today.getFullYear();
-        }
-
-        if (initTimeframeMatches) {
-          if (t.paymentMethod === 'CASH' || t.paymentMethod === 'CREDIT') {
-            initialCash = unaccountedPaid;
-          }
-        }
-      }
-
-      return acc + historyCash + initialCash;
-    }, 0);
-
-  const totalHandedToSecretary = (filteredSecretaryHandoversList || []).reduce((acc, h) => acc + h.amount, 0);
-  
-  const cashInHand = totalCash - cashPaidToTreasurer - totalHandedToSecretary;
-
-  const totalSponsorAmount = (filteredSponsorsList || []).reduce((acc, s) => acc + s.amount, 0);
-  const collectedSponsorAmount = (filteredSponsorsList || [])
-    .filter(s => s.status === 'COLLECTED')
-    .reduce((acc, s) => acc + s.amount, 0);
-  const pendingSponsorAmount = totalSponsorAmount - collectedSponsorAmount;
-
-  const totalIncome = (filteredIncomeExpensesList || [])
-    .filter(e => e.type === 'INCOME')
-    .reduce((acc, e) => acc + e.amount, 0);
-  const totalExpense = (filteredIncomeExpensesList || [])
-    .filter(e => e.type === 'EXPENSE')
-    .reduce((acc, e) => acc + e.amount, 0);
-  const netCashFlow = totalIncome - totalExpense;
-
-  // Chart Data: Daily Sales (Last 7 days)
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return d.toISOString().split('T')[0];
-  }).reverse();
-
-  const chartData = last7Days.map(date => {
-    const dailyTransactions = filteredTransactionsList.filter(t => t.date.startsWith(date));
-    return {
-      name: dailyTransactions.length > 0 ? new Date(date).toLocaleDateString('en-IN', { weekday: 'short' }) : new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-      amount: dailyTransactions.reduce((acc, t) => acc + t.totalAmount, 0),
-      credit: dailyTransactions.reduce((acc, t) => acc + t.creditAmount, 0),
-    };
-  });
-
-  const paymentMethodData = [
-    { name: customPaymentLabels.CASH || 'Cash', value: totalCash, color: '#10b981' },
-    { name: 'UPI', value: totalUPI, color: '#3b82f6' },
-    { name: customPaymentLabels.CREDIT || 'Credit', value: totalCredit, color: '#f59e0b' },
-  ];
-
-  const StatCard = ({ title, value, icon: Icon, color }: any) => (
-    <div className="bg-white p-2.5 md:p-4 rounded-xl md:rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
-      <div className="flex items-center justify-between mb-2 md:mb-3">
-        <div className={cn("p-1.5 md:p-2.5 rounded-lg md:rounded-xl shrink-0", color)}>
-          <Icon className="text-white w-4 h-4 md:w-5 md:h-5" />
+  const CustomChartTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-900 text-white p-3 rounded-xl shadow-lg border border-slate-800 text-xs text-left">
+          <p className="font-bold text-slate-300 mb-1">{label} Jun</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="font-mono flex justify-between gap-4" style={{ color: entry.stroke || entry.color }}>
+              <span className="uppercase font-bold tracking-wider">{entry.name}:</span>
+              <span>₹{entry.value.toLocaleString('en-IN')}</span>
+            </p>
+          ))}
         </div>
+      );
+    }
+    return null;
+  };
+
+  const StatCard = ({ title, value, icon: Icon, color, subValue, subLabel }: any) => (
+    <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
+      <div className={cn("p-2 rounded-lg shrink-0", color)}>
+        <Icon className="text-white w-4 h-4" />
       </div>
-      <div>
-        <p className="text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-wider line-clamp-1">{title}</p>
-        <h3 className="text-sm md:text-lg font-black text-slate-900 mt-0.5">₹{value.toLocaleString('en-IN')}</h3>
+      <div className="min-w-0 flex-1 text-left">
+        <span className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider block truncate">{title}</span>
+        <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{value.toLocaleString('en-IN')}</h3>
+        {subValue !== undefined && subLabel && (
+          <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
+            <span>{subLabel}:</span>
+            <span className="text-slate-700 font-extrabold">₹{subValue.toLocaleString('en-IN')}</span>
+          </p>
+        )}
       </div>
     </div>
   );
 
+
   return (
-    <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div className="hidden md:block">
-          <h2 className="text-lg font-black text-slate-800 tracking-tight">Overview Dashboard</h2>
+          <h2 className="text-xl font-black text-slate-800 tracking-tight uppercase">Overview</h2>
+          
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
           <div className="flex items-center gap-1 bg-slate-100 p-0.5 md:p-1 rounded-xl md:rounded-2xl border border-slate-200 shadow-inner">
@@ -303,8 +233,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               Today's Sale
             </button>
           </div>
-          <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100 hidden sm:block">
-            <span className="text-blue-700 font-bold text-xs md:text-sm">Today: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100">
+            <span className="text-blue-700 font-bold text-xs">Today: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
           </div>
         </div>
       </header>
@@ -313,81 +243,106 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
         <button 
           onClick={() => (window as any).setActiveTab?.('add-transaction')}
-          className="flex flex-col items-center justify-center p-3 md:p-4 bg-blue-600 text-white rounded-xl md:rounded-2xl shadow-md md:shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 cursor-pointer"
+          className="flex flex-col items-center justify-center p-3 md:p-4 bg-blue-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-blue-700 transition-all active:scale-95 cursor-pointer text-center"
         >
-          <TrendingUp className="mb-1.5 w-5 h-5 md:w-6 md:h-6" />
+          <TrendingUp className="mb-1.5 w-5 h-5" />
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Add Sale</span>
         </button>
         <button 
           onClick={() => document.getElementById('transaction-history-section')?.scrollIntoView({ behavior: 'smooth' })}
-          className="flex flex-col items-center justify-center p-3 md:p-4 bg-slate-800 text-white rounded-xl md:rounded-2xl shadow-md md:shadow-lg shadow-slate-800/20 hover:bg-slate-900 transition-all active:scale-95 cursor-pointer"
+          className="flex flex-col items-center justify-center p-3 md:p-4 bg-slate-800 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-slate-900 transition-all active:scale-95 cursor-pointer text-center"
         >
-          <ArrowUpRight className="mb-1.5 w-5 h-5 md:w-6 md:h-6" />
+          <ArrowUpRight className="mb-1.5 w-5 h-5" />
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">History</span>
         </button>
         <button 
           onClick={() => (window as any).setActiveTab?.('credit')}
-          className="flex flex-col items-center justify-center p-3 md:p-4 bg-amber-500 text-white rounded-xl md:rounded-2xl shadow-md md:shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all active:scale-95 cursor-pointer"
+          className="flex flex-col items-center justify-center p-3 md:p-4 bg-amber-500 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-amber-600 transition-all active:scale-95 cursor-pointer text-center"
         >
-          <CreditCard className="mb-1.5 w-5 h-5 md:w-6 md:h-6" />
+          <CreditCard className="mb-1.5 w-5 h-5" />
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Credit</span>
         </button>
         <button 
           onClick={() => (window as any).setActiveTab?.('income-expense')}
-          className="flex flex-col items-center justify-center p-3 md:p-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl shadow-md md:shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer"
+          className="flex flex-col items-center justify-center p-3 md:p-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer text-center"
         >
-          <TrendingDown className="mb-1.5 w-5 h-5 md:w-6 md:h-6" />
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Expense</span>
+          <TrendingDown className="mb-1.5 w-5 h-5" />
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Income & Expense</span>
         </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-4 border-b border-slate-100 pb-4 md:pb-6">
-        <StatCard 
-          title="Total Sales" 
-          value={totalSales} 
-          icon={IndianRupee} 
-          color="bg-blue-600" 
-        />
-        <StatCard 
-          title="Credit" 
-          value={totalCredit} 
-          icon={CreditCard} 
-          color="bg-amber-500" 
-        />
-        <StatCard 
-          title="Cash sale" 
-          value={totalCashSale} 
-          icon={Wallet} 
-          color="bg-emerald-600" 
-        />
-        {nonCashCreditMethods
-          .filter(m => !m.isDisabled || getAmountByMethod(m.id, timeframe) > 0)
-          .map(method => {
-            const IconComponent = method.id === 'GOOGLE_PAY' ? QrCode : Smartphone;
-            let bgColor = 'bg-indigo-500';
-            if (method.id === 'GOOGLE_PAY') bgColor = 'bg-teal-600';
-            else if (method.id === 'PHONE_PAY') bgColor = 'bg-indigo-600';
-            else if (method.id === 'PAYTM') bgColor = 'bg-sky-500';
-            else if (method.id === 'OTHER_UPI') bgColor = 'bg-violet-600';
+      {/* SECTION 1: Coupon Sales Ledger */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 border-l-4 border-blue-600 pl-2">
+          <h3 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">Coupon Sales</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard 
+            title="Total Coupon Revenue" 
+            value={totalSales} 
+            icon={IndianRupee} 
+            color="bg-blue-600" 
+            subValue={totalCredit}
+            subLabel="Outstanding Credit"
+          />
+          <StatCard 
+            title="Scc Book Credits" 
+            value={totalCredit} 
+            icon={CreditCard} 
+            color="bg-amber-500" 
+            subValue={totalSales - totalCredit}
+            subLabel="Collected Tickets"
+          />
+          <StatCard 
+            title="Total Cash sales" 
+            value={totalCashSale} 
+            icon={Wallet} 
+            color="bg-emerald-600" 
+            subValue={totalCash}
+            subLabel="Hard Cash only"
+          />
+          <StatCard 
+            title="Total UPI Receipts" 
+            value={totalUPI} 
+            icon={QrCode} 
+            color="bg-indigo-600" 
+            subValue={totalCashSale}
+            subLabel="Cash + UPI Revenue"
+          />
+        </div>
 
-            return (
-              <StatCard 
-                key={method.id}
-                title={method.label} 
-                value={getAmountByMethod(method.id, timeframe)} 
-                icon={IconComponent} 
-                color={bgColor} 
-              />
-            );
-          })}
-        <StatCard 
-          title="To Secretary" 
-          value={totalHandedToSecretary} 
-          icon={Users} 
-          color="bg-purple-600" 
-        />
-      </div>
+        {/* Dynamic Payment methods sub-row */}
+        {nonCashCreditMethods.filter(m => !m.isDisabled || getAmountByMethod(m.id, timeframe) > 0).length > 0 && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-2 border-l-4 border-indigo-600 pl-2">
+              <h4 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">UPI App Channel Receipts</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {nonCashCreditMethods
+                .filter(m => !m.isDisabled || getAmountByMethod(m.id, timeframe) > 0)
+                .map(method => {
+                  const IconComponent = method.id === 'TRUST GPAY' ? QrCode : Smartphone;
+                  let cardColor = 'bg-indigo-600';
+                  if (method.id === 'TRUST GPAY') cardColor = 'bg-teal-600';
+                  else if (method.id === 'SOFIA GPAY') cardColor = 'bg-violet-600';
+                  else if (method.id === 'JOHNY GPAY') cardColor = 'bg-sky-600';
+                  else if (method.id === 'OTHER_UPI') cardColor = 'bg-rose-500';
+
+                  return (
+                    <StatCard 
+                      key={method.id}
+                      title={method.label} 
+                      value={getAmountByMethod(method.id, timeframe)} 
+                      icon={IconComponent} 
+                      color={cardColor} 
+                    />
+                  );
+                })}
+            </div>
+          </div>
+        )}
+      </section>
+
 
       {/* Transaction History Section */}
       <div id="transaction-history-section" className="scroll-mt-6 border-t border-slate-100 pt-6">

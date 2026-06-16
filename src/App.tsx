@@ -75,13 +75,19 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string }[]>([]);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const isPrimaryAdmin = !!(user && user.email && (
+    user.email.toLowerCase() === 'ignitina2@gmail.com' ||
+    user.email.toLowerCase() === 'ignitina2@gmail.com'
+  ));
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         const isSuperAdmin = currentUser.email && (
           currentUser.email.toLowerCase() === 'ignitina2@gmail.com' ||
-          currentUser.email.toLowerCase() === 'ignitina2@mail.com'
+          currentUser.email.toLowerCase() === 'ignitina2@gmail.com'
         );
 
         if (isSuperAdmin) {
@@ -192,7 +198,7 @@ export default function App() {
     }
     const isSuperAdmin = user.email && (
       user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-      user.email.toLowerCase() === 'ignitina2@mail.com'
+      user.email.toLowerCase() === 'ignitina2@gmail.com'
     );
     if (!isSuperAdmin) {
       setAllowedUsers([]);
@@ -241,6 +247,7 @@ export default function App() {
   // Auto-dismiss auth error after 7 seconds
   useEffect(() => {
     if (authError) {
+      if (authError.code === 'auth/unauthorized-domain') return;
       const timer = setTimeout(() => {
         setAuthError(null);
       }, 7000);
@@ -248,12 +255,7 @@ export default function App() {
     }
   }, [authError]);
 
-  // Secure redirection: if a logged-in user is not the primary admin and somehow falls on the settings tab, relocate them to dashboard
-  useEffect(() => {
-    if (activeTab === 'settings' && user && user.email?.toLowerCase() !== 'ignitina2@gmail.com') {
-      setActiveTab('dashboard');
-    }
-  }, [user, activeTab]);
+
 
   // Reset scroll to top on tab change
   useEffect(() => {
@@ -266,6 +268,8 @@ export default function App() {
 
   // Google Login and Logout
   const handleGoogleLogin = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     setAuthError(null);
     try {
@@ -290,12 +294,19 @@ export default function App() {
           code: errCode,
           message: 'The sign-in popup was blocked by your browser. Please permit popups or shift to a standard browser tab to connect cloud sync.'
         });
+      } else if (errCode === 'auth/unauthorized-domain' || (errMsg && errMsg.includes('auth/unauthorized-domain'))) {
+        setAuthError({
+          code: 'auth/unauthorized-domain',
+          message: `This domain (${window.location.hostname}) is not authorized for Google Sign-In in your Firebase Console. To fix this, please: 1. Go to your Firebase Console. 2. Navigate to Authentication > Settings > Authorized domains. 3. Click 'Add domain' and paste: "${window.location.hostname}"`
+        });
       } else {
         setAuthError({
           code: errCode,
           message: errMsg
         });
       }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -859,6 +870,20 @@ export default function App() {
             paymentMethodsList={appData.paymentMethodsList}
           />
         );
+      case 'transactions':
+        return (
+          <TransactionList 
+            transactions={appData.transactions} 
+            onDelete={deleteTransaction}
+            onToggleTreasurer={toggleTreasurer}
+            onEdit={(t) => {
+              setEditingTransaction(t);
+              setActiveTab('add-transaction');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            customPaymentLabels={labels}
+          />
+        );
       case 'credit':
         return (
           <CreditManagement 
@@ -901,6 +926,25 @@ export default function App() {
           />
         );
       case 'settings':
+        if (!isPrimaryAdmin) {
+          return (
+            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto my-12">
+              <div className="bg-rose-50 p-4 rounded-full text-rose-500">
+                <AlertCircle size={40} className="stroke-[2.5]" />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">Access Denied</h3>
+              <p className="text-slate-500 text-sm font-semibold max-w-sm leading-relaxed">
+                Only the Primary System Administrator has permission to access the Settings, allowed helper directory, and database controls.
+              </p>
+              <button 
+                onClick={() => setActiveTab('dashboard')}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md transition-all cursor-pointer active:scale-95"
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          );
+        }
         return (
           <Settings 
             appData={appData}
@@ -983,9 +1027,10 @@ export default function App() {
             ) : (
               <button 
                 onClick={handleGoogleLogin}
-                className="p-1 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[9px] font-black tracking-wide shrink-0 transition-all active:scale-95 shadow-sm hover:scale-105"
+                disabled={isLoggingIn}
+                className="p-1 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[9px] font-black tracking-wide shrink-0 transition-all active:scale-95 shadow-sm hover:scale-105 disabled:opacity-50"
               >
-                Cloud Sync
+                {isLoggingIn ? 'Syncing...' : 'Cloud Sync'}
               </button>
             )}
             <button 
@@ -1052,17 +1097,45 @@ export default function App() {
             ) : (
               <button 
                 onClick={handleGoogleLogin}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black tracking-wide shadow-lg shadow-blue-600/15 transition-all active:scale-95 cursor-pointer"
+                disabled={isLoggingIn}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black tracking-wide shadow-lg shadow-blue-600/15 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
               >
-                <LogIn size={14} />
-                <span>Sync with Google</span>
+                {isLoggingIn ? (
+                  <span className="animate-pulse">Connecting...</span>
+                ) : (
+                  <>
+                    <LogIn size={14} />
+                    <span>Sync with Google</span>
+                  </>
+                )}
               </button>
             )}
           </div>
         </div>
 
         {/* Page Content */}
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto relative">
+          {/* Printable formal header */}
+          <div className="hidden print:block print-header">
+            <div className="flex items-center justify-between border-b pb-2 mb-4 border-slate-900 font-sans">
+              <div className="flex items-center gap-3">
+                {appData.logo ? (
+                  <img src={appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg" />
+                ) : (
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">C</div>
+                )}
+                <div className="flex flex-col">
+                  <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">ST.CASIMIR CHARITABLE TRUST</h1>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">SCC TRUST LUCKY COUPON SALE 2026</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Report Date</span>
+                <span className="text-xs font-black text-slate-800">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              </div>
+            </div>
+          </div>
+
           {showNotificationPrompt && (
             <div className="mb-6 bg-blue-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-600/20 flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500">
               <div className="flex items-center gap-4">

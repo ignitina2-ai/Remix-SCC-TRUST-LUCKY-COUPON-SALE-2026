@@ -514,7 +514,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
                     <div className="flex items-center gap-1 font-semibold text-slate-700 text-[10px] md:text-xs">
                       <PaymentIcon method={t.paymentMethod} />
                       <span className="truncate max-w-[65px] sm:max-w-none">
-                        {customPaymentLabels?.[t.paymentMethod] || t.paymentMethod.replace('_', ' ')}
+                        {customPaymentLabels?.[t.paymentMethod] || DEFAULT_PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod.replace('_', ' ')}
                       </span>
                     </div>
                   </div>

@@ -24,7 +24,7 @@ interface TransactionFormProps {
   onUpdateTransaction?: (id: string, updates: Partial<Transaction>) => void;
   onCancelEdit?: () => void;
   transactions: Transaction[];
-  onDelete: (id: string) => void;
+  onDelete: (ids: string[]) => void;
   onToggleTreasurer: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
   customPaymentLabels?: Record<PaymentMethod, string>;
@@ -81,9 +81,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     switch(id) {
       case 'CASH': return { color: 'text-emerald-600', bg: 'bg-emerald-50' };
       case 'CREDIT': return { color: 'text-amber-600', bg: 'bg-amber-50' };
-      case 'GOOGLE_PAY': return { color: 'text-blue-600', bg: 'bg-blue-50' };
-      case 'PHONE_PAY': return { color: 'text-indigo-600', bg: 'bg-indigo-50' };
-      case 'PAYTM': return { color: 'text-sky-600', bg: 'bg-sky-50' };
+      case 'TRUST GPAY': return { color: 'text-blue-600', bg: 'bg-blue-50' };
+      case 'SOFIA GPAY': return { color: 'text-indigo-600', bg: 'bg-indigo-50' };
+      case 'JOHNY GPAY': return { color: 'text-sky-600', bg: 'bg-sky-50' };
       default: return { color: 'text-violet-600', bg: 'bg-violet-50' };
     }
   };
@@ -291,9 +291,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               : [
                   { id: 'CASH', label: 'Cash', isDisabled: false, isSystem: true },
                   { id: 'CREDIT', label: 'Credit', isDisabled: false, isSystem: true },
-                  { id: 'GOOGLE_PAY', label: 'Google Pay', isDisabled: false, isSystem: false },
-                  { id: 'PHONE_PAY', label: 'PhonePe', isDisabled: false, isSystem: false },
-                  { id: 'PAYTM', label: 'Paytm', isDisabled: false, isSystem: false },
+                  { id: 'TRUST GPAY', label: 'TRUST GPAY', isDisabled: false, isSystem: false },
+                  { id: 'SOFIA GPAY', label: 'SOFIA GPAY', isDisabled: false, isSystem: false },
+                  { id: 'JOHNY GPAY', label: 'JOHNY GPAY', isDisabled: false, isSystem: false },
                   { id: 'OTHER_UPI', label: 'Other UPI', isDisabled: false, isSystem: false },
                 ]
             ).map((method) => {
@@ -366,6 +366,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           onDelete={onDelete}
           onToggleTreasurer={onToggleTreasurer}
           onEdit={onEdit}
+          customPaymentLabels={customPaymentLabels}
         />
       </div>
     </div>

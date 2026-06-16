@@ -37,7 +37,9 @@
         "amount": { "type": "number", "description": "Promised premium or monetary support" },
         "collectedAmount": { "type": "number", "description": "Amount collected from the sponsor so far" },
         "status": { "type": "string", "enum": ["COLLECTED", "PENDING", "FLAGGED"] },
-        "collectedDate": { "type": "string", "description": "Optional collection date" }
+        "collectedDate": { "type": "string", "description": "Optional collection date" },
+        "prizeImageUrl": { "type": "string", "description": "URL of the uploaded prize image in Storage" },
+        "prizeImageName": { "type": "string", "description": "Filename of the uploaded prize image" }
       },
       "required": ["id", "name", "area", "prizeDescription", "amount", "collectedAmount", "status"]
     },
@@ -51,7 +53,9 @@
         "description": { "type": "string" },
         "amount": { "type": "number" },
         "type": { "type": "string", "enum": ["INCOME", "EXPENSE"] },
-        "category": { "type": "string" }
+        "category": { "type": "string" },
+        "receiptUrl": { "type": "string", "description": "URL of the uploaded receipt in Storage" },
+        "receiptName": { "type": "string", "description": "Original filename of the uploaded receipt" }
       },
       "required": ["id", "date", "description", "amount", "type"]
     },

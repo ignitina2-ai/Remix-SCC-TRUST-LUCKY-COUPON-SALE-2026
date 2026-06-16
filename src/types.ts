@@ -43,6 +43,8 @@ export interface Sponsor {
   collectedAmount: number;
   status: 'COLLECTED' | 'PENDING' | 'FLAGGED';
   collectedDate?: string;
+  prizeImageUrl?: string;
+  prizeImageName?: string;
 }
 
 export interface CreditSettings {
@@ -100,6 +102,8 @@ export interface IncomeExpense {
   amount: number;
   type: EntryType;
   category?: string;
+  receiptUrl?: string;
+  receiptName?: string;
 }
 
 export const COUPON_PRICE = 100;

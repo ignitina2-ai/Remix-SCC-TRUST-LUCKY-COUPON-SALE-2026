@@ -24,16 +24,20 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, user }) => {
-  const isPrimaryAdmin = user && user.email?.toLowerCase() === 'ignitina2@gmail.com';
+  const isPrimaryAdmin = user && (
+    user.email?.toLowerCase() === 'ignitina2@gmail.com' ||
+    user.email?.toLowerCase() === 'ignitina2@gmail.com'
+  );
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'add-transaction', label: 'Add Sale', icon: PlusCircle },
+    { id: 'transactions', label: 'Transaction History', icon: History },
     { id: 'credit', label: 'Credit Management', icon: CreditCard },
     { id: 'income-expense', label: 'Income & Expense', icon: Banknote },
     { id: 'secretary-handover', label: 'Secretary Handover', icon: Users },
     { id: 'sponsors', label: 'Prize Sponsors', icon: Trophy },
-    ...(!user || isPrimaryAdmin ? [{ id: 'settings', label: 'Settings & Backup', icon: SettingsIcon }] : []),
+    ...(isPrimaryAdmin ? [{ id: 'settings', label: 'Settings & Backup', icon: SettingsIcon }] : []),
   ];
 
   return (
