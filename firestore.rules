@@ -107,7 +107,7 @@ service cloud.firestore {
 
     function isValidAppSettings(data) {
       return data.id is string && data.id.size() <= 128
-        && (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000))
+        && (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000))
         && (!('notificationsEnabled' in data) || data.notificationsEnabled is bool)
         && (!('creditSettings' in data) || data.creditSettings is map)
         && (!('customPaymentLabels' in data) || data.customPaymentLabels is map)
@@ -151,7 +151,7 @@ service cloud.firestore {
 
     match /settings/{settingsId} {
       allow read: if isAdmin() || isAllowedUserNonAdmin();
-      allow write: if isAdmin() && isValidId(settingsId) && isValidAppSettings(incoming());
+      allow write: if (isAdmin() || isAllowedUserNonAdmin()) && isValidId(settingsId) && isValidAppSettings(incoming());
     }
   }
 }

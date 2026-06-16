@@ -56,9 +56,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     ? transactions.filter(t => {
         const d = new Date(t.date);
         const today = new Date();
-        return d.getDate() === today.getDate() &&
-               d.getMonth() === today.getMonth() &&
-               d.getFullYear() === today.getFullYear();
+        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
+        return formatter.format(d) === formatter.format(today);
       })
     : transactions;
 
@@ -73,9 +72,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         if (viewTimeframe === 'today') {
           const d = new Date(entry.date);
           const today = new Date();
-          return d.getDate() === today.getDate() &&
-                 d.getMonth() === today.getMonth() &&
-                 d.getFullYear() === today.getFullYear();
+          const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
+          return formatter.format(d) === formatter.format(today);
         }
         return true; // overall
       });
@@ -92,9 +90,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         if (viewTimeframe === 'today') {
           const d = new Date(t.date);
           const today = new Date();
-          timeframeMatches = d.getDate() === today.getDate() &&
-                             d.getMonth() === today.getMonth() &&
-                             d.getFullYear() === today.getFullYear();
+          const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
+          timeframeMatches = formatter.format(d) === formatter.format(today);
         }
 
         if (timeframeMatches) {
@@ -123,7 +120,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
   const totalUPI = nonCashCreditMethods.reduce((sum, m) => sum + getAmountByMethod(m.id, timeframe), 0);
   const totalCashSale = totalCash + totalUPI;
-  const totalHandover = (secretaryHandovers || []).reduce((acc, h) => acc + h.amount, 0);
+
+  const totalHandover = timeframe === 'today'
+    ? (secretaryHandovers || []).filter(h => {
+        const d = new Date(h.date);
+        const today = new Date();
+        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
+        return formatter.format(d) === formatter.format(today);
+      }).reduce((acc, h) => acc + h.amount, 0)
+    : (secretaryHandovers || []).reduce((acc, h) => acc + h.amount, 0);
 
   // calculations for monthly chart
   const getMonthlyChartData = () => {
@@ -287,7 +292,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex items-center gap-2 border-l-4 border-blue-600 pl-2">
           <h3 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">Coupon Sales</h3>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
           <StatCard 
             title="Total Coupon Revenue" 
             value={totalSales} 
@@ -311,6 +316,12 @@ const Dashboard: React.FC<DashboardProps> = ({
             value={totalUPI} 
             icon={QrCode} 
             color="bg-indigo-600" 
+          />
+          <StatCard 
+            title="Sec Handover" 
+            value={totalHandover} 
+            icon={Users} 
+            color="bg-teal-600" 
           />
         </div>
 

@@ -1,0 +1,15 @@
+ST. CASIMIR CHARITABLE TRUST KADAVOOR
+=======================================
+SCC LUCKY COUPON SALE 2026 - SPLASH LOGOS REFERENCE
+
+You can save custom mobile and desktop logos directly into this folder!
+If placed here, the system detects them dynamically upon initialization.
+
+Format requirements:
+- Desktop image path:
+  `/public/splash/desktop.png`  (or .jpg, .svg, .webp)
+
+- Mobile image path:
+  `/public/splash/mobile.png`   (or .jpg, .svg, .webp)
+
+Alternatively, you can customize these directly from Settings -> Admin Panel -> App Open Logo Options!

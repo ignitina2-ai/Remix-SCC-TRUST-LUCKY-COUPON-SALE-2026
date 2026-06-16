@@ -26,6 +26,8 @@ interface AllowedUser {
 interface SettingsProps {
   appData: AppData;
   onUpdateLogo: (logo: string) => void;
+  onUpdateLogoMobile?: (logo: string) => void;
+  onUpdateLogoDesktop?: (logo: string) => void;
   onBackup: () => void;
   onRestore: (data: AppData) => void;
   onClearData: () => void;
@@ -45,6 +47,8 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ 
   appData, 
   onUpdateLogo, 
+  onUpdateLogoMobile,
+  onUpdateLogoDesktop,
   onBackup, 
   onRestore, 
   onClearData,
@@ -175,7 +179,13 @@ const Settings: React.FC<SettingsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* App Logo Settings */}
-        <LogoSettings appData={appData} onUpdateLogo={onUpdateLogo} user={user} />
+        <LogoSettings 
+          appData={appData} 
+          onUpdateLogo={onUpdateLogo} 
+          onUpdateLogoMobile={onUpdateLogoMobile}
+          onUpdateLogoDesktop={onUpdateLogoDesktop}
+          user={user} 
+        />
 
         {/* Data Management (Backup, Restore, Notification Toggle) */}
         <BackupSettings 

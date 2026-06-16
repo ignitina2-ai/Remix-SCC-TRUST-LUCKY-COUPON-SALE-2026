@@ -14,6 +14,8 @@ import SponsorsList from './components/SponsorsList';
 import IncomeExpenseManagement from './components/IncomeExpenseManagement';
 import SecretaryHandoverManagement from './components/SecretaryHandoverManagement';
 import Settings from './components/Settings';
+import { SplashComponent } from './components/SplashComponent';
+import { LoginPage } from './components/LoginPage';
 import { AppData, Transaction, Sponsor, IncomeExpense, CreditSettings, SecretaryHandover, PaymentMethod, DEFAULT_PAYMENT_LABELS, CustomPaymentMethod, getDefaultPaymentMethodsList } from './types';
 import { cn, cleanUndefined } from './lib/utils';
 import { sendNotification, requestNotificationPermission } from './lib/notifications';
@@ -70,8 +72,10 @@ export default function App() {
     return defaultData;
   });
 
+  const [showSplash, setShowSplash] = useState(true);
+
   // User state integration
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string }[]>([]);
@@ -83,6 +87,16 @@ export default function App() {
   ));
 
   useEffect(() => {
+    // Check if there is an offline local user session saved previously
+    const savedLocalUser = localStorage.getItem('scc_local_verified_user');
+    if (savedLocalUser) {
+      try {
+        setUser(JSON.parse(savedLocalUser));
+      } catch (e) {
+        console.error("Failed to restore saved local session", e);
+      }
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         const isSuperAdmin = currentUser.email && (
@@ -90,16 +104,37 @@ export default function App() {
           currentUser.email.toLowerCase() === 'ignitina2@gmail.com'
         );
 
+        const cleanEmail = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
+
         if (isSuperAdmin) {
           setUser(currentUser);
+          // Always ensure admin email is cached
+          try {
+            const saved = localStorage.getItem('scc_permitted_emails');
+            let list = saved ? JSON.parse(saved) : [];
+            if (!Array.isArray(list)) list = [];
+            if (!list.includes(cleanEmail)) {
+              list.push(cleanEmail);
+              localStorage.setItem('scc_permitted_emails', JSON.stringify(list));
+            }
+          } catch (e) {}
           setAuthLoading(false);
         } else {
           setAuthLoading(true);
-          const cleanEmail = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
           try {
             const docSnap = await getDoc(doc(db, 'allowedUsers', cleanEmail));
             if (docSnap.exists()) {
               setUser(currentUser);
+              // Save to local cache of permitted emails for seamless subsequent entries
+              try {
+                const saved = localStorage.getItem('scc_permitted_emails');
+                let list = saved ? JSON.parse(saved) : [];
+                if (!Array.isArray(list)) list = [];
+                if (!list.includes(cleanEmail)) {
+                  list.push(cleanEmail);
+                  localStorage.setItem('scc_permitted_emails', JSON.stringify(list));
+                }
+              } catch (e) {}
             } else {
               await signOut(auth);
               setUser(null);
@@ -119,7 +154,10 @@ export default function App() {
           }
         }
       } else {
-        setUser(null);
+        // Only trigger logout state if not in static offline-login bypass style
+        if (!localStorage.getItem('scc_local_verified_user')) {
+          setUser(null);
+        }
         setAuthLoading(false);
       }
     });
@@ -136,12 +174,13 @@ export default function App() {
 
       try {
         const parsed = JSON.parse(saved) as AppData;
+        const promises: Promise<void>[] = [];
         let syncedCount = 0;
         
         // 1. Sync any local transactions
         if (parsed.transactions && parsed.transactions.length > 0) {
           for (const tx of parsed.transactions) {
-            await setDoc(doc(db, 'transactions', tx.id), cleanUndefined(tx));
+            promises.push(setDoc(doc(db, 'transactions', tx.id), cleanUndefined(tx)));
             syncedCount++;
           }
         }
@@ -149,7 +188,7 @@ export default function App() {
         // 2. Sync any local sponsors
         if (parsed.sponsors && parsed.sponsors.length > 0) {
           for (const sp of parsed.sponsors) {
-            await setDoc(doc(db, 'sponsors', sp.id), cleanUndefined(sp));
+            promises.push(setDoc(doc(db, 'sponsors', sp.id), cleanUndefined(sp)));
             syncedCount++;
           }
         }
@@ -157,7 +196,7 @@ export default function App() {
         // 3. Sync any local incomeExpenses
         if (parsed.incomeExpenses && parsed.incomeExpenses.length > 0) {
           for (const ie of parsed.incomeExpenses) {
-            await setDoc(doc(db, 'incomeExpenses', ie.id), cleanUndefined(ie));
+            promises.push(setDoc(doc(db, 'incomeExpenses', ie.id), cleanUndefined(ie)));
             syncedCount++;
           }
         }
@@ -165,9 +204,13 @@ export default function App() {
         // 4. Sync secretaryHandovers
         if (parsed.secretaryHandovers && parsed.secretaryHandovers.length > 0) {
           for (const hv of parsed.secretaryHandovers) {
-            await setDoc(doc(db, 'secretaryHandovers', hv.id), cleanUndefined(hv));
+            promises.push(setDoc(doc(db, 'secretaryHandovers', hv.id), cleanUndefined(hv)));
             syncedCount++;
           }
+        }
+
+        if (promises.length > 0) {
+          await Promise.all(promises);
         }
 
         if (syncedCount > 0) {
@@ -211,6 +254,13 @@ export default function App() {
         list.push(d.data());
       });
       setAllowedUsers(list);
+      // Sync permitted email IDs list to localStorage
+      try {
+        const emails = list.map(u => u.email.toLowerCase().trim()).filter(Boolean);
+        localStorage.setItem('scc_permitted_emails', JSON.stringify(emails));
+      } catch (e) {
+        console.error("Local caching from snapshots collection failed", e);
+      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'allowedUsers');
     });
@@ -312,6 +362,8 @@ export default function App() {
 
   const handleGoogleLogout = async () => {
     try {
+      localStorage.removeItem('scc_local_verified_user');
+      setUser(null);
       await signOut(auth);
     } catch (error) {
       console.error("Logout failed:", error);
@@ -322,28 +374,37 @@ export default function App() {
   const handleSyncLocalToCloud = async (): Promise<boolean> => {
     if (!auth.currentUser) return false;
     try {
+      const promises: Promise<void>[] = [];
+      
       for (const t of appData.transactions) {
-        await setDoc(doc(db, 'transactions', t.id), t);
+        promises.push(setDoc(doc(db, 'transactions', t.id), cleanUndefined(t)));
       }
       for (const s of appData.sponsors) {
-        await setDoc(doc(db, 'sponsors', s.id), s);
+        promises.push(setDoc(doc(db, 'sponsors', s.id), cleanUndefined(s)));
       }
       for (const e of appData.incomeExpenses || []) {
-        await setDoc(doc(db, 'incomeExpenses', e.id), e);
+        promises.push(setDoc(doc(db, 'incomeExpenses', e.id), cleanUndefined(e)));
       }
       for (const h of appData.secretaryHandovers || []) {
-        await setDoc(doc(db, 'secretaryHandovers', h.id), h);
+        promises.push(setDoc(doc(db, 'secretaryHandovers', h.id), cleanUndefined(h)));
       }
       
       const settingsObj = {
         id: 'appSettings',
         logo: appData.logo || '',
+        logoMobile: appData.logoMobile || '',
+        logoDesktop: appData.logoDesktop || '',
         notificationsEnabled: !!appData.notificationsEnabled,
         creditSettings: appData.creditSettings || DEFAULT_CREDIT_SETTINGS,
         customPaymentLabels: appData.customPaymentLabels || DEFAULT_PAYMENT_LABELS,
         paymentMethodsList: appData.paymentMethodsList || []
       };
-      await setDoc(doc(db, 'settings', 'appSettings'), settingsObj);
+      
+      promises.push(setDoc(doc(db, 'settings', 'appSettings'), cleanUndefined(settingsObj)));
+      
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
       return true;
     } catch (err) {
       console.error("Offline upload migration failed: ", err);
@@ -409,6 +470,8 @@ export default function App() {
         setAppData(prev => ({
           ...prev,
           logo: data.logo ?? prev.logo,
+          logoMobile: data.logoMobile ?? prev.logoMobile,
+          logoDesktop: data.logoDesktop ?? prev.logoDesktop,
           notificationsEnabled: data.notificationsEnabled ?? prev.notificationsEnabled,
           creditSettings: data.creditSettings ?? prev.creditSettings,
           customPaymentLabels: data.customPaymentLabels ?? prev.customPaymentLabels,
@@ -746,6 +809,30 @@ export default function App() {
     }
   };
 
+  const updateLogoMobile = async (logoMobile: string) => {
+    if (user) {
+      try {
+        await setDoc(doc(db, 'settings', 'appSettings'), { logoMobile }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `settings/appSettings`);
+      }
+    } else {
+      setAppData(prev => ({ ...prev, logoMobile }));
+    }
+  };
+
+  const updateLogoDesktop = async (logoDesktop: string) => {
+    if (user) {
+      try {
+        await setDoc(doc(db, 'settings', 'appSettings'), { logoDesktop }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `settings/appSettings`);
+      }
+    } else {
+      setAppData(prev => ({ ...prev, logoDesktop }));
+    }
+  };
+
   const updateCreditSettings = async (settings: CreditSettings) => {
     if (user) {
       try {
@@ -952,6 +1039,8 @@ export default function App() {
           <Settings 
             appData={appData}
             onUpdateLogo={updateLogo}
+            onUpdateLogoMobile={updateLogoMobile}
+            onUpdateLogoDesktop={updateLogoDesktop}
             onBackup={backupData}
             onRestore={restoreData}
             onClearData={clearData}
@@ -986,6 +1075,31 @@ export default function App() {
     }
   };
 
+  if (showSplash) {
+    return (
+      <SplashComponent 
+        onComplete={() => setShowSplash(false)} 
+        logoUrl={appData.logo} 
+      />
+    );
+  }
+
+  if (!user) {
+    return (
+      <LoginPage
+        onLoginSuccess={(loggedInUser) => {
+          localStorage.setItem('scc_local_verified_user', JSON.stringify(loggedInUser));
+          setUser(loggedInUser);
+        }}
+        handleGoogleLogin={handleGoogleLogin}
+        isLoggingIn={isLoggingIn}
+        authError={authError}
+        setAuthError={setAuthError}
+        logoUrl={appData.logo}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <Sidebar 
@@ -1008,7 +1122,7 @@ export default function App() {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
           >
             {appData.logo ? (
-              <img src={appData.logo} alt="Logo" className="w-6 h-6 object-contain" />
+              <img src={appData.logo} alt="Logo" className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-[10px] shrink-0">C</div>
             )}
@@ -1020,13 +1134,23 @@ export default function App() {
           
           <div className="flex items-center gap-2">
             {user ? (
-              <button
-                onClick={handleGoogleLogout}
-                title={`Cloud Connected: ${user.displayName || user.email}`}
-                className="w-7 h-7 rounded-full border border-emerald-300 overflow-hidden shrink-0 shadow-sm"
-              >
-                <img src={user.photoURL || "https://picsum.photos/seed/admin/100/100"} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-              </button>
+              isPrimaryAdmin ? (
+                <button
+                  onClick={handleGoogleLogout}
+                  title={`Cloud Connected: ${user.displayName || user.email}`}
+                  className="w-7 h-7 rounded-full border border-emerald-300 overflow-hidden shrink-0 shadow-sm"
+                >
+                  <img src={user.photoURL || "https://picsum.photos/seed/admin/100/100"} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleGoogleLogout}
+                  title="Disconnect Cloud Sync"
+                  className="p-1 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg text-[9px] font-black tracking-wide shrink-0 transition-all active:scale-95 shadow-sm"
+                >
+                  Disconnect
+                </button>
+              )
             ) : (
               <button 
                 onClick={handleGoogleLogin}
@@ -1052,7 +1176,7 @@ export default function App() {
             className="flex items-center gap-4 hover:opacity-80 transition-opacity text-left"
           >
             {appData.logo ? (
-              <img src={appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg shadow-sm" />
+              <img src={appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg shadow-sm" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">C</div>
             )}
@@ -1078,25 +1202,36 @@ export default function App() {
             </div>
 
             {user ? (
-              <div className="flex items-center gap-3 bg-white border border-slate-100 shadow-sm pl-4 pr-1.5 py-1 rounded-2xl">
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Cloud Connected
-                  </p>
-                  <p className="text-[11px] font-bold text-slate-700 max-w-[120px] truncate">{user.displayName || user.email}</p>
+              isPrimaryAdmin ? (
+                <div className="flex items-center gap-3 bg-white border border-slate-100 shadow-sm pl-4 pr-1.5 py-1 rounded-2xl">
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Cloud Connected
+                    </p>
+                    <p className="text-[11px] font-bold text-slate-700 max-w-[120px] truncate">{user.displayName || user.email}</p>
+                  </div>
+                  <button
+                    onClick={handleGoogleLogout}
+                    title="Logout Cloud Sync"
+                    className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden hover:opacity-80 transition-all shrink-0 relative group shadow-inner"
+                  >
+                    <img src={user.photoURL || "https://picsum.photos/seed/admin/100/100"} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+                      <LogOut size={12} className="text-white" />
+                    </div>
+                  </button>
                 </div>
+              ) : (
                 <button
                   onClick={handleGoogleLogout}
-                  title="Logout Cloud Sync"
-                  className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden hover:opacity-80 transition-all shrink-0 relative group shadow-inner"
+                  title="Disconnect Cloud Sync"
+                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 px-5 py-2.5 rounded-2xl text-xs font-black tracking-wide transition-all active:scale-95 cursor-pointer shadow-sm"
                 >
-                  <img src={user.photoURL || "https://picsum.photos/seed/admin/100/100"} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
-                    <LogOut size={12} className="text-white" />
-                  </div>
+                  <LogOut size={14} />
+                  <span>Disconnect</span>
                 </button>
-              </div>
+              )
             ) : (
               <button 
                 onClick={handleGoogleLogin}
@@ -1123,7 +1258,7 @@ export default function App() {
             <div className="flex items-center justify-between border-b pb-2 mb-4 border-slate-900 font-sans">
               <div className="flex items-center gap-3">
                 {appData.logo ? (
-                  <img src={appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg" />
+                  <img src={appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">C</div>
                 )}

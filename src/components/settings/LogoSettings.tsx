@@ -1,18 +1,32 @@
 import React, { useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle, Laptop, Smartphone } from 'lucide-react';
 import { AppData } from '@/types';
 import { uploadFile, deleteFileFromStorage } from '@/lib/storage';
 
 interface LogoSettingsProps {
   appData: AppData;
   onUpdateLogo: (logo: string) => void;
+  onUpdateLogoMobile?: (logo: string) => void;
+  onUpdateLogoDesktop?: (logo: string) => void;
   user: any;
 }
 
-export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLogo, user }) => {
+export const LogoSettings: React.FC<LogoSettingsProps> = ({ 
+  appData, 
+  onUpdateLogo, 
+  onUpdateLogoMobile, 
+  onUpdateLogoDesktop, 
+  user 
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<'desktop' | 'mobile'>('desktop');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const isMobileLogo = activeTab === 'mobile';
+  const currentLogo = isMobileLogo 
+    ? (appData.logoMobile || '') 
+    : (appData.logoDesktop || appData.logo || '');
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,8 +40,10 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
     setIsUploading(true);
     setUploadError(null);
 
+    const oldUrl = currentLogo;
+
     if (user) {
-      // 2.5 second timeout safeguard to prevent hanging
+      // Timeout safeguard to prevent infinite hanging
       const uploadWithTimeout = (fileObj: File, filePath: string, ms: number): Promise<string> => {
         return new Promise((resolve, reject) => {
           const timer = setTimeout(() => {
@@ -48,32 +64,42 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
       };
 
       try {
-        // Sanitize name a bit
         const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const uniquePath = `logos/logo_${Date.now()}_${safeName}`;
+        const prefix = isMobileLogo ? 'logo_mobile' : 'logo_desktop';
+        const uniquePath = `logos/${prefix}_${Date.now()}_${safeName}`;
         
         // Delete old storage logo if it was a storage URL to save space
-        if (appData.logo && appData.logo.startsWith('http')) {
-          await deleteFileFromStorage(appData.logo);
+        if (oldUrl && oldUrl.startsWith('http')) {
+          await deleteFileFromStorage(oldUrl).catch(err => console.warn("Failed to delete old file:", err));
         }
 
-        const downloadUrl = await uploadWithTimeout(file, uniquePath, 2500);
-        onUpdateLogo(downloadUrl);
+        const downloadUrl = await uploadWithTimeout(file, uniquePath, 25000);
+        if (isMobileLogo) {
+          onUpdateLogoMobile?.(downloadUrl);
+        } else {
+          onUpdateLogoDesktop?.(downloadUrl);
+          onUpdateLogo(downloadUrl);
+        }
         setIsUploading(false);
       } catch (err: any) {
-        console.warn("Failed to upload logo to Firebase Storage or timed out, using local fallback:", err);
-        // Fallback to local image reader if storage upload failed or timed out
-        readAndSetLocal(file);
+        console.warn("Failed to upload logo to Firebase Storage, using local fallback:", err);
+        readAndSetLocal(file, isMobileLogo);
       }
     } else {
-      readAndSetLocal(file);
+      readAndSetLocal(file, isMobileLogo);
     }
   };
 
-  const readAndSetLocal = (file: File) => {
+  const readAndSetLocal = (file: File, forMobile: boolean) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      onUpdateLogo(reader.result as string);
+      const result = reader.result as string;
+      if (forMobile) {
+        onUpdateLogoMobile?.(result);
+      } else {
+        onUpdateLogoDesktop?.(result);
+        onUpdateLogo(result);
+      }
       setIsUploading(false);
     };
     reader.onerror = () => {
@@ -84,23 +110,58 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
   };
 
   const handleDeleteLogo = async () => {
-    if (appData.logo && appData.logo.startsWith('http')) {
+    const oldUrl = currentLogo;
+    if (oldUrl && oldUrl.startsWith('http')) {
       try {
-        await deleteFileFromStorage(appData.logo);
+        await deleteFileFromStorage(oldUrl);
       } catch (err) {
         console.warn("Failed to delete stale logo file:", err);
       }
     }
-    onUpdateLogo('');
+
+    if (isMobileLogo) {
+      onUpdateLogoMobile?.('');
+    } else {
+      onUpdateLogoDesktop?.('');
+      onUpdateLogo('');
+    }
   };
 
   return (
     <div id="settings-card-logo" className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-          <ImageIcon size={20} />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
+            <ImageIcon size={20} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">App Open Logo Options</h3>
         </div>
-        <h3 className="text-lg font-bold text-slate-900">App Logo</h3>
+      </div>
+
+      {/* Tabs Selector */}
+      <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/40">
+        <button
+          onClick={() => { setActiveTab('desktop'); setUploadError(null); }}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'desktop'
+              ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Laptop size={14} />
+          Desktop & default Layout
+        </button>
+        <button
+          onClick={() => { setActiveTab('mobile'); setUploadError(null); }}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'mobile'
+              ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Smartphone size={14} />
+          Mobile Phone Layout
+        </button>
       </div>
       
       <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 transition-all hover:bg-slate-100 relative">
@@ -114,9 +175,9 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
               Uploading to Cloud Storage...
             </p>
           </div>
-        ) : appData.logo ? (
+        ) : currentLogo ? (
           <div className="relative group">
-            <img src={appData.logo} alt="App Logo" className="w-32 h-32 object-contain rounded-xl shadow-md" />
+            <img src={currentLogo} alt="App Logo" className="w-32 h-32 object-contain rounded-xl shadow-md" />
             <button 
               onClick={handleDeleteLogo}
               className="absolute -top-2 -right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
@@ -129,7 +190,12 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-slate-300 shadow-sm">
               <Upload size={24} />
             </div>
-            <p className="text-slate-500 text-sm font-medium">No logo uploaded yet</p>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">No custom logo configured</p>
+            <p className="text-[10px] text-slate-400 font-bold max-w-xs mx-auto">
+              {isMobileLogo 
+                ? "If empty, mobile phones will display target file from `/splash/mobile.png` folder path or fall back to system defaults." 
+                : "If empty, desktop devices will display target file from `/splash/desktop.png` folder path or the custom attached image settings."}
+            </p>
           </div>
         )}
         <input 
@@ -143,20 +209,20 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({ appData, onUpdateLog
         <button 
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="mt-6 bg-white border border-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+          className="mt-6 bg-white border border-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all shadow-sm cursor-pointer disabled:opacity-50 uppercase tracking-widest"
         >
-          {appData.logo ? 'Change Logo' : 'Upload Logo'}
+          {currentLogo ? 'Change Selected Logo' : 'Upload custom logo'}
         </button>
 
         {uploadError && (
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
+          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 animate-slide-in">
             <AlertCircle size={12} />
             <span>{uploadError}</span>
           </div>
         )}
       </div>
-      <p className="text-xs text-slate-400 text-center font-medium">
-        {user ? "Saved securely in Firebase Cloud Storage." : "Saved locally on your browser. Connect Cloud server to enable persistent Cloud Storage."}
+      <p className="text-[10px] text-slate-400 text-center font-bold uppercase tracking-widest">
+        {user ? "Saved securely in Firebase Cloud Storage." : "Saved locally on your browser database."}
       </p>
     </div>
   );

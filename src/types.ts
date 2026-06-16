@@ -67,6 +67,8 @@ export interface AppData {
   incomeExpenses: IncomeExpense[];
   secretaryHandovers: SecretaryHandover[];
   logo?: string;
+  logoMobile?: string;
+  logoDesktop?: string;
   notificationsEnabled?: boolean;
   creditSettings?: CreditSettings;
   customPaymentLabels?: Record<PaymentMethod, string>;

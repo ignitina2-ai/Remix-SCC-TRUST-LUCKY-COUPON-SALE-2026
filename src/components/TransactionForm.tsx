@@ -11,7 +11,8 @@ import {
   Phone,
   Mail,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 import { Transaction, PaymentMethod, COUPON_PRICE, COUPONS_PER_BOOK, CustomPaymentMethod } from '@/types';
 import { cn } from '@/lib/utils';
@@ -102,6 +103,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     bookNumber: '',
     paymentMethod: 'CASH' as PaymentMethod,
     paidAmount: 0,
+    date: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
@@ -115,6 +117,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         bookNumber: editingTransaction.bookNumber || '',
         paymentMethod: editingTransaction.paymentMethod,
         paidAmount: editingTransaction.paidAmount,
+        date: editingTransaction.date ? editingTransaction.date.split('T')[0] : new Date().toISOString().split('T')[0],
       });
     }
   }, [editingTransaction]);
@@ -158,10 +161,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         paidAmount: finalPaidAmount,
         creditAmount: finalCreditAmount,
         paymentMethod: formData.paymentMethod,
+        date: new Date(formData.date + 'T12:00:00').toISOString(),
       });
     } else {
       onAddTransaction({
-        date: new Date().toISOString(),
+        date: new Date(formData.date + 'T12:00:00').toISOString(),
         name: formData.name,
         phone: formData.phone,
         area: formData.area,
@@ -187,6 +191,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       bookNumber: '',
       paymentMethod: 'CASH',
       paidAmount: 0,
+      date: new Date().toISOString().split('T')[0],
     });
     
     setShowSuccess(true);
@@ -194,12 +199,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   };
 
   const getTodaySalesStats = () => {
-    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-    
     const todayTransactions = (transactions || []).filter(t => {
       try {
-        const transDate = new Date(t.date).toLocaleDateString('en-CA');
-        return transDate === todayStr;
+        const d = new Date(t.date);
+        const today = new Date();
+        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
+        return formatter.format(d) === formatter.format(today);
       } catch (e) {
         return false;
       }
@@ -323,6 +328,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             placeholder="John Doe" 
             value={formData.name}
             onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
+
+          <InputField 
+            label="Sale Date" 
+            icon={Calendar} 
+            type="date" 
+            value={formData.date}
+            onChange={(e: any) => setFormData({ ...formData, date: e.target.value })}
             required
           />
           
