@@ -352,7 +352,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
           {/* Total Cash Sale */}
           <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
-            <p className="text-slate-100/10 hidden">CASH SALE ONLY</p>
+            <p className="text-slate-100/10 hidden">CASH SALE</p>
             <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Cash Sale Only</p>
             <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-600 mt-1 truncate">₹{todayStats.totalCash.toLocaleString('en-IN')}</h4>
           </div>
