@@ -472,8 +472,8 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
         </div>
       )}
 
-      {/* Summary Cards Grid (Requested as another grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Summary Cards Grid (Optimized as 2x2 grid to save space) */}
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
           <div className="p-2 rounded-lg shrink-0 bg-emerald-600">
             <IndianRupee className="text-white w-4 h-4" />
@@ -647,16 +647,16 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
       </div>
 
       {/* Recipient list card block */}
-      <div className="space-y-2">
-        {filteredHandovers.length === 0 ? (
-          <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200">
-            <div className="bg-slate-50 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 text-slate-300">
-              <Filter size={18} />
-            </div>
-            <p className="text-slate-400 font-bold text-xs">No records found</p>
+      {filteredHandovers.length === 0 ? (
+        <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200">
+          <div className="bg-slate-50 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 text-slate-300">
+            <Filter size={18} />
           </div>
-        ) : (
-          filteredHandovers.map((handover) => {
+          <p className="text-slate-400 font-bold text-xs">No records found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
+          {filteredHandovers.map((handover) => {
             const isExpanded = !isCollapsedMode || expandedIds.has(handover.id);
             return (
               <div 
@@ -728,9 +728,9 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
                 )}
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
       <ConfirmationModal
         isOpen={deleteIds.length > 0}

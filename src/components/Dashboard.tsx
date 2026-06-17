@@ -196,8 +196,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     return null;
   };
 
-  const StatCard = ({ title, value, icon: Icon, color, subValue, subLabel }: any) => (
-    <div className="bg-white p-2.5 sm:p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-2 sm:gap-3 transition-all hover:shadow-md">
+  const StatCard = ({ title, value, icon: Icon, color, subValue, subLabel, className }: any) => (
+    <div className={cn("bg-white p-2.5 sm:p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-2 sm:gap-3 transition-all hover:shadow-md", className)}>
       <div className={cn("p-1.5 sm:p-2 rounded-lg shrink-0", color)}>
         <Icon className="text-white w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </div>
@@ -327,6 +327,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             value={totalHandover} 
             icon={Users} 
             color="bg-teal-600" 
+            className="col-span-2 lg:col-span-1"
           />
         </div>
 

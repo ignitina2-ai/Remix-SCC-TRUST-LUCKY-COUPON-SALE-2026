@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Cloud, 
-  CloudOff, 
-  LogIn, 
-  LogOut, 
   CheckCircle2, 
   AlertCircle 
 } from 'lucide-react';
@@ -35,9 +31,6 @@ interface SettingsProps {
   onUpdatePaymentLabels: (labels: Record<PaymentMethod, string>) => void;
   onUpdatePaymentMethodsList?: (list: CustomPaymentMethod[]) => void;
   user: any; // User | null
-  onGoogleLogin: () => void;
-  onGoogleLogout: () => void;
-  onSyncLocalToCloud: () => Promise<boolean>;
   allowedUsers?: AllowedUser[];
   onAddAllowedUser?: (email: string) => Promise<void>;
   onDeleteAllowedUser?: (email: string) => Promise<void>;
@@ -57,9 +50,6 @@ const Settings: React.FC<SettingsProps> = ({
   onUpdatePaymentLabels,
   onUpdatePaymentMethodsList,
   user,
-  onGoogleLogin,
-  onGoogleLogout,
-  onSyncLocalToCloud,
   allowedUsers = [],
   onAddAllowedUser,
   onDeleteAllowedUser,
@@ -67,28 +57,11 @@ const Settings: React.FC<SettingsProps> = ({
   activeSessions = []
 }) => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  const [syncingCloud, setSyncingCloud] = useState(false);
   const [userToRevoke, setUserToRevoke] = useState<string | null>(null);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 3000);
-  };
-
-  const handleSyncCloud = async () => {
-    setSyncingCloud(true);
-    try {
-      const success = await onSyncLocalToCloud();
-      if (success) {
-        showNotification('success', 'Local data fully synced to Cloud Storage!');
-      } else {
-        showNotification('error', 'Synchronization failed. Check internet.');
-      }
-    } catch (err) {
-      showNotification('error', 'Sync encountered an error.');
-    } finally {
-      setSyncingCloud(false);
-    }
   };
 
   const handleRevokeConfirm = async () => {

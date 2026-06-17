@@ -1101,9 +1101,6 @@ export default function App() {
             onUpdatePaymentLabels={updatePaymentLabels}
             onUpdatePaymentMethodsList={updatePaymentMethodsList}
             user={user}
-            onGoogleLogin={handleGoogleLogin}
-            onGoogleLogout={handleGoogleLogout}
-            onSyncLocalToCloud={handleSyncLocalToCloud}
             allowedUsers={allowedUsers}
             onAddAllowedUser={addAllowedUser}
             onDeleteAllowedUser={deleteAllowedUser}
