@@ -23,13 +23,10 @@ interface SidebarProps {
   setIsOpen: (isOpen: boolean) => void;
   user?: any;
   onLogout?: () => void;
+  isPrimaryAdmin?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, user, onLogout }) => {
-  const isPrimaryAdmin = user && (
-    user.email?.toLowerCase() === 'ignitina2@gmail.com'
-  );
-
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, user, onLogout, isPrimaryAdmin = false }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'add-transaction', label: 'Add Sale', icon: PlusCircle },

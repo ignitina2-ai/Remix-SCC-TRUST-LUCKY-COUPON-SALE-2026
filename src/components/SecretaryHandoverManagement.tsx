@@ -16,7 +16,8 @@ import {
   EyeOff,
   CreditCard,
   Wallet,
-  QrCode
+  QrCode,
+  AlertCircle
 } from 'lucide-react';
 import { SecretaryHandover, Transaction, CustomPaymentMethod, PaymentMethod, DEFAULT_PAYMENT_LABELS, getDefaultPaymentMethodsList } from '@/types';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,11 @@ interface SecretaryHandoverManagementProps {
   transactions?: Transaction[];
   paymentMethodsList?: CustomPaymentMethod[];
   customPaymentLabels?: Record<PaymentMethod, string>;
+  permissions?: {
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
 }
 
 const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = ({ 
@@ -43,7 +49,8 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
   onDeleteHandover,
   transactions = [],
   paymentMethodsList,
-  customPaymentLabels = DEFAULT_PAYMENT_LABELS
+  customPaymentLabels = DEFAULT_PAYMENT_LABELS,
+  permissions
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -430,6 +437,20 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
 
   return (
     <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
+      {permissions && !permissions.canAdd && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle size={16} className="text-amber-600 shrink-0" />
+          <span>Adding handover entries has been disabled by the Primary Admin.</span>
+        </div>
+      )}
+
+      {permissions && !permissions.canEdit && editingId && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle size={16} className="text-amber-600 shrink-0" />
+          <span>Editing handover entries has been disabled by the Primary Admin.</span>
+        </div>
+      )}
+
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Handover to Secretary</h1>
@@ -452,18 +473,27 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
           </button>
           {selectedIds.size > 0 && (
             <button 
-              onClick={() => setDeleteIds(Array.from(selectedIds))}
-              className="p-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg md:rounded-xl hover:bg-rose-100 transition-all font-bold text-xs flex items-center gap-1 cursor-pointer"
+              disabled={permissions?.canDelete === false}
+              onClick={() => permissions?.canDelete !== false && setDeleteIds(Array.from(selectedIds))}
+              className={cn(
+                "p-2 border rounded-lg md:rounded-xl transition-all font-bold text-xs flex items-center gap-1",
+                permissions?.canDelete === false
+                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-55"
+                  : "bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 cursor-pointer"
+              )}
             >
               <Trash2 size={14} />
               <span>Delete ({selectedIds.size})</span>
             </button>
           )}
           <button 
-            onClick={() => setShowForm(!showForm)}
+            disabled={permissions?.canAdd === false}
+            onClick={() => permissions?.canAdd !== false && setShowForm(!showForm)}
             className={cn(
-              "px-3 py-1.5 rounded-lg md:rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1 font-bold text-xs cursor-pointer",
-              showForm ? "bg-slate-150 text-slate-600 border border-slate-200" : "bg-blue-600 text-white shadow-blue-600/10"
+              "px-3 py-1.5 rounded-lg md:rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1 font-bold text-xs",
+              permissions?.canAdd === false
+                ? "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed opacity-55 shadow-none"
+                : (showForm ? "bg-slate-150 text-slate-600 border border-slate-200 cursor-pointer" : "bg-blue-600 text-white shadow-blue-600/10 cursor-pointer")
             )}
           >
             {showForm ? <Minus size={14} /> : <Plus size={14} />}
@@ -557,7 +587,13 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
 
             <button 
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md shadow-blue-600/15 transition-all active:scale-95 text-xs cursor-pointer"
+              disabled={editingId ? (permissions?.canEdit === false) : (permissions?.canAdd === false)}
+              className={cn(
+                "w-full py-2.5 rounded-lg font-bold shadow-md transition-all active:scale-95 text-xs cursor-pointer",
+                (editingId ? (permissions?.canEdit === false) : (permissions?.canAdd === false))
+                  ? "bg-slate-300 border border-slate-400 cursor-not-allowed opacity-50 shadow-none text-slate-500"
+                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/15"
+              )}
             >
               {editingId ? 'Update Record' : 'Save Record'}
             </button>
@@ -672,17 +708,29 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
                       </div>
                     )}
 
-                    <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-slate-100">
+                    <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-slate-100 font-sans">
                       <button 
-                        onClick={() => handleEdit(handover)}
-                        className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-md font-bold text-[10px] hover:bg-blue-100 transition-all cursor-pointer"
+                        disabled={permissions?.canEdit === false}
+                        onClick={() => permissions?.canEdit !== false && handleEdit(handover)}
+                        className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-md font-bold text-[10px] transition-all",
+                          permissions?.canEdit === false
+                            ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-55"
+                            : "bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 cursor-pointer"
+                        )}
                       >
                         <Edit2 size={10} />
                         <span>Edit</span>
                       </button>
                       <button 
-                        onClick={() => setDeleteIds([handover.id])}
-                        className="flex items-center gap-1 px-2 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-md font-bold text-[10px] hover:bg-rose-100 transition-all cursor-pointer"
+                        disabled={permissions?.canDelete === false}
+                        onClick={() => permissions?.canDelete !== false && setDeleteIds([handover.id])}
+                        className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-md font-bold text-[10px] transition-all",
+                          permissions?.canDelete === false
+                            ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-55"
+                            : "bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 cursor-pointer"
+                        )}
                       >
                         <Trash2 size={10} />
                         <span>Delete</span>

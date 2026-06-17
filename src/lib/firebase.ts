@@ -58,8 +58,14 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  const isOffline = errMsg.toLowerCase().includes('offline') || 
+                    errMsg.toLowerCase().includes('unavailable') || 
+                    errMsg.toLowerCase().includes('network') ||
+                    (error && typeof error === 'object' && (error as any).code === 'unavailable');
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid || null,
       email: auth.currentUser?.email || null,
@@ -74,6 +80,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
+
+  if (isOffline) {
+    console.warn('Firestore Offline/Network Warning: ', JSON.stringify(errInfo));
+    return; // Don't throw for offline/network/unavailable issues to keep app responsive
+  }
+
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }

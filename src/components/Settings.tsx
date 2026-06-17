@@ -24,6 +24,9 @@ interface AllowedUser {
   addedAt?: string;
   addedBy?: string;
   disabled?: boolean;
+  canAdd?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 interface SettingsProps {
@@ -42,6 +45,7 @@ interface SettingsProps {
   onAddAllowedUser?: (email: string) => Promise<void>;
   onDeleteAllowedUser?: (email: string) => Promise<void>;
   onToggleAllowedUserDisabled?: (email: string, disabled: boolean) => Promise<void>;
+  onUpdateAllowedUserPermission?: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', value: boolean) => Promise<void>;
   activeSessions?: any[];
   onGoogleLogin?: () => Promise<void>;
   onGoogleLogout?: () => Promise<void>;
@@ -64,6 +68,7 @@ const Settings: React.FC<SettingsProps> = ({
   onAddAllowedUser,
   onDeleteAllowedUser,
   onToggleAllowedUserDisabled,
+  onUpdateAllowedUserPermission,
   activeSessions = [],
   onGoogleLogin,
   onGoogleLogout,
@@ -89,7 +94,10 @@ const Settings: React.FC<SettingsProps> = ({
     setUserToRevoke(null);
   };
 
-  const isPrimaryAdmin = user && user.email?.toLowerCase() === 'ignitina2@gmail.com';
+  const isPrimaryAdmin = !!(user && user.email && (
+    user.email.toLowerCase() === 'ignitina2@gmail.com' ||
+    allowedUsers.some(u => u.email.toLowerCase() === user.email?.toLowerCase() && !u.disabled)
+  ));
 
   return (
     <div id="settings-management-container" className="max-w-4xl mx-auto space-y-10 p-4 font-sans pb-16">
@@ -251,6 +259,7 @@ const Settings: React.FC<SettingsProps> = ({
                 allowedUsers={allowedUsers}
                 onAddAllowedUser={onAddAllowedUser}
                 onToggleAllowedUserDisabled={onToggleAllowedUserDisabled}
+                onUpdateAllowedUserPermission={onUpdateAllowedUserPermission}
                 setUserToRevoke={setUserToRevoke}
                 showNotification={showNotification}
               />

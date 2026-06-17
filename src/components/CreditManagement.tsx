@@ -39,6 +39,11 @@ interface CreditManagementProps {
   onDelete?: (ids: string[]) => void;
   customPaymentLabels?: Record<PaymentMethod, string>;
   paymentMethodsList?: CustomPaymentMethod[];
+  permissions?: {
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
 }
 
 const CreditManagement: React.FC<CreditManagementProps> = ({ 
@@ -47,7 +52,8 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
   onEdit,
   onDelete,
   customPaymentLabels,
-  paymentMethodsList
+  paymentMethodsList,
+  permissions
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [overdueDaysFilter, setOverdueDaysFilter] = useState<number>(0);
@@ -479,8 +485,14 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
                     {isExpanded && (
                       <div className="flex items-center">
                         <button 
-                          onClick={() => setPaymentModal({ id: t.id, amount: t.creditAmount, paymentMethod: 'CASH' })}
-                          className="bg-slate-900 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl font-bold text-xs hover:bg-slate-800 transition-all active:scale-95 shadow flex items-center gap-1 cursor-pointer"
+                          disabled={permissions?.canEdit === false}
+                          onClick={() => permissions?.canEdit !== false && setPaymentModal({ id: t.id, amount: t.creditAmount, paymentMethod: 'CASH' })}
+                          className={cn(
+                            "px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl font-bold text-xs transition-all active:scale-95 shadow flex items-center gap-1",
+                            permissions?.canEdit === false
+                              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-55 shadow-none"
+                              : "bg-slate-900 text-white hover:bg-slate-800 cursor-pointer"
+                          )}
                         >
                           <span>Record</span>
                           <ArrowRight size={14} />
@@ -518,16 +530,28 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
                     {/* Action buttons inside expanded card */}
                     <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100">
                       <button 
-                        onClick={() => onEdit(t)}
-                        className="p-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-100 transition-all cursor-pointer"
+                        disabled={permissions?.canEdit === false}
+                        onClick={() => permissions?.canEdit !== false && onEdit(t)}
+                        className={cn(
+                          "p-1.5 border rounded-lg transition-all",
+                          permissions?.canEdit === false
+                            ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-55"
+                            : "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer"
+                        )}
                         title="Edit Transaction"
                       >
                         <Edit2 size={14} />
                       </button>
                       {onDelete && (
                         <button 
-                          onClick={() => setDeleteId(t.id)}
-                          className="p-1.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all cursor-pointer"
+                          disabled={permissions?.canDelete === false}
+                          onClick={() => permissions?.canDelete !== false && setDeleteId(t.id)}
+                          className={cn(
+                            "p-1.5 border rounded-lg transition-all",
+                            permissions?.canDelete === false
+                              ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-55"
+                              : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 cursor-pointer"
+                          )}
                           title="Delete Transaction"
                         >
                           <Trash2 size={14} />

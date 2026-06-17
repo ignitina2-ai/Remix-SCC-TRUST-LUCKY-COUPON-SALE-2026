@@ -33,6 +33,11 @@ interface TransactionFormProps {
   onEdit: (transaction: Transaction) => void;
   customPaymentLabels?: Record<PaymentMethod, string>;
   paymentMethodsList?: CustomPaymentMethod[];
+  permissions?: {
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
 }
 
 const AREAS = [
@@ -78,7 +83,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   onToggleTreasurer,
   onEdit,
   customPaymentLabels,
-  paymentMethodsList
+  paymentMethodsList,
+  permissions
 }) => {
   const getIconForMethod = (id: string) => {
     if (id === 'CASH') return Wallet;
@@ -388,6 +394,20 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         </div>
       )}
 
+      {permissions && !permissions.canAdd && !editingTransaction && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle size={16} className="text-amber-600 shrink-0" />
+          <span>Adding entries has been disabled by the Primary Admin.</span>
+        </div>
+      )}
+
+      {permissions && !permissions.canEdit && editingTransaction && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle size={16} className="text-amber-600 shrink-0" />
+          <span>Editing entries has been disabled by the Primary Admin.</span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 space-y-4 md:space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           <InputField 
@@ -626,7 +646,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           </div>
           <button 
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 md:px-6 md:py-3.5 rounded-lg md:rounded-xl font-bold flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all active:scale-95 text-xs md:text-sm cursor-pointer"
+            disabled={editingTransaction ? (permissions?.canEdit === false) : (permissions?.canAdd === false)}
+            className={cn(
+              "text-white px-4 py-2.5 md:px-6 md:py-3.5 rounded-lg md:rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-all active:scale-95 text-xs md:text-sm cursor-pointer",
+              (editingTransaction ? (permissions?.canEdit === false) : (permissions?.canAdd === false))
+                ? "bg-slate-300 border border-slate-400 cursor-not-allowed opacity-50 shadow-none text-slate-500"
+                : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
+            )}
           >
             <Save size={16} />
             {editingTransaction ? 'Update Sale' : 'Save'}
@@ -641,6 +667,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           onToggleTreasurer={onToggleTreasurer}
           onEdit={onEdit}
           customPaymentLabels={customPaymentLabels}
+          permissions={permissions}
         />
       </div>
     </div>

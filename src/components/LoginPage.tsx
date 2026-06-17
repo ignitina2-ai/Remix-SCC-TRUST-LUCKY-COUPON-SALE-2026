@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, HelpCircle, Shield, AlertTriangle, CheckCircle, Mail, ArrowRight, Loader2 } from 'lucide-react';
+import { Shield, AlertTriangle, Loader2 } from 'lucide-react';
 import { TrustLogo } from './TrustLogo';
 import { useActiveResponsiveLogo } from '@/lib/logo-resolver';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 interface LoginPageProps {
   onLoginSuccess: (user: any) => void;
@@ -16,7 +14,6 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
-  onLoginSuccess,
   handleGoogleLogin,
   isLoggingIn,
   authError,
@@ -24,102 +21,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   appData
 }) => {
   const { resolvedLogo } = useActiveResponsiveLogo(appData);
-  const [email, setEmail] = useState('');
-  const [errorLocal, setErrorLocal] = useState<string | null>(null);
-  const [isVerifyingLocal, setIsVerifyingLocal] = useState(false);
-  const [verificationSuccess, setVerificationSuccess] = useState(false);
-
-  // Read saved emails to check against
-  const getCachedEmails = (): string[] => {
-    try {
-      const saved = localStorage.getItem('scc_permitted_emails');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Failed to parse cached permitted emails list", e);
-    }
-    return [];
-  };
-
-  const handleLocalEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorLocal(null);
-    setAuthError(null);
-    
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      setErrorLocal('Please enter your Google Email address.');
-      return;
-    }
-
-    // Built-in email match validator
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanEmail)) {
-      setErrorLocal('Please enter a valid format email address.');
-      return;
-    }
-
-    setIsVerifyingLocal(true);
-
-    try {
-      // Primary Admin match or cached matches list
-      const isPrimaryAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@mail.com';
-      const cachedAllowed = getCachedEmails();
-      let isAllowed = isPrimaryAdmin || cachedAllowed.includes(cleanEmail);
-
-      if (!isAllowed) {
-        // Query Firestore directly to see if this email exists and is not disabled
-        const docSnap = await getDoc(doc(db, 'allowedUsers', cleanEmail));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data && data.disabled !== true) {
-            isAllowed = true;
-            // Cache it locally so subsequent entries are instant
-            try {
-              const saved = localStorage.getItem('scc_permitted_emails');
-              let list = saved ? JSON.parse(saved) : [];
-              if (!Array.isArray(list)) list = [];
-              if (!list.includes(cleanEmail)) {
-                list.push(cleanEmail);
-                localStorage.setItem('scc_permitted_emails', JSON.stringify(list));
-              }
-            } catch (e) {
-              console.error("Failed to cache email locally", e);
-            }
-          } else if (data && data.disabled === true) {
-            setErrorLocal('Access Denied: This account has been disabled by the administrator.');
-            setIsVerifyingLocal(false);
-            return;
-          }
-        }
-      }
-
-      if (isAllowed) {
-        setVerificationSuccess(true);
-        setTimeout(() => {
-          // Log in with offline session structure
-          const mockUser = {
-            email: cleanEmail,
-            displayName: cleanEmail.split('@')[0],
-            photoURL: '',
-            uid: `local_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-            isLocal: true
-          };
-          onLoginSuccess(mockUser);
-        }, 800);
-      } else {
-        setErrorLocal(
-          `Unauthorized Email: "${cleanEmail}" is not listed in the authorized User Admins directory. If you are an authorized helper, please connect with Google first or request the admin (ignitina2@gmail.com) to add you.`
-        );
-      }
-    } catch (err: any) {
-      console.error("Verifying email against directory failed:", err);
-      setErrorLocal("Permission verification failed. Please check your internet connection or try connecting with Google.");
-    } finally {
-      setIsVerifyingLocal(false);
-    }
-  };
 
   return (
     <div 
@@ -151,19 +52,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <Shield className="text-blue-600 mt-0.5 shrink-0" size={16} />
           <div className="text-xs">
             <span className="font-bold text-slate-800 block">Restricted Authorized Portal</span>
-            <span className="text-slate-500 font-semibold mt-0.5 block leading-relaxed">
-              Access is strictly limited to authorized trust administrators and registered helpers.
+            <span className="text-slate-500 font-semibold mt-0.5 block leading-relaxed text-left">
+              Access is strictly limited to authorized trust administrators. Please login using your registered Google Account.
             </span>
           </div>
         </div>
 
-        {/* Google Sync Sign In Option - Primary */}
-        <div className="w-full space-y-2 mb-6">
+        {/* Google Sync Sign In Option - Primary & ONLY login method */}
+        <div className="w-full space-y-4">
           <button
             id="login-google-button"
             onClick={handleGoogleLogin}
             type="button"
-            disabled={isLoggingIn || verificationSuccess}
+            disabled={isLoggingIn}
             className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer animate-fade-in"
           >
             {isLoggingIn ? (
@@ -191,123 +92,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.6-2.4-6.5-5.36l-3.9 3C3.5 20.4 7.4 23 12 23z"
                   />
                 </svg>
-                <span>Connect & Sync with Google</span>
+                <span>Connect & Sign In with Google</span>
               </>
             )}
           </button>
           
           <p className="text-[9.5px] text-emerald-700 font-extrabold text-center uppercase tracking-wider bg-emerald-50/80 py-1.5 px-3 rounded-xl mx-auto w-fit border border-emerald-100 flex items-center justify-center gap-1 shadow-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-            ✨ RECOMMENDED: Syncs all mobile & desktop devices in real time.
+            ✨ Syncs all mobile & desktop devices in real-time.
           </p>
-        </div>
 
-        {/* Divider lines */}
-        <div className="w-full flex items-center justify-between my-4 opacity-40">
-          <div className="h-[1px] bg-slate-200 flex-1" />
-          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-3">or</span>
-          <div className="h-[1px] bg-slate-200 flex-1" />
-        </div>
-
-        {/* Internal Core form for email authorization - Fallback / Local Mode */}
-        <div id="offline-bypass-container" className="w-full bg-slate-50/50 border border-slate-100 rounded-3xl p-4 md:p-5">
-          <div className="mb-3.5 text-left">
-            <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Device-Isolated Offline Mode</h3>
-            <p className="text-[10px] text-slate-500 leading-normal font-semibold mt-0.5">
-              Ideal if Google Sign-In is blocked inside iframes (such as Google AI Studio previews) or if you are offline.
-            </p>
-          </div>
-
-          <form onSubmit={handleLocalEmailSubmit} className="w-full space-y-3">
-            <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block pl-1">
-                Enter Authorized Email ID
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                  <Mail size={14} />
-                </span>
-                <input
-                  id="login-email-input"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setErrorLocal(null);
-                  }}
-                  disabled={isVerifyingLocal || verificationSuccess}
-                  placeholder="helper@gmail.com"
-                  className="w-full pl-10 pr-3 py-3 bg-white border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
-                />
-              </div>
-            </div>
-
-            <AnimatePresence mode="wait">
-              {errorLocal && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="bg-rose-50 border border-rose-100 p-3 rounded-xl text-rose-700 text-[11px] font-semibold flex items-start gap-2 leading-relaxed"
-                >
-                  <AlertTriangle className="stroke-[2.5] mt-0.5 shrink-0 text-rose-500" size={13} />
-                  <span>{errorLocal}</span>
-                </motion.div>
-              )}
-
-              {authError && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-amber-800 text-[11px] font-semibold flex items-start gap-2 leading-relaxed"
-                >
-                  <AlertTriangle className="stroke-[2.5] mt-0.5 shrink-0 text-amber-600" size={13} />
-                  <span>{authError.message}</span>
-                </motion.div>
-              )}
-
-              {verificationSuccess && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-emerald-800 text-[11px] font-black flex items-center gap-2"
-                >
-                  <CheckCircle className="text-emerald-500 shrink-0" size={14} />
-                  <span>Authorized! Redirecting you now...</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <button
-              id="login-verify-button"
-              type="submit"
-              disabled={isVerifyingLocal || verificationSuccess}
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-            >
-              {isVerifyingLocal ? (
-                <>
-                  <Loader2 size={13} className="animate-spin text-white" />
-                  <span>Verifying Access Rights...</span>
-                </>
-              ) : (
-                <>
-                  <span>Verify & Open App (Offline Device-Only)</span>
-                  <ArrowRight size={13} />
-                </>
-              )}
-            </button>
-            
-            <p className="text-[8.5px] text-amber-600 font-extrabold text-center uppercase tracking-wider bg-amber-50/70 py-1 px-2.5 rounded-lg w-fit mx-auto border border-amber-100/60 leading-normal">
-              ⚠️ Warning: Saves ONLY to this browser; will NOT sync cross-device.
-            </p>
-          </form>
+          <AnimatePresence mode="wait">
+            {authError && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-rose-800 text-[11px] font-semibold flex items-start gap-2.5 leading-relaxed text-left"
+              >
+                <AlertTriangle className="stroke-[2.5] mt-0.5 shrink-0 text-rose-500" size={14} />
+                <span>{authError.message}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Informative Footer Support */}
         <div className="mt-8 text-center max-w-[280px]">
           <p className="text-[10px] font-semibold text-slate-400 leading-relaxed">
-            Trouble logging in? Please contact your trust admin to register your Google Account ID on the database directory.
+            Trouble signing in? Please contact your trust admin to register your Google Account ID on the database directory.
           </p>
         </div>
       </div>

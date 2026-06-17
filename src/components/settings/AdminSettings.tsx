@@ -7,6 +7,9 @@ interface AllowedUser {
   addedAt?: string;
   addedBy?: string;
   disabled?: boolean;
+  canAdd?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 interface AdminSettingsProps {
@@ -15,6 +18,7 @@ interface AdminSettingsProps {
   onAddAllowedUser?: (email: string) => Promise<void>;
   onDeleteAllowedUser?: (email: string) => Promise<void>;
   onToggleAllowedUserDisabled?: (email: string, disabled: boolean) => Promise<void>;
+  onUpdateAllowedUserPermission?: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', value: boolean) => Promise<void>;
   setUserToRevoke: (email: string | null) => void;
   showNotification: (type: 'success' | 'error', message: string) => void;
 }
@@ -24,15 +28,16 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   allowedUsers,
   onAddAllowedUser,
   onToggleAllowedUserDisabled,
+  onUpdateAllowedUserPermission,
   setUserToRevoke,
   showNotification,
 }) => {
   const [newEmail, setNewEmail] = useState('');
 
-  const isAdminUser = user && (
-    user.email?.toLowerCase() === 'ignitina2@gmail.com' ||
-    user.email?.toLowerCase() === 'ignitina2@gmail.com'
-  );
+  const isAdminUser = !!(user && user.email && (
+    user.email.toLowerCase() === 'ignitina2@gmail.com' ||
+    allowedUsers.some(u => u.email.toLowerCase() === user.email?.toLowerCase() && !u.disabled)
+  ));
 
   const handleAddEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +56,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     }
 
     if (allowedUsers.some(u => u.email.toLowerCase() === emailToValidate)) {
-      showNotification('error', 'This email is already in the User Admins list.');
+      showNotification('error', 'This email is already in the Trust Admins list.');
       return;
     }
 
@@ -59,7 +64,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       if (onAddAllowedUser) {
         await onAddAllowedUser(emailToValidate);
         setNewEmail('');
-        showNotification('success', `User Admin access successfully granted to ${emailToValidate}.`);
+        showNotification('success', `Trust Admin access successfully granted to ${emailToValidate}.`);
       }
     } catch (err) {
       showNotification('error', 'Failed to save to cloud directory.');
@@ -75,15 +80,15 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
           <ShieldCheck size={20} />
         </div>
         <div className="text-left">
-          <h3 className="text-lg font-bold text-slate-900">User Admins & Access Settings</h3>
-          <p className="text-slate-500 text-xs font-semibold">Authorize User Admin Google mail IDs to log in, make entries, and synchronize data (Settings restricted)</p>
+          <h3 className="text-lg font-bold text-slate-900">Trust Admins & Access Settings</h3>
+          <p className="text-slate-500 text-xs font-semibold">Authorize Trust Admins Google mail IDs to log in, make entries, and synchronize data (Settings restricted)</p>
         </div>
       </div>
 
       <div className="border border-slate-100 rounded-2xl p-5 bg-slate-50/50 space-y-4">
         <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 text-left">
           <UserPlus size={14} />
-          Add Authorized User Admin Email
+          Add Authorized Trust Admin Email
         </h4>
         <form onSubmit={handleAddEmail} className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -92,7 +97,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="Enter User Admin Google email address... (e.g. helper@gmail.com)"
+              placeholder="Enter Trust Admin Google email address... (e.g. trustee@gmail.com)"
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold"
               required
             />
@@ -109,9 +114,9 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
 
       <div className="space-y-3">
         <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider text-left">
-          Authorized User Admin Email IDs ({allowedUsers.length})
+          Authorized Trust Admin Email IDs ({allowedUsers.length})
         </h4>
-        <div className="border border-slate-100 rounded-2xl bg-white overflow-hidden divide-y divide-slate-100 max-h-72 overflow-y-auto">
+        <div className="border border-slate-100 rounded-2xl bg-white overflow-hidden divide-y divide-slate-100 max-h-96 overflow-y-auto">
           {/* Always show the root admin */}
           <div className="p-4 flex items-center justify-between bg-blue-50/20">
             <div className="flex items-center gap-3 text-left">
@@ -130,53 +135,122 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             </div>
             <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider bg-emerald-50 px-2 py-1 rounded-lg flex items-center gap-1 shrink-0">
               <ShieldCheck size={11} />
-              Permanent Bypass
+              All Access Active
             </span>
           </div>
 
           {allowedUsers.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs font-bold">
-              No User Admin emails authorized. Only owner (ignitina2) currently has access.
+              No Trust Admin emails authorized. Only owner (ignitina2) currently has access.
             </div>
           ) : (
             allowedUsers.map((userObj) => (
-              <div key={userObj.email} className={cn("p-4 flex items-center justify-between hover:bg-slate-50 transition-colors", userObj.disabled && "bg-slate-50/50")}>
-                <div className="flex items-center gap-3 text-left min-w-0">
-                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase shrink-0", userObj.disabled ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600")}>
-                    {userObj.email.substring(0, 2)}
+              <div key={userObj.email} className={cn("p-4 flex flex-col hover:bg-slate-50 transition-colors", userObj.disabled && "bg-slate-50/50")}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-left min-w-0">
+                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase shrink-0", userObj.disabled ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600")}>
+                      {userObj.email.substring(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className={cn("text-xs font-bold truncate transition-all", userObj.disabled ? "text-slate-400 line-through decoration-slate-300" : "text-slate-900")}>
+                        {userObj.email}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">
+                        Added by {userObj.addedBy || 'System Admin'} on {userObj.addedAt ? new Date(userObj.addedAt).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className={cn("text-xs font-bold truncate transition-all", userObj.disabled ? "text-slate-400 line-through decoration-slate-300" : "text-slate-900")}>
-                      {userObj.email}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">
-                      Added by {userObj.addedBy || 'System Admin'} on {userObj.addedAt ? new Date(userObj.addedAt).toLocaleDateString() : 'N/A'}
-                    </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => onToggleAllowedUserDisabled?.(userObj.email, !userObj.disabled)}
+                      className={cn(
+                        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                        userObj.disabled ? "bg-slate-200" : "bg-blue-600"
+                      )}
+                      title={userObj.disabled ? "Enable user" : "Disable user"}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          userObj.disabled ? "translate-x-0" : "translate-x-4"
+                        )}
+                      />
+                    </button>
+                    <button
+                      onClick={() => setUserToRevoke(userObj.email)}
+                      className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                      title="Revoke/Delete User"
+                    >
+                      <UserMinus size={15} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => onToggleAllowedUserDisabled?.(userObj.email, !userObj.disabled)}
-                    className={cn(
-                      "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                      userObj.disabled ? "bg-slate-200" : "bg-blue-600"
-                    )}
-                    title={userObj.disabled ? "Enable user" : "Disable user"}
-                  >
-                    <span
+
+                {/* Custom Toggles for Add, Edit, Delete Controls */}
+                <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-5 items-center pl-11">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Access Toggle:</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg">
+                    <span className="text-[10px] font-bold text-slate-650">Add:</span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateAllowedUserPermission?.(userObj.email, 'canAdd', userObj.canAdd !== false ? false : true)}
+                      disabled={userObj.disabled}
                       className={cn(
-                        "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                        userObj.disabled ? "translate-x-0" : "translate-x-4"
+                        "relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                        userObj.disabled ? "bg-slate-100 cursor-not-allowed" : (userObj.canAdd !== false ? "bg-emerald-500" : "bg-slate-200")
                       )}
-                    />
-                  </button>
-                  <button
-                    onClick={() => setUserToRevoke(userObj.email)}
-                    className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                    title="Revoke/Delete User"
-                  >
-                    <UserMinus size={15} />
-                  </button>
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          userObj.disabled ? "translate-x-0" : (userObj.canAdd !== false ? "translate-x-4" : "translate-x-0")
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg">
+                    <span className="text-[10px] font-bold text-slate-650">Edit:</span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateAllowedUserPermission?.(userObj.email, 'canEdit', userObj.canEdit !== false ? false : true)}
+                      disabled={userObj.disabled}
+                      className={cn(
+                        "relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                        userObj.disabled ? "bg-slate-100 cursor-not-allowed" : (userObj.canEdit !== false ? "bg-indigo-500" : "bg-slate-200")
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          userObj.disabled ? "translate-x-0" : (userObj.canEdit !== false ? "translate-x-4" : "translate-x-0")
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg">
+                    <span className="text-[10px] font-bold text-slate-650">Delete:</span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateAllowedUserPermission?.(userObj.email, 'canDelete', userObj.canDelete !== false ? false : true)}
+                      disabled={userObj.disabled}
+                      className={cn(
+                        "relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                        userObj.disabled ? "bg-slate-100 cursor-not-allowed" : (userObj.canDelete !== false ? "bg-rose-500" : "bg-slate-200")
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          userObj.disabled ? "translate-x-0" : (userObj.canDelete !== false ? "translate-x-4" : "translate-x-0")
+                        )}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))

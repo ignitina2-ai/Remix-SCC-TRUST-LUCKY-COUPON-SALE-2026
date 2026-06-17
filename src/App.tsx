@@ -79,13 +79,22 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
-  const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string }[]>([]);
+  const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string; disabled?: boolean; canAdd?: boolean; canEdit?: boolean; canDelete?: boolean; }[]>([]);
+  const [userPermissions, setUserPermissions] = useState<{
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  }>({
+    canAdd: true,
+    canEdit: true,
+    canDelete: true,
+  });
   const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const isPrimaryAdmin = !!(user && user.email && (
     user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-    user.email.toLowerCase() === 'ignitina2@gmail.com'
+    allowedUsers.some(u => u.email.toLowerCase() === user.email?.toLowerCase() && !u.disabled)
   ));
 
   useEffect(() => {
@@ -144,16 +153,32 @@ export default function App() {
               setAuthError({
                 message: isUserDisabled
                   ? `Access Denied: This account (${currentUser.email}) has been disabled by the administrator.`
-                  : `Access Denied: The Google Account (${currentUser.email}) is not on the authorized User Admins directory. Please contact the administrator.`
+                  : `Access Denied: The Google Account (${currentUser.email}) is not on the authorized Trust Admins directory. Please contact the administrator.`
               });
             }
           } catch (err: any) {
             console.error("Checking allowed users directory failed:", err);
-            await signOut(auth);
-            setUser(null);
-            setAuthError({
-              message: `Verification failed. Could not verify login permission, please check your network.`
-            });
+            
+            // Offline tolerance credentials check
+            let isOfflineBypassed = false;
+            try {
+              const saved = localStorage.getItem('scc_permitted_emails');
+              let list = saved ? JSON.parse(saved) : [];
+              if (Array.isArray(list) && list.includes(cleanEmail)) {
+                isOfflineBypassed = true;
+              }
+            } catch (e) {}
+
+            if (isOfflineBypassed) {
+              console.log("Device is offline, but user is pre-authorized via locally saved credentials cache.");
+              setUser(currentUser);
+            } else {
+              await signOut(auth);
+              setUser(null);
+              setAuthError({
+                message: `Verification failed. Could not verify login permission, please check your network.`
+              });
+            }
           } finally {
             setAuthLoading(false);
           }
@@ -351,6 +376,43 @@ export default function App() {
     return () => unsubAllowed();
   }, [user]);
 
+  // Listen to current logged-in user permissions from allowedUsers collection
+  useEffect(() => {
+    if (!user) {
+      setUserPermissions({ canAdd: true, canEdit: true, canDelete: true });
+      return;
+    }
+    const cleanEmail = user.email ? user.email.toLowerCase().trim() : '';
+    if (!cleanEmail) {
+      setUserPermissions({ canAdd: true, canEdit: true, canDelete: true });
+      return;
+    }
+
+    const isSuperAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@gmail.com';
+    if (isSuperAdmin) {
+      setUserPermissions({ canAdd: true, canEdit: true, canDelete: true });
+      return;
+    }
+
+    const unsubUserPerm = onSnapshot(doc(db, 'allowedUsers', cleanEmail), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserPermissions({
+          canAdd: data.canAdd !== false,
+          canEdit: data.canEdit !== false,
+          canDelete: data.canDelete !== false,
+        });
+      } else {
+        // Default to restricted if no record found
+        setUserPermissions({ canAdd: false, canEdit: false, canDelete: false });
+      }
+    }, (error) => {
+      console.warn("Error listening to user permissions:", error);
+    });
+
+    return () => unsubUserPerm();
+  }, [user]);
+
   // Hook 1: Register active session in Firestore when user changes/logs in
   useEffect(() => {
     if (!user) return;
@@ -414,10 +476,26 @@ export default function App() {
       await setDoc(doc(db, 'allowedUsers', cleanEmail), {
         email: cleanEmail,
         addedAt: new Date().toISOString(),
-        addedBy: user.email || 'Admin'
+        addedBy: user.email || 'Admin',
+        canAdd: true,
+        canEdit: true,
+        canDelete: true,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `allowedUsers/${cleanEmail}`);
+    }
+  };
+
+  const updateAllowedUserPermission = async (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', value: boolean) => {
+    if (!user) return;
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail) return;
+    try {
+      await updateDoc(doc(db, 'allowedUsers', cleanEmail), {
+        [field]: value
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `allowedUsers/${cleanEmail}`);
     }
   };
 
@@ -708,6 +786,10 @@ export default function App() {
   }, []);
 
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      alert("Permission Denied: Your Primary Admin has restricted you from adding new entries.");
+      return;
+    }
     const newTransaction: Transaction = {
       ...transaction,
       id: crypto.randomUUID(),
@@ -733,6 +815,10 @@ export default function App() {
   };
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    if (!userPermissions.canEdit) {
+      alert("Permission Denied: Your Primary Admin has restricted you from editing entries.");
+      return;
+    }
     if (user) {
       try {
         await updateDoc(doc(db, 'transactions', id), cleanUndefined(updates));
@@ -748,6 +834,10 @@ export default function App() {
   };
 
   const deleteTransaction = async (ids: string[]) => {
+    if (!userPermissions.canDelete) {
+      alert("Permission Denied: Your Primary Admin has restricted you from deleting entries.");
+      return;
+    }
     if (user) {
       try {
         for (const id of ids) {
@@ -765,6 +855,10 @@ export default function App() {
   };
 
   const toggleTreasurer = async (id: string) => {
+    if (!userPermissions.canEdit) {
+      alert("Permission Denied: Your Primary Admin has restricted you from editing entries.");
+      return;
+    }
     const currentTx = appData.transactions.find(t => t.id === id);
     if (!currentTx) return;
     const paidToTreasurer = !currentTx.paidToTreasurer;
@@ -796,6 +890,10 @@ export default function App() {
   };
 
   const addSponsor = async (sponsor: Omit<Sponsor, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      alert("Permission Denied: Your Primary Admin has restricted you from adding new entries.");
+      return;
+    }
     const newSponsor: Sponsor = {
       ...sponsor,
       id: crypto.randomUUID(),
@@ -821,6 +919,10 @@ export default function App() {
   };
 
   const updateSponsor = async (id: string, updates: Partial<Sponsor>) => {
+    if (!userPermissions.canEdit) {
+      alert("Permission Denied: Your Primary Admin has restricted you from editing entries.");
+      return;
+    }
     const oldSponsor = appData.sponsors.find(s => s.id === id);
     if (user) {
       try {
@@ -843,6 +945,10 @@ export default function App() {
   };
 
   const deleteSponsor = async (id: string) => {
+    if (!userPermissions.canDelete) {
+      alert("Permission Denied: Your Primary Admin has restricted you from deleting entries.");
+      return;
+    }
     if (user) {
       try {
         await deleteDoc(doc(db, 'sponsors', id));
@@ -858,6 +964,10 @@ export default function App() {
   };
 
   const addIncomeExpense = async (entry: Omit<IncomeExpense, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      alert("Permission Denied: Your Primary Admin has restricted you from adding new entries.");
+      return;
+    }
     const newEntry: IncomeExpense = {
       ...entry,
       id: crypto.randomUUID(),
@@ -883,6 +993,10 @@ export default function App() {
   };
 
   const updateIncomeExpense = async (id: string, updates: Partial<IncomeExpense>) => {
+    if (!userPermissions.canEdit) {
+      alert("Permission Denied: Your Primary Admin has restricted you from editing entries.");
+      return;
+    }
     if (user) {
       try {
         await updateDoc(doc(db, 'incomeExpenses', id), cleanUndefined(updates));
@@ -898,6 +1012,10 @@ export default function App() {
   };
 
   const deleteIncomeExpense = async (ids: string[]) => {
+    if (!userPermissions.canDelete) {
+      alert("Permission Denied: Your Primary Admin has restricted you from deleting entries.");
+      return;
+    }
     if (user) {
       try {
         for (const id of ids) {
@@ -915,6 +1033,10 @@ export default function App() {
   };
 
   const addSecretaryHandover = async (handover: Omit<SecretaryHandover, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      alert("Permission Denied: Your Primary Admin has restricted you from adding new entries.");
+      return;
+    }
     const newHandover: SecretaryHandover = {
       ...handover,
       id: crypto.randomUUID(),
@@ -940,6 +1062,10 @@ export default function App() {
   };
 
   const updateSecretaryHandover = async (id: string, updates: Partial<SecretaryHandover>) => {
+    if (!userPermissions.canEdit) {
+      alert("Permission Denied: Your Primary Admin has restricted you from editing entries.");
+      return;
+    }
     if (user) {
       try {
         await updateDoc(doc(db, 'secretaryHandovers', id), cleanUndefined(updates));
@@ -955,6 +1081,10 @@ export default function App() {
   };
 
   const deleteSecretaryHandover = async (ids: string[]) => {
+    if (!userPermissions.canDelete) {
+      alert("Permission Denied: Your Primary Admin has restricted you from deleting entries.");
+      return;
+    }
     if (user) {
       try {
         for (const id of ids) {
@@ -1192,6 +1322,7 @@ export default function App() {
             }}
             customPaymentLabels={labels}
             paymentMethodsList={appData.paymentMethodsList}
+            permissions={userPermissions}
           />
         );
       case 'transactions':
@@ -1206,6 +1337,7 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             customPaymentLabels={labels}
+            permissions={userPermissions}
           />
         );
       case 'credit':
@@ -1220,6 +1352,7 @@ export default function App() {
             onDelete={deleteTransaction}
             customPaymentLabels={labels}
             paymentMethodsList={appData.paymentMethodsList}
+            permissions={userPermissions}
           />
         );
       case 'sponsors':
@@ -1229,6 +1362,7 @@ export default function App() {
             onAddSponsor={addSponsor}
             onUpdateSponsor={updateSponsor}
             onDeleteSponsor={deleteSponsor}
+            permissions={userPermissions}
           />
         );
       case 'income-expense':
@@ -1238,6 +1372,7 @@ export default function App() {
             onAddEntry={addIncomeExpense}
             onUpdateEntry={updateIncomeExpense}
             onDeleteEntry={deleteIncomeExpense}
+            permissions={userPermissions}
           />
         );
       case 'secretary-handover':
@@ -1250,6 +1385,7 @@ export default function App() {
             transactions={appData.transactions}
             paymentMethodsList={appData.paymentMethodsList}
             customPaymentLabels={labels}
+            permissions={userPermissions}
           />
         );
       case 'settings':
@@ -1261,7 +1397,7 @@ export default function App() {
               </div>
               <h3 className="text-lg font-bold text-slate-900">Access Denied</h3>
               <p className="text-slate-500 text-sm">
-                Only the Primary Admin (ignitina2@gmail.com) has access to Settings & Backup.
+                Only authorized Trust Administrators have access to Settings & Backup.
               </p>
             </div>
           );
@@ -1283,6 +1419,7 @@ export default function App() {
             onAddAllowedUser={addAllowedUser}
             onDeleteAllowedUser={deleteAllowedUser}
             onToggleAllowedUserDisabled={toggleAllowedUserDisabled}
+            onUpdateAllowedUserPermission={updateAllowedUserPermission}
             activeSessions={activeSessions}
             onGoogleLogin={handleGoogleLogin}
             onGoogleLogout={handleGoogleLogout}
@@ -1341,6 +1478,7 @@ export default function App() {
         setIsOpen={setIsSidebarOpen} 
         user={user}
         onLogout={handleGoogleLogout}
+        isPrimaryAdmin={isPrimaryAdmin}
       />
 
       {/* Main Content */}

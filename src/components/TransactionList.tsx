@@ -36,6 +36,11 @@ interface TransactionListProps {
   onToggleTreasurer: (id: string) => void;
   onEdit?: (transaction: Transaction) => void;
   customPaymentLabels?: Record<PaymentMethod, string>;
+  permissions?: {
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
 }
 
 const TransactionList: React.FC<TransactionListProps> = ({ 
@@ -43,7 +48,8 @@ const TransactionList: React.FC<TransactionListProps> = ({
   onDelete, 
   onToggleTreasurer,
   onEdit,
-  customPaymentLabels
+  customPaymentLabels,
+  permissions
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -396,8 +402,14 @@ const TransactionList: React.FC<TransactionListProps> = ({
         <div className="flex items-center gap-1.5">
           {selectedIds.size > 0 && (
             <button 
-              onClick={() => setDeleteIds(Array.from(selectedIds))}
-              className="px-2.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg md:rounded-xl hover:bg-rose-100 transition-all font-bold text-[10px] md:text-xs flex items-center gap-1 shadow-sm cursor-pointer"
+              disabled={permissions?.canDelete === false}
+              onClick={() => permissions?.canDelete !== false && setDeleteIds(Array.from(selectedIds))}
+              className={cn(
+                "px-2.5 py-1.5 border rounded-lg md:rounded-xl transition-all font-bold text-[10px] md:text-xs flex items-center gap-1 shadow-sm",
+                permissions?.canDelete === false
+                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50"
+                  : "bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 cursor-pointer"
+              )}
             >
               <Trash2 size={14} className="md:w-4 md:h-4" />
               <span>Delete ({selectedIds.size})</span>
@@ -533,12 +545,14 @@ const TransactionList: React.FC<TransactionListProps> = ({
                   <div className="flex flex-col">
                     <span className="text-slate-400 text-[8px] font-bold uppercase tracking-wider">Treasurer</span>
                     <button 
-                      onClick={() => onToggleTreasurer(t.id)}
+                      disabled={permissions?.canEdit === false}
+                      onClick={() => permissions?.canEdit !== false && onToggleTreasurer(t.id)}
                       className={cn(
-                        "flex items-center gap-0.5 font-bold text-[9px] md:text-[10px] px-1.5 py-0.5 md:px-2 md:py-1 rounded-full transition-all cursor-pointer",
+                        "flex items-center gap-0.5 font-bold text-[9px] md:text-[10px] px-1.5 py-0.5 md:px-2 md:py-1 rounded-full transition-all",
+                        permissions?.canEdit === false ? "bg-slate-100 text-slate-300 cursor-not-allowed" : "cursor-pointer",
                         t.paidToTreasurer 
-                          ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" 
-                          : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                          ? (permissions?.canEdit === false ? "bg-slate-100 text-emerald-400/60" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100") 
+                          : (permissions?.canEdit === false ? "bg-slate-100 text-slate-300" : "bg-slate-50 text-slate-400 hover:bg-slate-100")
                       )}
                     >
                       {t.paidToTreasurer ? <CheckCircle size={10} /> : <XCircle size={10} />}
@@ -571,16 +585,28 @@ const TransactionList: React.FC<TransactionListProps> = ({
                   <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {onEdit && (
                       <button 
-                        onClick={() => onEdit(t)}
-                        className="flex items-center gap-0.5 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md font-bold text-[9px] md:text-[10px] hover:bg-blue-100 transition-all cursor-pointer"
+                        disabled={permissions?.canEdit === false}
+                        onClick={() => permissions?.canEdit !== false && onEdit(t)}
+                        className={cn(
+                          "flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-[9px] md:text-[10px] transition-all",
+                          permissions?.canEdit === false
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                            : "bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer"
+                        )}
                       >
                         <Edit2 size={10} />
                         Edit
                       </button>
                     )}
                     <button 
-                      onClick={() => setDeleteIds([t.id])}
-                      className="flex items-center gap-0.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md font-bold text-[9px] md:text-[10px] hover:bg-rose-100 transition-all cursor-pointer"
+                      disabled={permissions?.canDelete === false}
+                      onClick={() => permissions?.canDelete !== false && setDeleteIds([t.id])}
+                      className={cn(
+                        "flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-[9px] md:text-[10px] transition-all",
+                        permissions?.canDelete === false
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                          : "bg-rose-50 text-rose-600 hover:bg-rose-100 cursor-pointer"
+                      )}
                     >
                       <Trash2 size={10} />
                       Delete

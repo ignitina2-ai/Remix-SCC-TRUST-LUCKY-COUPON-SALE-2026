@@ -31,9 +31,20 @@ interface SponsorsListProps {
   onAddSponsor: (sponsor: Omit<Sponsor, 'id'>) => void;
   onUpdateSponsor: (id: string, updates: Partial<Sponsor>) => void;
   onDeleteSponsor: (id: string) => void;
+  permissions?: {
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
 }
 
-const SponsorsList: React.FC<SponsorsListProps> = ({ sponsors, onAddSponsor, onUpdateSponsor, onDeleteSponsor }) => {
+const SponsorsList: React.FC<SponsorsListProps> = ({ 
+  sponsors, 
+  onAddSponsor, 
+  onUpdateSponsor, 
+  onDeleteSponsor,
+  permissions
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COLLECTED' | 'PENDING' | 'FLAGGED'>('ALL');
   const [isAdding, setIsAdding] = useState(false);
@@ -401,6 +412,20 @@ const SponsorsList: React.FC<SponsorsListProps> = ({ sponsors, onAddSponsor, onU
 
   return (
     <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
+      {permissions && !permissions.canAdd && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle size={16} className="text-amber-600 shrink-0" />
+          <span>Adding entry sponsors has been disabled by the Primary Admin.</span>
+        </div>
+      )}
+
+      {permissions && !permissions.canEdit && editingSponsor && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle size={16} className="text-amber-600 shrink-0" />
+          <span>Editing entry sponsors has been disabled by the Primary Admin.</span>
+        </div>
+      )}
+
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h1 className="text-xl md:text-3xl font-bold text-slate-900 tracking-tight">Prize Sponsors</h1>
@@ -415,8 +440,14 @@ const SponsorsList: React.FC<SponsorsListProps> = ({ sponsors, onAddSponsor, onU
             <span>Export</span>
           </button>
           <button 
-            onClick={handleAddNew}
-            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg md:rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 text-xs cursor-pointer"
+            disabled={permissions?.canAdd === false}
+            onClick={() => permissions?.canAdd !== false && handleAddNew()}
+            className={cn(
+              "flex items-center gap-1 px-3 py-1.5 rounded-lg md:rounded-xl font-bold transition-all shadow-md text-xs",
+              permissions?.canAdd === false
+                ? "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed opacity-55 shadow-none"
+                : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20 cursor-pointer"
+            )}
           >
             <Plus size={14} />
             <span>Add</span>
@@ -818,15 +849,27 @@ const SponsorsList: React.FC<SponsorsListProps> = ({ sponsors, onAddSponsor, onU
                       {/* Edit & Delete Action Buttons inside collapse details */}
                       <div className="col-span-4 flex items-center justify-end gap-2 p-1.5 bg-white/40 dark:bg-slate-900/10 rounded-xl border border-slate-200/30">
                         <button 
-                          onClick={() => handleEdit(s)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-650 hover:bg-blue-50 border border-blue-200 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                          disabled={permissions?.canEdit === false}
+                          onClick={() => permissions?.canEdit !== false && handleEdit(s)}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs active:scale-95",
+                            permissions?.canEdit === false
+                              ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-55"
+                              : "bg-white text-blue-650 hover:bg-blue-50 border border-blue-200 cursor-pointer"
+                          )}
                         >
                           <Edit2 size={12} />
                           <span>Edit Sponsor</span>
                         </button>
                         <button 
-                          onClick={() => setDeleteId(s.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-rose-650 hover:bg-rose-50 border border-rose-200 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                          disabled={permissions?.canDelete === false}
+                          onClick={() => permissions?.canDelete !== false && setDeleteId(s.id)}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs active:scale-95",
+                            permissions?.canDelete === false
+                              ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-55"
+                              : "bg-white text-rose-650 hover:bg-rose-50 border border-rose-200 cursor-pointer"
+                          )}
                         >
                           <Trash2 size={12} />
                           <span>Delete Sponsor</span>
@@ -867,14 +910,26 @@ const SponsorsList: React.FC<SponsorsListProps> = ({ sponsors, onAddSponsor, onU
                   </div>
                   <div className="flex items-center gap-1">
                     <button 
-                      onClick={() => handleEdit(s)}
-                      className="p-1 px-1.5 bg-white/80 text-slate-500 hover:text-blue-600 rounded transition-all cursor-pointer border border-slate-100 hover:bg-blue-50"
+                      disabled={permissions?.canEdit === false}
+                      onClick={() => permissions?.canEdit !== false && handleEdit(s)}
+                      className={cn(
+                        "p-1 px-1.5 rounded transition-all border",
+                        permissions?.canEdit === false
+                          ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-55"
+                          : "bg-white/80 text-slate-500 hover:text-blue-600 border-slate-100 hover:bg-blue-50 cursor-pointer"
+                      )}
                     >
                       <Edit2 size={12} />
                     </button>
                     <button 
-                      onClick={() => setDeleteId(s.id)}
-                      className="p-1 px-1.5 bg-white/80 text-slate-500 hover:text-rose-600 rounded transition-all cursor-pointer border border-slate-100 hover:bg-rose-50"
+                      disabled={permissions?.canDelete === false}
+                      onClick={() => permissions?.canDelete !== false && setDeleteId(s.id)}
+                      className={cn(
+                        "p-1 px-1.5 rounded transition-all border",
+                        permissions?.canDelete === false
+                          ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-55"
+                          : "bg-white/80 text-slate-500 hover:text-rose-600 border-slate-100 hover:bg-rose-50 cursor-pointer"
+                      )}
                     >
                       <Trash2 size={12} />
                     </button>
