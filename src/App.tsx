@@ -144,7 +144,7 @@ export default function App() {
               setAuthError({
                 message: isUserDisabled
                   ? `Access Denied: This account (${currentUser.email}) has been disabled by the administrator.`
-                  : `Access Denied: The Google Account (${currentUser.email}) is not on the allowed users directory. Please contact the administrator.`
+                  : `Access Denied: The Google Account (${currentUser.email}) is not on the authorized User Admins directory. Please contact the administrator.`
               });
             }
           } catch (err: any) {
@@ -1253,6 +1253,19 @@ export default function App() {
           />
         );
       case 'settings':
+        if (!isPrimaryAdmin) {
+          return (
+            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center max-w-md mx-auto my-12 space-y-4">
+              <div className="text-rose-500 bg-rose-50 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto">
+                <AlertCircle size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Access Denied</h3>
+              <p className="text-slate-500 text-sm">
+                Only the Primary Admin (ignitina2@gmail.com) has access to Settings & Backup.
+              </p>
+            </div>
+          );
+        }
         return (
           <Settings 
             appData={appData}

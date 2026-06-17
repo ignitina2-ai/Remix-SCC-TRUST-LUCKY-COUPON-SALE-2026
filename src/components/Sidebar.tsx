@@ -27,7 +27,6 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, user, onLogout }) => {
   const isPrimaryAdmin = user && (
-    user.email?.toLowerCase() === 'ignitina2@gmail.com' ||
     user.email?.toLowerCase() === 'ignitina2@gmail.com'
   );
 
@@ -39,7 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'income-expense', label: 'Income & Expense', icon: Banknote },
     { id: 'secretary-handover', label: 'Handover to Secretary', icon: Users },
     { id: 'sponsors', label: 'Prize Sponsors', icon: Trophy },
-    { id: 'settings', label: 'Settings & Backup', icon: SettingsIcon },
+    ...(isPrimaryAdmin ? [{ id: 'settings', label: 'Settings & Backup', icon: SettingsIcon }] : []),
   ];
 
   return (

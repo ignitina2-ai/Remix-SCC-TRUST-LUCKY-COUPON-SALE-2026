@@ -46,12 +46,12 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     }
 
     if (emailToValidate === 'ignitina2@gmail.com' || emailToValidate === 'ignitina2@gmail.com') {
-      showNotification('error', 'The super administrator is permanently auto-allowed.');
+      showNotification('error', 'The primary administrator is permanently auto-allowed.');
       return;
     }
 
     if (allowedUsers.some(u => u.email.toLowerCase() === emailToValidate)) {
-      showNotification('error', 'This email is already in the allowed users list.');
+      showNotification('error', 'This email is already in the User Admins list.');
       return;
     }
 
@@ -59,7 +59,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       if (onAddAllowedUser) {
         await onAddAllowedUser(emailToValidate);
         setNewEmail('');
-        showNotification('success', `Access successfully granted to ${emailToValidate}.`);
+        showNotification('success', `User Admin access successfully granted to ${emailToValidate}.`);
       }
     } catch (err) {
       showNotification('error', 'Failed to save to cloud directory.');
@@ -75,15 +75,15 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
           <ShieldCheck size={20} />
         </div>
         <div className="text-left">
-          <h3 className="text-lg font-bold text-slate-900">Secondary Admin & Access Settings</h3>
-          <p className="text-slate-500 text-xs font-semibold">Authorize secondary allowed/permitted Google mail IDs to log in and synchronize data</p>
+          <h3 className="text-lg font-bold text-slate-900">User Admins & Access Settings</h3>
+          <p className="text-slate-500 text-xs font-semibold">Authorize User Admin Google mail IDs to log in, make entries, and synchronize data (Settings restricted)</p>
         </div>
       </div>
 
       <div className="border border-slate-100 rounded-2xl p-5 bg-slate-50/50 space-y-4">
         <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 text-left">
           <UserPlus size={14} />
-          Authorize Permitted Secondary Admin Mail ID
+          Add Authorized User Admin Email
         </h4>
         <form onSubmit={handleAddEmail} className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -92,7 +92,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="Enter secondary admin Google email address... (e.g. partner@gmail.com)"
+              placeholder="Enter User Admin Google email address... (e.g. helper@gmail.com)"
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold"
               required
             />
@@ -102,21 +102,21 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow-md shadow-blue-600/10 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
           >
             <UserPlus size={14} />
-            Permit Mail ID
+            Authorize Email
           </button>
         </form>
       </div>
 
       <div className="space-y-3">
         <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider text-left">
-          Permitted Secondary Admin Mail IDs ({allowedUsers.length})
+          Authorized User Admin Email IDs ({allowedUsers.length})
         </h4>
         <div className="border border-slate-100 rounded-2xl bg-white overflow-hidden divide-y divide-slate-100 max-h-72 overflow-y-auto">
           {/* Always show the root admin */}
           <div className="p-4 flex items-center justify-between bg-blue-50/20">
             <div className="flex items-center gap-3 text-left">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-black">
-                SA
+                PA
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -136,7 +136,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
 
           {allowedUsers.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs font-bold">
-              No secondary emails authorized. Only owner (ignitina2) currently permitted.
+              No User Admin emails authorized. Only owner (ignitina2) currently has access.
             </div>
           ) : (
             allowedUsers.map((userObj) => (

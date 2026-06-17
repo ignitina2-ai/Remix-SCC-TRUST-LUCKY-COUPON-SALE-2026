@@ -110,7 +110,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         }, 800);
       } else {
         setErrorLocal(
-          `Unauthorized Email: "${cleanEmail}" is not listed in the permitted users directory. If you are an authorized helper, please connect with Google first or request the admin (ignitina2@gmail.com) to add you.`
+          `Unauthorized Email: "${cleanEmail}" is not listed in the authorized User Admins directory. If you are an authorized helper, please connect with Google first or request the admin (ignitina2@gmail.com) to add you.`
         );
       }
     } catch (err: any) {
