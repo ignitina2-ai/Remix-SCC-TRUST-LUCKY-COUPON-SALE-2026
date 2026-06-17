@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Cloud, CloudOff, LogIn, LogOut, AlertCircle } from 'lucide-react';
+import { Menu, X, Cloud, CloudOff, LogIn, LogOut, AlertCircle, CheckCircle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
@@ -243,7 +243,7 @@ export default function App() {
     }
     const isSuperAdmin = user.email && (
       user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-      user.email.toLowerCase() === 'ignitina2@gmail.com'
+      user.email.toLowerCase() === 'ignitina2@mail.com'
     );
     if (!isSuperAdmin) {
       setAllowedUsers([]);
@@ -419,7 +419,7 @@ export default function App() {
 
   const handleGoogleLogout = async () => {
     try {
-      if (user) {
+      if (user && !user.isLocal) {
         const cleanEmail = user.email ? user.email.toLowerCase().trim() : '';
         if (cleanEmail) {
           const safeSessionId = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
@@ -1339,12 +1339,12 @@ export default function App() {
                   <AlertCircle size={18} className="stroke-[2.5]" />
                 </span>
                 <div className="text-left font-sans">
-                  <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider">Device-Isolated Mode Enabled (Unsynced)</h4>
+                  <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider">Device-Isolated Mode (Unsynced)</h4>
                   <p className="text-[11px] text-amber-800 font-extrabold leading-normal mt-1">
-                    You logged in using Local Email Bypass. Changes are saved ONLY to this specific browser and will NOT sync with other phones, PCs, or the Google AI Studio preview!
+                    You logged in via local bypass. Changes are saved ONLY to this browser/device and will NOT synchronize automatically with Firebase cloud storage or other users.
                   </p>
                   <p className="text-[11px] text-amber-700/80 font-bold leading-normal mt-0.5">
-                    To access & sync your team's real-time sales data instantly across mobile & desktop, please sign out and select "Connect & Sync with Google".
+                    To upload & sync your team's real-time sales data instantly to Google Cloud, please sign out and select "Sync with Google" when on a supported browser.
                   </p>
                 </div>
               </div>

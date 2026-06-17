@@ -16,8 +16,8 @@ service cloud.firestore {
       return isSignedIn() && (
         request.auth.uid == 'bCCFuZOFKsPeZ2Go7eSvXlnHOOS2' ||
         (request.auth.token.email != null && (
-          request.auth.token.email == 'ignitina2@gmail.com' ||
-          request.auth.token.email == 'ignitina2@mail.com'
+          request.auth.token.email.lower() == 'ignitina2@gmail.com' ||
+          request.auth.token.email.lower() == 'ignitina2@mail.com'
         ))
       );
     }
@@ -32,7 +32,7 @@ service cloud.firestore {
         !isAdmin() &&
         request.auth.token.email != null && 
         request.auth.token.email != '' && 
-        isEmailAllowed(request.auth.token.email);
+        isEmailAllowed(request.auth.token.email.lower());
     }
 
     function incoming() {
