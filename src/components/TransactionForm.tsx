@@ -281,13 +281,33 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       return sum + upiAmountForTx;
     }, 0);
 
-    const secretaryHandled = totalAmount - totalCredit;
+    const totalCash = (transactions || []).reduce((acc, t) => {
+      const relevantHistory = (t.paymentHistory || []).filter(entry => {
+        return entry.paymentMethod === 'CASH' && getLocalDatePart(entry.date) === todayIST;
+      });
+      const historySum = relevantHistory.reduce((sum, entry) => sum + entry.amount, 0);
+
+      const totalHistoryAmount = (t.paymentHistory || []).reduce((sum, entry) => sum + entry.amount, 0);
+      const unaccountedPaid = Math.max(0, t.paidAmount - totalHistoryAmount);
+
+      let initialPaidAllocated = 0;
+      if (unaccountedPaid > 0) {
+        const isTxFromToday = getLocalDatePart(t.date) === todayIST;
+        if (isTxFromToday) {
+          if (t.paymentMethod === 'CASH' || t.paymentMethod === 'CREDIT') {
+            initialPaidAllocated = unaccountedPaid;
+          }
+        }
+      }
+
+      return acc + historySum + initialPaidAllocated;
+    }, 0);
 
     return {
       totalAmount,
       totalCredit,
       totalUPI,
-      secretaryHandled,
+      totalCash,
       count: todayTransactions.length
     };
   };
@@ -330,6 +350,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             <h4 className="text-xs sm:text-sm md:text-base font-black text-slate-800 mt-1 truncate">₹{todayStats.totalAmount.toLocaleString('en-IN')}</h4>
           </div>
 
+          {/* Total Cash Sale */}
+          <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
+            <p className="text-slate-100/10 hidden">CASH SALE ONLY</p>
+            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Cash Sale Only</p>
+            <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-600 mt-1 truncate">₹{todayStats.totalCash.toLocaleString('en-IN')}</h4>
+          </div>
+
           {/* Total Credit */}
           <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
             <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Total Credit</p>
@@ -340,12 +367,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
             <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">All UPI Receipts</p>
             <h4 className="text-xs sm:text-sm md:text-base font-black text-indigo-600 mt-1 truncate">₹{todayStats.totalUPI.toLocaleString('en-IN')}</h4>
-          </div>
-
-          {/* Secretary Handover Total */}
-          <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
-            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Secretary Handover</p>
-            <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-600 mt-1 truncate">₹{todayStats.secretaryHandled.toLocaleString('en-IN')}</h4>
           </div>
         </div>
       </div>
