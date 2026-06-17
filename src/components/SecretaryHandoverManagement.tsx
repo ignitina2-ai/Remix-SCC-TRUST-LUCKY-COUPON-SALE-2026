@@ -472,60 +472,17 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
         </div>
       )}
 
-      {/* Summary Cards Grid (Optimized as 2x2 grid to save space) */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Summary Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
           <div className="p-2 rounded-lg shrink-0 bg-emerald-600">
             <IndianRupee className="text-white w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1 text-left">
-            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Consolidated Coupon Revenue</span>
+            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Handover to Secretary </span>
             <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{(totalSales + totalHandover).toLocaleString('en-IN')}</h3>
             <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
-              <span>Coupon Sell Sales:</span>
-              <span className="text-slate-700 font-extrabold">₹{totalSales.toLocaleString('en-IN')}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
-          <div className="p-2 rounded-lg shrink-0 bg-amber-500">
-            <CreditCard className="text-white w-4 h-4" />
-          </div>
-          <div className="min-w-0 flex-1 text-left">
-            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Book Credit</span>
-            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalCredit.toLocaleString('en-IN')}</h3>
-            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
-              <span>Secretary Handover:</span>
-              <span className="text-slate-700 font-extrabold">₹{totalHandover.toLocaleString('en-IN')}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
-          <div className="p-2 rounded-lg shrink-0 bg-teal-600">
-            <Wallet className="text-white w-4 h-4" />
-          </div>
-          <div className="min-w-0 flex-1 text-left">
-            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Cash Sale</span>
-            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalCashSale.toLocaleString('en-IN')}</h3>
-            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
-              <span>Hard Cash:</span>
-              <span className="text-slate-700 font-extrabold">₹{totalCash.toLocaleString('en-IN')}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-3 transition-all hover:shadow-md">
-          <div className="p-2 rounded-lg shrink-0 bg-indigo-600">
-            <QrCode className="text-white w-4 h-4" />
-          </div>
-          <div className="min-w-0 flex-1 text-left">
-            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Total UPI Receipts</span>
-            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalUPI.toLocaleString('en-IN')}</h3>
-            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
-              <span>UPI Receipts:</span>
-              <span className="text-slate-700 font-extrabold">₹{totalUPI.toLocaleString('en-IN')}</span>
+              
             </p>
           </div>
         </div>
