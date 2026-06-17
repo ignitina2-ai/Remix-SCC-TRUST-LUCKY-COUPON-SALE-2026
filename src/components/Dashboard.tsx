@@ -285,7 +285,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
         <button 
           onClick={() => (window as any).setActiveTab?.('secretary-handover')}
-          className="flex flex-col items-center justify-center p-3 md:p-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 cursor-pointer text-center col-span-2 sm:col-span-1"
+          className="hidden sm:flex flex-col items-center justify-center p-3 md:p-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 cursor-pointer text-center col-span-2 sm:col-span-1"
         >
           <Users className="mb-1.5 w-5 h-5" />
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Sec Handover</span>
@@ -299,7 +299,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
           <StatCard 
-            title="Total Coupon Revenue" 
+            title="Total Coupon Sale" 
             value={totalSales} 
             icon={IndianRupee} 
             color="bg-blue-600" 

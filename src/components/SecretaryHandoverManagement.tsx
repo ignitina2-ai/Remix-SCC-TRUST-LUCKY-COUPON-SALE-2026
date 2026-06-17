@@ -425,7 +425,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Sec Handover</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Secretary Handover</h1>
           <p className="text-slate-500 mt-0.5 font-semibold text-xs">Record cash handed over to the secretary</p>
         </div>
         <div className="flex items-center gap-1.5">

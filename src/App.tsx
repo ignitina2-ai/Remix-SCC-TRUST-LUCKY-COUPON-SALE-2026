@@ -1046,8 +1046,6 @@ export default function App() {
         console.error("Failed to clear Cloud Firestore database contents:", err);
       }
     }
-
-    setActiveTab('dashboard');
   };
 
   const renderContent = () => {
