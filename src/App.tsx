@@ -980,8 +980,73 @@ export default function App() {
     setAppData(data);
   };
 
-  const clearData = () => {
-    setAppData({ transactions: [], sponsors: [], incomeExpenses: [], secretaryHandovers: [], logo: '', notificationsEnabled: false });
+  const clearData = async () => {
+    const defaultData: AppData = {
+      transactions: [],
+      sponsors: [],
+      incomeExpenses: [],
+      secretaryHandovers: [],
+      logo: '',
+      logoMobile: '',
+      logoDesktop: '',
+      notificationsEnabled: false,
+      creditSettings: DEFAULT_CREDIT_SETTINGS,
+      customPaymentLabels: DEFAULT_PAYMENT_LABELS,
+      paymentMethodsList: []
+    };
+
+    setAppData(defaultData);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+
+    if (user && !user.isLocal) {
+      const deletePromises: Promise<any>[] = [];
+      
+      // Transactions
+      if (appData.transactions && appData.transactions.length > 0) {
+        appData.transactions.forEach(t => {
+          deletePromises.push(deleteDoc(doc(db, 'transactions', t.id)));
+        });
+      }
+      
+      // Sponsors
+      if (appData.sponsors && appData.sponsors.length > 0) {
+        appData.sponsors.forEach(s => {
+          deletePromises.push(deleteDoc(doc(db, 'sponsors', s.id)));
+        });
+      }
+      
+      // IncomeExpenses
+      if (appData.incomeExpenses && appData.incomeExpenses.length > 0) {
+        appData.incomeExpenses.forEach(ie => {
+          deletePromises.push(deleteDoc(doc(db, 'incomeExpenses', ie.id)));
+        });
+      }
+      
+      // Secretary Handovers
+      if (appData.secretaryHandovers && appData.secretaryHandovers.length > 0) {
+        appData.secretaryHandovers.forEach(sh => {
+          deletePromises.push(deleteDoc(doc(db, 'secretaryHandovers', sh.id)));
+        });
+      }
+      
+      // Keep settings doc reset
+      deletePromises.push(setDoc(doc(db, 'settings', 'appSettings'), {
+        logo: '',
+        logoMobile: '',
+        logoDesktop: '',
+        notificationsEnabled: false,
+        creditSettings: DEFAULT_CREDIT_SETTINGS,
+        customPaymentLabels: DEFAULT_PAYMENT_LABELS,
+        paymentMethodsList: []
+      }));
+
+      try {
+        await Promise.all(deletePromises);
+      } catch (err) {
+        console.error("Failed to clear Cloud Firestore database contents:", err);
+      }
+    }
+
     setActiveTab('dashboard');
   };
 

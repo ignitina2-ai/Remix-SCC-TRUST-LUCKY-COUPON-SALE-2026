@@ -26,7 +26,7 @@ interface SettingsProps {
   onUpdateLogoDesktop?: (logo: string) => void;
   onBackup: () => void;
   onRestore: (data: AppData) => void;
-  onClearData: () => void;
+  onClearData: () => void | Promise<void>;
   onToggleNotifications: (enabled: boolean) => void;
   onUpdatePaymentLabels: (labels: Record<PaymentMethod, string>) => void;
   onUpdatePaymentMethodsList?: (list: CustomPaymentMethod[]) => void;

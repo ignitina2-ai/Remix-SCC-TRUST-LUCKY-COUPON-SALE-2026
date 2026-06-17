@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ShieldAlert, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface DangerSettingsProps {
-  onClearAll: () => void;
+  onClearAll: () => void | Promise<void>;
   onBackup?: () => void;
   showNotification: (type: 'success' | 'error', message: string) => void;
 }
@@ -12,7 +12,7 @@ export const DangerSettings: React.FC<DangerSettingsProps> = ({ onClearAll, onBa
   const [confirmInput, setConfirmInput] = useState('');
   const [downloadBackup, setDownloadBackup] = useState(true);
 
-  const handleClearAllConfirm = () => {
+  const handleClearAllConfirm = async () => {
     if (confirmInput.trim().toUpperCase() !== 'RESET') {
       showNotification('error', 'Confirmation keyword does not match.');
       return;
@@ -26,10 +26,15 @@ export const DangerSettings: React.FC<DangerSettingsProps> = ({ onClearAll, onBa
       }
     }
 
-    onClearAll();
+    try {
+      await onClearAll();
+      showNotification('success', downloadBackup && onBackup ? 'Backup downloaded & databases fully reset!' : 'All databases fully reset!');
+    } catch (err) {
+      console.error('Reset failed:', err);
+      showNotification('error', 'Failed to fully reset databases.');
+    }
     setShowConfirm(false);
     setConfirmInput('');
-    showNotification('success', downloadBackup && onBackup ? 'Backup downloaded & local state databases fully reset!' : 'All local state databases fully reset!');
   };
 
   return (
