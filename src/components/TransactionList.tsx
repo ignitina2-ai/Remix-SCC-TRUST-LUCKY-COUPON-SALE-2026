@@ -64,15 +64,27 @@ const TransactionList: React.FC<TransactionListProps> = ({
   };
 
   const filteredTransactions = (transactions || [])
-    .filter(t => 
-      (t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       t.area.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (dateFilter === '' || t.date.startsWith(dateFilter))
-    )
+    .filter(t => {
+      const name = (t.name || '').toLowerCase();
+      const area = (t.area || '').toLowerCase();
+      const date = t.date || '';
+      const term = searchTerm.toLowerCase();
+      return (name.includes(term) || area.includes(term)) &&
+             (dateFilter === '' || date.startsWith(dateFilter));
+    })
     .sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      
+      const valA = isNaN(dateA) ? 0 : dateA;
+      const valB = isNaN(dateB) ? 0 : dateB;
+      
+      const diff = sortOrder === 'desc' ? valB - valA : valA - valB;
+      if (diff !== 0) return diff;
+      
+      const idA = a.id || '';
+      const idB = b.id || '';
+      return sortOrder === 'desc' ? idB.localeCompare(idA) : idA.localeCompare(idB);
     });
 
   const exportPDF = () => {

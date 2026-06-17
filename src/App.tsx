@@ -25,6 +25,7 @@ import { Bell, BellRing } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
 import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, getDoc } from 'firebase/firestore';
 import { auth, db, OperationType, handleFirestoreError } from './lib/firebase';
+import { uploadFile, dataURLtoFile } from './lib/storage';
 
 const STORAGE_KEY = 'coupon_sale_app_data_2026';
 
@@ -188,6 +189,51 @@ export default function App() {
         const promises: Promise<void>[] = [];
         let syncedCount = 0;
         
+        // --- 0. Sync and upload base64 images / logos to Firebase Cloud Storage ---
+        let logoUrl = parsed.logo || '';
+        let logoMobileUrl = parsed.logoMobile || '';
+        let logoDesktopUrl = parsed.logoDesktop || '';
+
+        if (parsed.logo && parsed.logo.startsWith('data:')) {
+          try {
+            const file = dataURLtoFile(parsed.logo, 'logo_synced.png');
+            if (file) {
+              logoUrl = await uploadFile(file, `logos/logo_synced_${Date.now()}.png`);
+            }
+          } catch (err) {
+            console.warn("Failed to sync primary logo to cloud storage:", err);
+          }
+        }
+        if (parsed.logoMobile && parsed.logoMobile.startsWith('data:')) {
+          try {
+            const file = dataURLtoFile(parsed.logoMobile, 'logo_mobile_synced.png');
+            if (file) {
+              logoMobileUrl = await uploadFile(file, `logos/logo_mobile_synced_${Date.now()}.png`);
+            }
+          } catch (err) {
+            console.warn("Failed to sync mobile logo to cloud storage:", err);
+          }
+        }
+        if (parsed.logoDesktop && parsed.logoDesktop.startsWith('data:')) {
+          try {
+            const file = dataURLtoFile(parsed.logoDesktop, 'logo_desktop_synced.png');
+            if (file) {
+              logoDesktopUrl = await uploadFile(file, `logos/logo_desktop_synced_${Date.now()}.png`);
+            }
+          } catch (err) {
+            console.warn("Failed to sync desktop logo to cloud storage:", err);
+          }
+        }
+
+        // Write logo settings to Firestore if updated
+        if (logoUrl !== (parsed.logo || '') || logoMobileUrl !== (parsed.logoMobile || '') || logoDesktopUrl !== (parsed.logoDesktop || '')) {
+          promises.push(setDoc(doc(db, 'settings', 'appSettings'), {
+            logo: logoUrl,
+            logoMobile: logoMobileUrl,
+            logoDesktop: logoDesktopUrl,
+          }, { merge: true }));
+        }
+
         // 1. Sync any local transactions
         if (parsed.transactions && parsed.transactions.length > 0) {
           for (const tx of parsed.transactions) {
@@ -204,10 +250,27 @@ export default function App() {
           }
         }
 
-        // 3. Sync any local incomeExpenses
+        // 3. Sync and upload receipts of incomeExpenses
+        const syncedReceiptsCache: { id: string, url: string }[] = [];
         if (parsed.incomeExpenses && parsed.incomeExpenses.length > 0) {
           for (const ie of parsed.incomeExpenses) {
-            promises.push(setDoc(doc(db, 'incomeExpenses', ie.id), cleanUndefined(ie)));
+            let receiptUrl = ie.receiptUrl;
+            if (ie.receiptUrl && ie.receiptUrl.startsWith('data:')) {
+              try {
+                const extension = ie.receiptName ? ie.receiptName.split('.').pop() : 'png';
+                const filename = `receipt_${ie.id}.${extension}`;
+                const file = dataURLtoFile(ie.receiptUrl, filename);
+                if (file) {
+                  const uploadedUrl = await uploadFile(file, `receipts/receipt_synced_${ie.id}_${Date.now()}.${extension}`);
+                  receiptUrl = uploadedUrl;
+                  syncedReceiptsCache.push({ id: ie.id, url: uploadedUrl });
+                }
+              } catch (err) {
+                console.warn(`Failed to sync receipt to cloud storage for entry ${ie.id}:`, err);
+              }
+            }
+            const updatedIe = { ...ie, receiptUrl };
+            promises.push(setDoc(doc(db, 'incomeExpenses', ie.id), cleanUndefined(updatedIe)));
             syncedCount++;
           }
         }
@@ -224,9 +287,27 @@ export default function App() {
           await Promise.all(promises);
         }
 
+        // Update local app state with the freshly synced Cloud Storage URLs instead of heavy local base64 strings
+        setAppData(prev => {
+          const updatedEntries = prev.incomeExpenses.map(ie => {
+            const cached = syncedReceiptsCache.find(x => x.id === ie.id);
+            if (cached) {
+              return { ...ie, receiptUrl: cached.url };
+            }
+            return ie;
+          });
+          return {
+            ...prev,
+            logo: logoUrl,
+            logoMobile: logoMobileUrl,
+            logoDesktop: logoDesktopUrl,
+            incomeExpenses: updatedEntries,
+          };
+        });
+
         // Clean local/bypass session indicator only after successful synchronization to Firestore in the cloud
         localStorage.removeItem('scc_local_verified_user');
-        console.log(`Successfully migrated ${syncedCount} offline/local records to Firestore cloud sync!`);
+        console.log(`Successfully migrated ${syncedCount} offline/local records to Firestore cloud sync (with Firebase Cloud Storage integration)!`);
       } catch (e) {
         console.error("Failed to sync offline local storage data to Cloud:", e);
       }
@@ -494,7 +575,14 @@ export default function App() {
       snapshot.forEach((d) => {
         txs.push(d.data() as Transaction);
       });
-      txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      txs.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        const valA = isNaN(dateA) ? 0 : dateA;
+        const valB = isNaN(dateB) ? 0 : dateB;
+        if (valB !== valA) return valB - valA;
+        return (b.id || '').localeCompare(a.id || '');
+      });
       setAppData(prev => ({ ...prev, transactions: txs }));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'transactions');
@@ -517,7 +605,14 @@ export default function App() {
       snapshot.forEach((d) => {
         ies.push(d.data() as IncomeExpense);
       });
-      ies.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      ies.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        const valA = isNaN(dateA) ? 0 : dateA;
+        const valB = isNaN(dateB) ? 0 : dateB;
+        if (valB !== valA) return valB - valA;
+        return (b.id || '').localeCompare(a.id || '');
+      });
       setAppData(prev => ({ ...prev, incomeExpenses: ies }));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'incomeExpenses');
@@ -529,7 +624,14 @@ export default function App() {
       snapshot.forEach((d) => {
         hvs.push(d.data() as SecretaryHandover);
       });
-      hvs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      hvs.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        const valA = isNaN(dateA) ? 0 : dateA;
+        const valB = isNaN(dateB) ? 0 : dateB;
+        if (valB !== valA) return valB - valA;
+        return (b.id || '').localeCompare(a.id || '');
+      });
       setAppData(prev => ({ ...prev, secretaryHandovers: hvs }));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'secretaryHandovers');

@@ -164,6 +164,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     const finalPaidAmount = formData.paymentMethod === 'CREDIT' ? safePaidAmount : totalAmount;
     const finalCreditAmount = formData.paymentMethod === 'CREDIT' ? totalAmount - safePaidAmount : 0;
 
+    const now = new Date();
+    const pad = (num: number, size: number = 2) => String(num).padStart(size, '0');
+    const timeStr = `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
+    const finalDateStr = new Date(formData.date + timeStr).toISOString();
+
     if (editingTransaction && onUpdateTransaction) {
       onUpdateTransaction(editingTransaction.id, {
         name: formData.name,
@@ -176,11 +181,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         paidAmount: finalPaidAmount,
         creditAmount: finalCreditAmount,
         paymentMethod: formData.paymentMethod,
-        date: new Date(formData.date + 'T12:00:00').toISOString(),
+        date: finalDateStr,
       });
     } else {
       onAddTransaction({
-        date: new Date(formData.date + 'T12:00:00').toISOString(),
+        date: finalDateStr,
         name: formData.name,
         phone: formData.phone,
         area: formData.area,

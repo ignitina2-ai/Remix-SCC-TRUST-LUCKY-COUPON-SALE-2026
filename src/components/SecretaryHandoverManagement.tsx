@@ -135,7 +135,14 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
       
       return matchesSearch && matchesStartDate && matchesEndDate;
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      const valA = isNaN(dateA) ? 0 : dateA;
+      const valB = isNaN(dateB) ? 0 : dateB;
+      if (valB !== valA) return valB - valA;
+      return (b.id || '').localeCompare(a.id || '');
+    });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -425,7 +432,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Secretary Handover</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Handover to Secretary</h1>
           <p className="text-slate-500 mt-0.5 font-semibold text-xs">Record cash handed over to the secretary</p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -480,7 +487,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
           </div>
           <div className="min-w-0 flex-1 text-left">
             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Handover to Secretary </span>
-            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{(totalSales + totalHandover).toLocaleString('en-IN')}</h3>
+            <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalHandover.toLocaleString('en-IN')}</h3>
             <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
               
             </p>

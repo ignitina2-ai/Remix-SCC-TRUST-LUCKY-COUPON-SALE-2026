@@ -1,10 +1,10 @@
 {
   "projectId": "scc-trust-coupon-sale-2026",
-  "appId": "1:287461567164:web:bd7d75774bca96eb083eb9",
+  "appId": "1:287461567164:web:750736f80634f697083eb9",
   "apiKey": "AIzaSyDVE8V8CFHVzy3vvvBOwfaj_cAgt3YTfHM",
   "authDomain": "scc-trust-coupon-sale-2026.firebaseapp.com",
   "firestoreDatabaseId": "remixed-firestore-database-id",
   "storageBucket": "scc-trust-coupon-sale-2026.firebasestorage.app",
   "messagingSenderId": "287461567164",
-  "measurementId": ""
+  "measurementId": "G-6G3K5N45DH"
 }

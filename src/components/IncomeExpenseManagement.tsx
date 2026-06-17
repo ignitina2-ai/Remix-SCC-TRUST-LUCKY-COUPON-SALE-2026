@@ -179,7 +179,14 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
 
       return matchesSearch && matchesType && matchesStartDate && matchesEndDate && matchesCategory;
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      const valA = isNaN(dateA) ? 0 : dateA;
+      const valB = isNaN(dateB) ? 0 : dateB;
+      if (valB !== valA) return valB - valA;
+      return (b.id || '').localeCompare(a.id || '');
+    });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
