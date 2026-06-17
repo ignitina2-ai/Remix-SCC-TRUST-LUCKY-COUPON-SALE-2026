@@ -219,39 +219,66 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   };
 
   const getTodaySalesStats = () => {
-    const todayTransactions = (transactions || []).filter(t => {
+    const todayIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+
+    const getLocalDatePart = (dateString: string) => {
+      if (!dateString) return '';
       try {
-        const d = new Date(t.date);
-        const today = new Date();
-        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
-        return formatter.format(d) === formatter.format(today);
+        const d = new Date(dateString);
+        return isNaN(d.getTime()) ? dateString.split('T')[0] : new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
       } catch (e) {
-        return false;
+        return dateString.split('T')[0];
       }
+    };
+
+    const todayTransactions = (transactions || []).filter(t => {
+      return getLocalDatePart(t.date) === todayIST;
     });
 
     const totalAmount = todayTransactions.reduce((sum, t) => sum + t.totalAmount, 0);
     const totalCredit = todayTransactions.reduce((sum, t) => sum + t.creditAmount, 0);
     
-    // Support either primary paymentMethod or payment history entries
-    const totalGooglePay = todayTransactions.reduce((sum, t) => {
-      const pm = (t.paymentMethod || '').toUpperCase();
-      const isGPayObj = pm.includes('GPAY') || pm.includes('GOOGLE') || pm.includes('G_PAY');
-      
-      // Calculate how much was paid via GPay
-      let gpayPaid = 0;
-      if (t.paymentHistory && t.paymentHistory.length > 0) {
-        gpayPaid = t.paymentHistory.reduce((histSum, h) => {
-          const hPm = (h.paymentMethod || '').toUpperCase();
-          if (hPm.includes('GPAY') || hPm.includes('GOOGLE') || hPm.includes('G_PAY')) {
-            return histSum + h.amount;
+    const methods = paymentMethodsList && paymentMethodsList.length > 0
+      ? paymentMethodsList
+      : [
+          { id: 'CASH', label: 'Cash', isDisabled: false, isSystem: true },
+          { id: 'CREDIT', label: 'Credit', isDisabled: false, isSystem: true },
+          { id: 'TRUST GPAY', label: 'TRUST GPAY', isDisabled: false, isSystem: false },
+          { id: 'SOFIA GPAY', label: 'SOFIA GPAY', isDisabled: false, isSystem: false },
+          { id: 'JOHNY GPAY', label: 'JOHNY GPAY', isDisabled: false, isSystem: false },
+          { id: 'OTHER_UPI', label: 'Other UPI', isDisabled: false, isSystem: false },
+        ];
+    const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
+    const nonCashCreditMethodsIds = nonCashCreditMethods.map(m => m.id);
+
+    const totalUPI = todayTransactions.reduce((sum, t) => {
+      let upiAmountForTx = 0;
+
+      const totalHistoryAmount = (t.paymentHistory || []).reduce((histSum, h) => histSum + h.amount, 0);
+      const unaccountedPaid = Math.max(0, t.paidAmount - totalHistoryAmount);
+
+      // 1. History entries from today that are UPI
+      const relevantHistory = (t.paymentHistory || []).filter(entry => {
+        const matchesMethod = nonCashCreditMethodsIds.includes(entry.paymentMethod || '');
+        if (!matchesMethod) return false;
+        return getLocalDatePart(entry.date) === todayIST;
+      });
+      const historySum = relevantHistory.reduce((histSum, h) => histSum + h.amount, 0);
+
+      // 2. Initial payment if tx occurred today and is UPI
+      let initialPaidAllocated = 0;
+      if (unaccountedPaid > 0) {
+        const isTxFromToday = getLocalDatePart(t.date) === todayIST;
+        if (isTxFromToday) {
+          const isUpiMethod = nonCashCreditMethodsIds.includes(t.paymentMethod);
+          if (isUpiMethod) {
+            initialPaidAllocated = unaccountedPaid;
           }
-          return histSum;
-        }, 0);
-      } else if (isGPayObj) {
-        gpayPaid = t.paymentMethod === 'CREDIT' ? t.paidAmount : t.totalAmount;
+        }
       }
-      return sum + gpayPaid;
+
+      upiAmountForTx = historySum + initialPaidAllocated;
+      return sum + upiAmountForTx;
     }, 0);
 
     const secretaryHandled = totalAmount - totalCredit;
@@ -259,7 +286,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     return {
       totalAmount,
       totalCredit,
-      totalGooglePay,
+      totalUPI,
       secretaryHandled,
       count: todayTransactions.length
     };
@@ -309,10 +336,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             <h4 className="text-xs sm:text-sm md:text-base font-black text-amber-600 mt-1 truncate">₹{todayStats.totalCredit.toLocaleString('en-IN')}</h4>
           </div>
 
-          {/* Total Google Pay */}
+          {/* All UPI Receipts */}
           <div className="bg-white p-3 rounded-xl border border-slate-150 shadow-2xs text-left">
-            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">Total Google Pay</p>
-            <h4 className="text-xs sm:text-sm md:text-base font-black text-blue-600 mt-1 truncate">₹{todayStats.totalGooglePay.toLocaleString('en-IN')}</h4>
+            <p className="text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-wider block truncate">All UPI Receipts</p>
+            <h4 className="text-xs sm:text-sm md:text-base font-black text-indigo-600 mt-1 truncate">₹{todayStats.totalUPI.toLocaleString('en-IN')}</h4>
           </div>
 
           {/* Secretary Handover Total */}

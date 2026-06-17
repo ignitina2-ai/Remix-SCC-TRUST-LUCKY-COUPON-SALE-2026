@@ -171,7 +171,7 @@ export default function App() {
 
   // Synchronize localStorage data to Firestore when user logs in (Internet restored/session started)
   useEffect(() => {
-    if (!user || user.isLocal) return;
+    if (!user) return;
 
     const syncLocalToCloud = async () => {
       // ONLY perform migration if they were previously in local-bypass mode!
@@ -318,7 +318,7 @@ export default function App() {
 
   // Subscribe to allowedUsers changes in real-time (Admins only!)
   useEffect(() => {
-    if (!user || user.isLocal) {
+    if (!user) {
       setAllowedUsers([]);
       return;
     }
@@ -353,7 +353,7 @@ export default function App() {
 
   // Hook 1: Register active session in Firestore when user changes/logs in
   useEffect(() => {
-    if (!user || user.isLocal) return;
+    if (!user) return;
     
     const registerSession = async () => {
       const cleanEmail = user.email ? user.email.toLowerCase().trim() : '';
@@ -382,7 +382,7 @@ export default function App() {
 
   // Hook 2: Subscribe to userSessions in real-time for any logged in user
   useEffect(() => {
-    if (!user || user.isLocal) {
+    if (!user) {
       setActiveSessions([]);
       return;
     }
@@ -407,7 +407,7 @@ export default function App() {
   }, [user]);
 
   const addAllowedUser = async (email: string) => {
-    if (!user || user.isLocal) return;
+    if (!user) return;
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail) return;
     try {
@@ -422,7 +422,7 @@ export default function App() {
   };
 
   const deleteAllowedUser = async (email: string) => {
-    if (!user || user.isLocal) return;
+    if (!user) return;
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail) return;
     try {
@@ -500,7 +500,7 @@ export default function App() {
 
   const handleGoogleLogout = async () => {
     try {
-      if (user && !user.isLocal) {
+      if (user) {
         const cleanEmail = user.email ? user.email.toLowerCase().trim() : '';
         if (cleanEmail) {
           const safeSessionId = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
@@ -567,7 +567,7 @@ export default function App() {
 
   // Firestore Real-Time Subscriptions when logged in
   useEffect(() => {
-    if (!user || user.isLocal) return;
+    if (!user) return;
 
     // Listen to Transactions
     const unsubTx = onSnapshot(collection(db, 'transactions'), (snapshot) => {
@@ -712,7 +712,7 @@ export default function App() {
       ...transaction,
       id: crypto.randomUUID(),
     };
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'transactions', newTransaction.id), cleanUndefined(newTransaction));
       } catch (error) {
@@ -733,7 +733,7 @@ export default function App() {
   };
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await updateDoc(doc(db, 'transactions', id), cleanUndefined(updates));
       } catch (error) {
@@ -748,7 +748,7 @@ export default function App() {
   };
 
   const deleteTransaction = async (ids: string[]) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         for (const id of ids) {
           await deleteDoc(doc(db, 'transactions', id));
@@ -770,7 +770,7 @@ export default function App() {
     const paidToTreasurer = !currentTx.paidToTreasurer;
     const treasurerPaidDate = paidToTreasurer ? new Date().toISOString() : undefined;
 
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await updateDoc(doc(db, 'transactions', id), {
           paidToTreasurer,
@@ -800,7 +800,7 @@ export default function App() {
       ...sponsor,
       id: crypto.randomUUID(),
     };
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'sponsors', newSponsor.id), cleanUndefined(newSponsor));
       } catch (error) {
@@ -822,7 +822,7 @@ export default function App() {
 
   const updateSponsor = async (id: string, updates: Partial<Sponsor>) => {
     const oldSponsor = appData.sponsors.find(s => s.id === id);
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await updateDoc(doc(db, 'sponsors', id), cleanUndefined(updates));
       } catch (error) {
@@ -843,7 +843,7 @@ export default function App() {
   };
 
   const deleteSponsor = async (id: string) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await deleteDoc(doc(db, 'sponsors', id));
       } catch (error) {
@@ -862,7 +862,7 @@ export default function App() {
       ...entry,
       id: crypto.randomUUID(),
     };
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'incomeExpenses', newEntry.id), cleanUndefined(newEntry));
       } catch (error) {
@@ -883,7 +883,7 @@ export default function App() {
   };
 
   const updateIncomeExpense = async (id: string, updates: Partial<IncomeExpense>) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await updateDoc(doc(db, 'incomeExpenses', id), cleanUndefined(updates));
       } catch (error) {
@@ -898,7 +898,7 @@ export default function App() {
   };
 
   const deleteIncomeExpense = async (ids: string[]) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         for (const id of ids) {
           await deleteDoc(doc(db, 'incomeExpenses', id));
@@ -919,7 +919,7 @@ export default function App() {
       ...handover,
       id: crypto.randomUUID(),
     };
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'secretaryHandovers', newHandover.id), cleanUndefined(newHandover));
       } catch (error) {
@@ -940,7 +940,7 @@ export default function App() {
   };
 
   const updateSecretaryHandover = async (id: string, updates: Partial<SecretaryHandover>) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await updateDoc(doc(db, 'secretaryHandovers', id), cleanUndefined(updates));
       } catch (error) {
@@ -955,7 +955,7 @@ export default function App() {
   };
 
   const deleteSecretaryHandover = async (ids: string[]) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         for (const id of ids) {
           await deleteDoc(doc(db, 'secretaryHandovers', id));
@@ -972,7 +972,7 @@ export default function App() {
   };
 
   const updateLogo = async (logo: string) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'settings', 'appSettings'), { logo }, { merge: true });
       } catch (error) {
@@ -984,7 +984,7 @@ export default function App() {
   };
 
   const updateLogoMobile = async (logoMobile: string) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'settings', 'appSettings'), { logoMobile }, { merge: true });
       } catch (error) {
@@ -996,7 +996,7 @@ export default function App() {
   };
 
   const updateLogoDesktop = async (logoDesktop: string) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'settings', 'appSettings'), { logoDesktop }, { merge: true });
       } catch (error) {
@@ -1008,7 +1008,7 @@ export default function App() {
   };
 
   const updateCreditSettings = async (settings: CreditSettings) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'settings', 'appSettings'), { creditSettings: settings }, { merge: true });
       } catch (error) {
@@ -1020,7 +1020,7 @@ export default function App() {
   };
 
   const updatePaymentLabels = async (labels: Record<PaymentMethod, string>) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'settings', 'appSettings'), { customPaymentLabels: labels }, { merge: true });
       } catch (error) {
@@ -1032,7 +1032,7 @@ export default function App() {
   };
 
   const updatePaymentMethodsList = async (list: CustomPaymentMethod[]) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'settings', 'appSettings'), { paymentMethodsList: list }, { merge: true });
       } catch (error) {
@@ -1044,7 +1044,7 @@ export default function App() {
   };
 
   const toggleAllowedUserDisabled = async (email: string, disabled: boolean) => {
-    if (!user || user.isLocal) return;
+    if (!user) return;
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail) return;
     try {
@@ -1057,7 +1057,7 @@ export default function App() {
   };
 
   const toggleNotifications = async (enabled: boolean) => {
-    if (user && !user.isLocal) {
+    if (user) {
       try {
         await setDoc(doc(db, 'settings', 'appSettings'), { notificationsEnabled: enabled }, { merge: true });
       } catch (error) {
@@ -1100,7 +1100,7 @@ export default function App() {
     setAppData(defaultData);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
 
-    if (user && !user.isLocal) {
+    if (user) {
       const deletePromises: Promise<any>[] = [];
       
       // Transactions
@@ -1430,9 +1430,9 @@ export default function App() {
               <div className="flex items-center gap-3 bg-white border border-slate-100 shadow-sm pl-4 pr-1.5 py-1 rounded-2xl">
                 <div className="text-right">
                   {user.isLocal ? (
-                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider flex items-center justify-end gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                      Local Offline Mode
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-wider flex items-center justify-end gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                      Bypass Sync Active
                     </p>
                   ) : (
                     <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
@@ -1498,30 +1498,21 @@ export default function App() {
           </div>
 
           {user && user.isLocal && (
-            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-3xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md shadow-amber-900/5 animate-in slide-in-from-top-4 duration-300">
+            <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-3xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md shadow-indigo-900/5 animate-in slide-in-from-top-4 duration-300">
               <div className="flex items-start gap-3.5">
-                <span className="p-2.5 rounded-2xl bg-amber-100 text-amber-800 self-start md:self-center shrink-0">
-                  <AlertCircle size={18} className="stroke-[2.5]" />
+                <span className="p-2.5 rounded-2xl bg-indigo-100 text-indigo-800 self-start md:self-center shrink-0">
+                  <CheckCircle size={18} className="stroke-[2.5]" />
                 </span>
                 <div className="text-left font-sans">
-                  <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider">Device-Isolated Mode (Unsynced)</h4>
-                  <p className="text-[11px] text-amber-800 font-extrabold leading-normal mt-1">
-                    You logged in via local bypass. Changes are saved ONLY to this browser/device and will NOT synchronize automatically with Firebase cloud storage or other users.
+                  <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Bypass Access Synced with Firebase</h4>
+                  <p className="text-[11px] text-indigo-800 font-extrabold leading-normal mt-1">
+                    You verified your access with email <strong>{user.email}</strong>. Real-time syncing with Google Cloud database is active and working perfectly!
                   </p>
-                  <p className="text-[11px] text-amber-700/80 font-bold leading-normal mt-0.5">
-                    To upload & sync your team's real-time sales data instantly to Google Cloud, please sign out and select "Sync with Google" when on a supported browser.
+                  <p className="text-[11px] text-indigo-700/80 font-bold leading-normal mt-0.5">
+                    Your sales entries are recorded immediately to the central cloud for your secretary and other team members.
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isLoggingIn}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-black uppercase tracking-wider text-[10px] px-5 py-3 rounded-2xl shrink-0 cursor-pointer transition-all shadow-md shadow-amber-600/10 active:scale-95 flex items-center justify-center gap-2"
-              >
-                <LogIn size={13} />
-                {isLoggingIn ? 'Syncing...' : 'Sync with Google'}
-              </button>
             </div>
           )}
 

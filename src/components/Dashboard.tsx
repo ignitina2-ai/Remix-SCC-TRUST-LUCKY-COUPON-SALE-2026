@@ -58,7 +58,15 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const getLocalDatePart = (dateString: string) => {
     if (!dateString) return '';
-    return dateString.split('T')[0];
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) {
+        return dateString.split('T')[0];
+      }
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+    } catch (e) {
+      return dateString.split('T')[0];
+    }
   };
 
   // Filter lists based on timeframe
