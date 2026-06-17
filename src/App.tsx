@@ -1271,6 +1271,9 @@ export default function App() {
             onDeleteAllowedUser={deleteAllowedUser}
             onToggleAllowedUserDisabled={toggleAllowedUserDisabled}
             activeSessions={activeSessions}
+            onGoogleLogin={handleGoogleLogin}
+            onGoogleLogout={handleGoogleLogout}
+            isLoggingIn={isLoggingIn}
           />
         );
       default:
