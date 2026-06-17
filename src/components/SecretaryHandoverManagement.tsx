@@ -110,7 +110,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
 
   const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
   const totalUPI = nonCashCreditMethods.reduce((sum, m) => sum + getAmountByMethod(m.id), 0);
-  const totalCashSale = totalCash + totalUPI;
+  const totalCashSale = totalCash;
 
   const handleEdit = (handover: SecretaryHandover) => {
     setFormData({

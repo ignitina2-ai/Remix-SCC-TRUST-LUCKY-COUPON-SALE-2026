@@ -129,7 +129,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
   const totalUPI = nonCashCreditMethods.reduce((sum, m) => sum + getAmountByMethod(m.id, timeframe), 0);
-  const totalCashSale = totalCash + totalUPI;
+  const totalCashSale = totalCash;
 
   const totalHandover = timeframe === 'today'
     ? (secretaryHandovers || []).filter(h => {
