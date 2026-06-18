@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X, Cloud, CloudOff, LogIn, LogOut, AlertCircle, CheckCircle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -23,7 +23,7 @@ import { Bell, BellRing } from 'lucide-react';
 
 // Firebase Integrations
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
-import { doc, setDoc as firestoreSetDoc, updateDoc as firestoreUpdateDoc, deleteDoc as firestoreDeleteDoc, collection, onSnapshot, getDoc, waitForPendingWrites } from 'firebase/firestore';
+import { doc, setDoc as firestoreSetDoc, updateDoc as firestoreUpdateDoc, deleteDoc as firestoreDeleteDoc, collection, onSnapshot, getDoc, waitForPendingWrites, onSnapshotsInSync } from 'firebase/firestore';
 import { auth, db, OperationType, handleFirestoreError } from './lib/firebase';
 import { uploadFile, dataURLtoFile } from './lib/storage';
 
@@ -37,13 +37,20 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
 
 export default function App() {
   const [inFlightWrites, setInFlightWrites] = useState(0);
+  const inFlightWritesRef = useRef(inFlightWrites);
+
+  useEffect(() => {
+    inFlightWritesRef.current = inFlightWrites;
+  }, [inFlightWrites]);
 
   const setDoc = async (...args: any[]) => {
     setInFlightWrites(c => c + 1);
     try {
       return await (firestoreSetDoc as any)(...args);
     } finally {
-      setInFlightWrites(c => Math.max(0, c - 1));
+      setTimeout(() => {
+        setInFlightWrites(c => Math.max(0, c - 1));
+      }, 500);
     }
   };
 
@@ -52,7 +59,9 @@ export default function App() {
     try {
       return await (firestoreUpdateDoc as any)(...args);
     } finally {
-      setInFlightWrites(c => Math.max(0, c - 1));
+      setTimeout(() => {
+        setInFlightWrites(c => Math.max(0, c - 1));
+      }, 500);
     }
   };
 
@@ -61,7 +70,9 @@ export default function App() {
     try {
       return await (firestoreDeleteDoc as any)(...args);
     } finally {
-      setInFlightWrites(c => Math.max(0, c - 1));
+      setTimeout(() => {
+        setInFlightWrites(c => Math.max(0, c - 1));
+      }, 500);
     }
   };
 
@@ -110,36 +121,71 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    const updateStatus = async () => {
+
+    const checkOnlineOffline = () => {
       if (!navigator.onLine) {
-        if (active) setSyncStatus('offline');
+        setSyncStatus('offline');
+        return true;
+      }
+      return false;
+    };
+
+    // Keep state current on offline mode
+    if (checkOnlineOffline()) {
+      const handleOnlineChange = () => {
+        if (!active) return;
+        if (navigator.onLine) {
+          setSyncStatus(inFlightWritesRef.current > 0 ? 'pending' : 'connected');
+        } else {
+          setSyncStatus('offline');
+        }
+      };
+      
+      window.addEventListener('online', handleOnlineChange);
+      window.addEventListener('offline', handleOnlineChange);
+      
+      return () => {
+        active = false;
+        window.removeEventListener('online', handleOnlineChange);
+        window.removeEventListener('offline', handleOnlineChange);
+      };
+    }
+
+    // Set initial status based on known write state
+    setSyncStatus(inFlightWritesRef.current > 0 ? 'pending' : 'connected');
+
+    // Subscribe to Firestore onSnapshotsInSync callback event
+    const unsubscribeSync = onSnapshotsInSync(db, () => {
+      if (!active) return;
+      if (!navigator.onLine) {
+        setSyncStatus('offline');
         return;
       }
 
-      if (inFlightWrites > 0) {
-        if (active) setSyncStatus('pending');
-        try {
-          await waitForPendingWrites(db);
-          if (active && navigator.onLine) {
-            setSyncStatus('connected');
-          }
-        } catch (error) {
-          console.error("Sync resolution failed", error);
-        }
+      if (inFlightWritesRef.current === 0) {
+        setSyncStatus('connected');
       } else {
-        if (active) setSyncStatus('connected');
+        setSyncStatus('pending');
+      }
+    });
+
+    const handleNetworkChange = () => {
+      if (!active) return;
+      if (!navigator.onLine) {
+        setSyncStatus('offline');
+      } else {
+        setSyncStatus(inFlightWritesRef.current > 0 ? 'pending' : 'connected');
       }
     };
 
-    updateStatus();
-
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
+    window.addEventListener('online', handleNetworkChange);
+    window.addEventListener('offline', handleNetworkChange);
 
     return () => {
       active = false;
-      window.removeEventListener('online', updateStatus);
-      window.removeEventListener('offline', updateStatus);
+      unsubscribeSync();
+      window.removeEventListener('online', handleNetworkChange);
+      window.removeEventListener('offline', handleNetworkChange);
     };
   }, [inFlightWrites]);
 
