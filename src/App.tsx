@@ -47,9 +47,8 @@ export default function App() {
     setInFlightWrites(c => c + 1);
     try {
       return await (firestoreSetDoc as any)(...args);
-    } catch (error) {
+    } finally {
       setInFlightWrites(c => Math.max(0, c - 1));
-      throw error;
     }
   };
 
@@ -57,9 +56,8 @@ export default function App() {
     setInFlightWrites(c => c + 1);
     try {
       return await (firestoreUpdateDoc as any)(...args);
-    } catch (error) {
+    } finally {
       setInFlightWrites(c => Math.max(0, c - 1));
-      throw error;
     }
   };
 
@@ -67,9 +65,8 @@ export default function App() {
     setInFlightWrites(c => c + 1);
     try {
       return await (firestoreDeleteDoc as any)(...args);
-    } catch (error) {
+    } finally {
       setInFlightWrites(c => Math.max(0, c - 1));
-      throw error;
     }
   };
 
@@ -176,9 +173,7 @@ export default function App() {
       if (inFlightWritesRef.current === 0) {
         setSyncStatus('connected');
       } else {
-        // Sync completed! We reset the flag and status
-        setInFlightWrites(0);
-        setSyncStatus('connected');
+        setSyncStatus('pending');
       }
     });
 
