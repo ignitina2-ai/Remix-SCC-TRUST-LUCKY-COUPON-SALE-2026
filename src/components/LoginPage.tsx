@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, AlertTriangle, Loader2 } from 'lucide-react';
+import { Shield, AlertTriangle, Loader2, CloudOff, ChevronRight, User } from 'lucide-react';
 import { TrustLogo } from './TrustLogo';
 import { useActiveResponsiveLogo } from '@/lib/logo-resolver';
 
@@ -14,6 +14,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
+  onLoginSuccess,
   handleGoogleLogin,
   isLoggingIn,
   authError,
@@ -21,6 +22,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   appData
 }) => {
   const { resolvedLogo } = useActiveResponsiveLogo(appData);
+  const [showBypassForm, setShowBypassForm] = useState(false);
+  const [bypassEmail, setBypassEmail] = useState('');
+  const [bypassError, setBypassError] = useState('');
+
+  const handleLocalBypassSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBypassError('');
+    
+    const cleanEmail = bypassEmail.trim().toLowerCase();
+    if (!cleanEmail) {
+      setBypassError('Please enter a valid email address.');
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setBypassError('Please enter a valid email format.');
+      return;
+    }
+
+    // Authenticate offline local user state
+    onLoginSuccess({
+      uid: `local_bypass_${Date.now()}`,
+      email: cleanEmail,
+      displayName: cleanEmail.split('@')[0],
+      photoURL: null,
+      isLocal: true
+    });
+  };
 
   return (
     <div 
@@ -60,50 +90,114 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         {/* Google Sync Sign In Option - Primary & ONLY login method */}
         <div className="w-full space-y-4">
-          <button
-            id="login-google-button"
-            onClick={handleGoogleLogin}
-            type="button"
-            disabled={isLoggingIn}
-            className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer animate-fade-in"
-          >
-            {isLoggingIn ? (
-              <>
-                <Loader2 size={16} className="animate-spin text-blue-600" />
-                <span>Connecting Google Cloud...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.04c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.5 15 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.9 3C6.4 7.4 9 5.04 12 5.04z"
+          {!showBypassForm ? (
+            <>
+              <button
+                id="login-google-button"
+                onClick={handleGoogleLogin}
+                type="button"
+                disabled={isLoggingIn}
+                className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer animate-fade-in"
+              >
+                {isLoggingIn ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin text-blue-600" />
+                    <span>Connecting Google Cloud...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.04c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.5 15 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.9 3C6.4 7.4 9 5.04 12 5.04z"
+                      />
+                      <path
+                        fill="#4285F4"
+                        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.1-2 3.7-4.9 3.7-8.7z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.5 14.6c-.2-.7-.4-1.4-.4-2.1s.2-1.4.4-2.1L1.6 7.4C.6 9.3 0 11.6 0 14s.6 4.7 1.6 6.6l3.9-3z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.6-2.4-6.5-5.36l-3.9 3C3.5 20.4 7.4 23 12 23z"
+                      />
+                    </svg>
+                    <span>Connect & Sign In with Google</span>
+                  </>
+                )}
+              </button>
+
+              <p className="text-[9.5px] text-emerald-700 font-extrabold text-center uppercase tracking-wider bg-emerald-50/80 py-1.5 px-3 rounded-xl mx-auto w-fit border border-emerald-100 flex items-center justify-center gap-1 shadow-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                ✨ Syncs all mobile & desktop devices in real-time.
+              </p>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBypassForm(true)}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-600 font-semibold transition-all hover:underline cursor-pointer"
+                >
+                  <CloudOff size={14} />
+                  <span>Google Login Blocked? Use Offline Bypass</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <form onSubmit={handleLocalBypassSubmit} className="space-y-4 text-left animate-in slide-in-from-bottom-2 duration-200">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Administrator Email</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                    <User size={14} />
+                  </span>
+                  <input
+                    type="email"
+                    required
+                    value={bypassEmail}
+                    onChange={(e) => setBypassEmail(e.target.value)}
+                    placeholder="e.g. administrator@gmail.com"
+                    className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-850 placeholder-slate-405 transition-all outline-none"
                   />
-                  <path
-                    fill="#4285F4"
-                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.1-2 3.7-4.9 3.7-8.7z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.5 14.6c-.2-.7-.4-1.4-.4-2.1s.2-1.4.4-2.1L1.6 7.4C.6 9.3 0 11.6 0 14s.6 4.7 1.6 6.6l3.9-3z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.6-2.4-6.5-5.36l-3.9 3C3.5 20.4 7.4 23 12 23z"
-                  />
-                </svg>
-                <span>Connect & Sign In with Google</span>
-              </>
-            )}
-          </button>
-          
-          <p className="text-[9.5px] text-emerald-700 font-extrabold text-center uppercase tracking-wider bg-emerald-50/80 py-1.5 px-3 rounded-xl mx-auto w-fit border border-emerald-100 flex items-center justify-center gap-1 shadow-xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-            ✨ Syncs all mobile & desktop devices in real-time.
-          </p>
+                </div>
+                <p className="text-[9.5px] text-slate-400 leading-normal font-medium mt-1">
+                  💡 Enter your authorized email. This allows device-isolated operations and automatic cloud integration as soon as you connect in Settings later.
+                </p>
+              </div>
+
+              {bypassError && (
+                <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl text-rose-800 text-[10px] font-semibold flex items-center gap-2">
+                  <AlertTriangle size={12} className="shrink-0 text-rose-500" />
+                  <span>{bypassError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBypassForm(false);
+                    setBypassError('');
+                  }}
+                  className="flex-1 py-3 border border-slate-250 text-slate-700 bg-white hover:bg-slate-50 font-bold rounded-xl text-xs transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs shadow-md shadow-blue-600/10 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>Verify Offline</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </form>
+          )}
 
           <AnimatePresence mode="wait">
-            {authError && (
+            {authError && !showBypassForm && (
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}

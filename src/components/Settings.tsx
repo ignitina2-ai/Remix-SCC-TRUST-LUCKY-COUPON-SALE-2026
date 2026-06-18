@@ -50,6 +50,7 @@ interface SettingsProps {
   onGoogleLogin?: () => Promise<void>;
   onGoogleLogout?: () => Promise<void>;
   isLoggingIn?: boolean;
+  onSyncLocalToCloud?: () => Promise<boolean>;
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
@@ -72,7 +73,8 @@ const Settings: React.FC<SettingsProps> = ({
   activeSessions = [],
   onGoogleLogin,
   onGoogleLogout,
-  isLoggingIn = false
+  isLoggingIn = false,
+  onSyncLocalToCloud
 }) => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [userToRevoke, setUserToRevoke] = useState<string | null>(null);
@@ -96,7 +98,7 @@ const Settings: React.FC<SettingsProps> = ({
 
   const isPrimaryAdmin = !!(user && user.email && (
     user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-    allowedUsers.some(u => u.email.toLowerCase() === user.email?.toLowerCase() && !u.disabled)
+    user.email.toLowerCase() === 'ignitina2@mail.com'
   ));
 
   return (
@@ -239,6 +241,29 @@ const Settings: React.FC<SettingsProps> = ({
                     </span>
                   </p>
                 )}
+
+                <div className="pt-3 border-t border-slate-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-slate-800">Different dashboard amounts on mobile/desktop?</p>
+                    <p className="text-[10px] text-slate-400 font-bold">If this device has any local/offline data that isn't appearing on other screens, run a force sync to publish them.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (onSyncLocalToCloud) {
+                        const success = await onSyncLocalToCloud();
+                        if (success) {
+                          showNotification('success', 'Database cloud synchronization succeeded!');
+                        } else {
+                          showNotification('error', 'Database cloud sync failed. Please check your network connection.');
+                        }
+                      }
+                    }}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 px-3.5 rounded-xl text-[10px] shadow-sm transition-all active:scale-95 flex items-center gap-1.5 border border-blue-100 shrink-0 cursor-pointer justify-center"
+                  >
+                    <RefreshCw size={13} />
+                    <span>Force Database Cloud Sync</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-start gap-3 text-left">

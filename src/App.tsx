@@ -112,7 +112,7 @@ export default function App() {
 
   const isPrimaryAdmin = !!(user && user.email && (
     user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-    allowedUsers.some(u => u.email.toLowerCase() === user.email?.toLowerCase() && !u.disabled)
+    user.email.toLowerCase() === 'ignitina2@mail.com'
   ));
 
   useEffect(() => {
@@ -130,13 +130,19 @@ export default function App() {
       if (currentUser) {
         const isSuperAdmin = currentUser.email && (
           currentUser.email.toLowerCase() === 'ignitina2@gmail.com' ||
-          currentUser.email.toLowerCase() === 'ignitina2@gmail.com'
+          currentUser.email.toLowerCase() === 'ignitina2@mail.com'
         );
 
         const cleanEmail = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
 
         if (isSuperAdmin) {
-          setUser(currentUser);
+          setUser({
+            uid: currentUser.uid,
+            email: currentUser.email,
+            displayName: currentUser.displayName || 'Primary Administrator',
+            photoURL: currentUser.photoURL,
+            isLocal: false
+          });
           // Always ensure admin email is cached
           try {
             const saved = localStorage.getItem('scc_permitted_emails');
@@ -153,7 +159,14 @@ export default function App() {
           try {
             const docSnap = await getDoc(doc(db, 'allowedUsers', cleanEmail));
             if (docSnap.exists() && docSnap.data()?.disabled !== true) {
-              setUser(currentUser);
+              const userData = docSnap.data();
+              setUser({
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: currentUser.displayName || userData?.name || 'Authorized Helper',
+                photoURL: currentUser.photoURL,
+                isLocal: false
+              });
               // Save to local cache of permitted emails for seamless subsequent entries
               try {
                 const saved = localStorage.getItem('scc_permitted_emails');
@@ -193,7 +206,13 @@ export default function App() {
 
             if (isOfflineBypassed) {
               console.warn("Device/Firestore client currently offline, but user has pre-authorized login cached in credentials registry.", errMsg);
-              setUser(currentUser);
+              setUser({
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: currentUser.displayName || 'Authorized Admin / Helper',
+                photoURL: currentUser.photoURL,
+                isLocal: true
+              });
             } else {
               if (isOfflineErr) {
                 console.warn("Could not reach Trust directory database due to network connection warning.", errMsg);
@@ -417,8 +436,7 @@ export default function App() {
       return;
     }
 
-    const isSuperAdmin = cleanEmail === 'ignitina2@gmail.com' ||
-                         allowedUsers.some(u => u.email.toLowerCase() === cleanEmail && !u.disabled);
+    const isSuperAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@mail.com';
     if (isSuperAdmin) {
       setUserPermissions({ canAdd: true, canEdit: true, canDelete: true });
       return;
@@ -427,14 +445,30 @@ export default function App() {
     const unsubUserPerm = onSnapshot(doc(db, 'allowedUsers', cleanEmail), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setUserPermissions({
-          canAdd: data.canAdd !== false,
-          canEdit: data.canEdit !== false,
-          canDelete: data.canDelete !== false,
-        });
+        if (data.disabled === true) {
+          setUserPermissions({ canAdd: false, canEdit: false, canDelete: false });
+          signOut(auth).then(() => {
+            setUser(null);
+            setAuthError({
+              message: `Access Revoked: Your account (${cleanEmail}) has been disabled by the administrator.`
+            });
+          }).catch((e) => console.warn("Failed to sign out disabled user:", e));
+        } else {
+          setUserPermissions({
+            canAdd: data.canAdd !== false,
+            canEdit: data.canEdit !== false,
+            canDelete: data.canDelete !== false,
+          });
+        }
       } else {
-        // Default to restricted if no record found
+        // Removed from directory in real-time
         setUserPermissions({ canAdd: false, canEdit: false, canDelete: false });
+        signOut(auth).then(() => {
+          setUser(null);
+          setAuthError({
+            message: `Access Revoked: Your account (${cleanEmail}) is no longer authorized on the Trust directory.`
+          });
+        }).catch((e) => console.warn("Failed to sign out deleted user:", e));
       }
     }, (error) => {
       console.warn("Error listening to user permissions:", error);
@@ -452,8 +486,7 @@ export default function App() {
       if (!cleanEmail) return;
       
       const safeSessionId = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
-      const isSccPrimaryAdmin = cleanEmail === 'ignitina2@gmail.com' ||
-                                allowedUsers.some(u => u.email.toLowerCase() === cleanEmail && !u.disabled);
+      const isSccPrimaryAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@mail.com';
       
       try {
         await setDoc(doc(db, 'userSessions', safeSessionId), {
@@ -692,7 +725,26 @@ export default function App() {
         if (valB !== valA) return valB - valA;
         return (b.id || '').localeCompare(a.id || '');
       });
-      setAppData(prev => ({ ...prev, transactions: txs }));
+
+      setAppData(prev => {
+        const localOnly = prev.transactions.filter(local => !txs.some(cloud => cloud.id === local.id));
+        if (localOnly.length > 0) {
+          localOnly.forEach(t => {
+            setDoc(doc(db, 'transactions', t.id), cleanUndefined(t)).catch(e => {
+              console.warn("Background auto-upload of local transaction failed:", e);
+            });
+          });
+        }
+        const merged = [...localOnly, ...txs].sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : 0;
+          const dateB = b.date ? new Date(b.date).getTime() : 0;
+          const valA = isNaN(dateA) ? 0 : dateA;
+          const valB = isNaN(dateB) ? 0 : dateB;
+          if (valB !== valA) return valB - valA;
+          return (b.id || '').localeCompare(a.id || '');
+        });
+        return { ...prev, transactions: merged };
+      });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'transactions');
     });
@@ -703,7 +755,18 @@ export default function App() {
       snapshot.forEach((d) => {
         sps.push(d.data() as Sponsor);
       });
-      setAppData(prev => ({ ...prev, sponsors: sps }));
+
+      setAppData(prev => {
+        const localOnly = (prev.sponsors || []).filter(local => !sps.some(cloud => cloud.id === local.id));
+        if (localOnly.length > 0) {
+          localOnly.forEach(s => {
+            setDoc(doc(db, 'sponsors', s.id), cleanUndefined(s)).catch(e => {
+              console.warn("Background auto-upload of local sponsor failed:", e);
+            });
+          });
+        }
+        return { ...prev, sponsors: [...localOnly, ...sps] };
+      });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'sponsors');
     });
@@ -722,7 +785,26 @@ export default function App() {
         if (valB !== valA) return valB - valA;
         return (b.id || '').localeCompare(a.id || '');
       });
-      setAppData(prev => ({ ...prev, incomeExpenses: ies }));
+
+      setAppData(prev => {
+        const localOnly = (prev.incomeExpenses || []).filter(local => !ies.some(cloud => cloud.id === local.id));
+        if (localOnly.length > 0) {
+          localOnly.forEach(i => {
+            setDoc(doc(db, 'incomeExpenses', i.id), cleanUndefined(i)).catch(e => {
+              console.warn("Background auto-upload of local incomeExpense failed:", e);
+            });
+          });
+        }
+        const merged = [...localOnly, ...ies].sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : 0;
+          const dateB = b.date ? new Date(b.date).getTime() : 0;
+          const valA = isNaN(dateA) ? 0 : dateA;
+          const valB = isNaN(dateB) ? 0 : dateB;
+          if (valB !== valA) return valB - valA;
+          return (b.id || '').localeCompare(a.id || '');
+        });
+        return { ...prev, incomeExpenses: merged };
+      });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'incomeExpenses');
     });
@@ -741,7 +823,26 @@ export default function App() {
         if (valB !== valA) return valB - valA;
         return (b.id || '').localeCompare(a.id || '');
       });
-      setAppData(prev => ({ ...prev, secretaryHandovers: hvs }));
+
+      setAppData(prev => {
+        const localOnly = (prev.secretaryHandovers || []).filter(local => !hvs.some(cloud => cloud.id === local.id));
+        if (localOnly.length > 0) {
+          localOnly.forEach(h => {
+            setDoc(doc(db, 'secretaryHandovers', h.id), cleanUndefined(h)).catch(e => {
+              console.warn("Background auto-upload of local handover failed:", e);
+            });
+          });
+        }
+        const merged = [...localOnly, ...hvs].sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : 0;
+          const dateB = b.date ? new Date(b.date).getTime() : 0;
+          const valA = isNaN(dateA) ? 0 : dateA;
+          const valB = isNaN(dateB) ? 0 : dateB;
+          if (valB !== valA) return valB - valA;
+          return (b.id || '').localeCompare(a.id || '');
+        });
+        return { ...prev, secretaryHandovers: merged };
+      });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'secretaryHandovers');
     });
@@ -1455,6 +1556,7 @@ export default function App() {
             onGoogleLogin={handleGoogleLogin}
             onGoogleLogout={handleGoogleLogout}
             isLoggingIn={isLoggingIn}
+            onSyncLocalToCloud={handleSyncLocalToCloud}
           />
         );
       default:

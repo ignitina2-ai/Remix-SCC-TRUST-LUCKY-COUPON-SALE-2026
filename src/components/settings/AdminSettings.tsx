@@ -36,7 +36,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
 
   const isAdminUser = !!(user && user.email && (
     user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-    allowedUsers.some(u => u.email.toLowerCase() === user.email?.toLowerCase() && !u.disabled)
+    user.email.toLowerCase() === 'ignitina2@mail.com'
   ));
 
   const handleAddEmail = async (e: React.FormEvent) => {
@@ -50,7 +50,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       return;
     }
 
-    if (emailToValidate === 'ignitina2@gmail.com' || emailToValidate === 'ignitina2@gmail.com') {
+    if (emailToValidate === 'ignitina2@gmail.com' || emailToValidate === 'ignitina2@mail.com') {
       showNotification('error', 'The primary administrator is permanently auto-allowed.');
       return;
     }
