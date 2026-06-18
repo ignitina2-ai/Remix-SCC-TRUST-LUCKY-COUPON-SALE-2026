@@ -23,7 +23,7 @@ import { Bell, BellRing } from 'lucide-react';
 
 // Firebase Integrations
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
-import { doc, setDoc as firestoreSetDoc, updateDoc as firestoreUpdateDoc, deleteDoc as firestoreDeleteDoc, collection, onSnapshot, getDoc, waitForPendingWrites, onSnapshotsInSync } from 'firebase/firestore';
+import { doc, setDoc as firestoreSetDoc, updateDoc as firestoreUpdateDoc, deleteDoc as firestoreDeleteDoc, collection, onSnapshot, getDoc, waitForPendingWrites, onSnapshotsInSync, query, limit } from 'firebase/firestore';
 import { auth, db, OperationType, handleFirestoreError } from './lib/firebase';
 import { uploadFile, dataURLtoFile } from './lib/storage';
 
@@ -154,6 +154,19 @@ export default function App() {
     // Set initial status based on known write state
     setSyncStatus(inFlightWritesRef.current > 0 ? 'pending' : 'connected');
 
+    // 1. Heartbeat query to keep Firestore connection highly active and syncStatus highly responsive
+    let unsubscribeHeartbeat: (() => void) | null = null;
+    try {
+      const dummyQuery = query(collection(db, 'transactions'), limit(1));
+      unsubscribeHeartbeat = onSnapshot(dummyQuery, () => {
+        // Keeps the connection alive and responsive
+      }, (err) => {
+        console.debug("Heartbeat snapshot subscription info/error ignored:", err);
+      });
+    } catch (err) {
+      console.debug("Heartbeat query creation ignored:", err);
+    }
+
     // Subscribe to Firestore onSnapshotsInSync callback event
     const unsubscribeSync = onSnapshotsInSync(db, () => {
       if (!active) return;
@@ -183,6 +196,7 @@ export default function App() {
 
     return () => {
       active = false;
+      if (unsubscribeHeartbeat) unsubscribeHeartbeat();
       unsubscribeSync();
       window.removeEventListener('online', handleNetworkChange);
       window.removeEventListener('offline', handleNetworkChange);
