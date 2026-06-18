@@ -79,7 +79,25 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
-  const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string; disabled?: boolean; canAdd?: boolean; canEdit?: boolean; canDelete?: boolean; }[]>([]);
+  const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string; disabled?: boolean; canAdd?: boolean; canEdit?: boolean; canDelete?: boolean; }[]>(() => {
+    try {
+      const saved = localStorage.getItem('scc_allowed_users_full');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    try {
+      const savedEmails = localStorage.getItem('scc_permitted_emails');
+      if (savedEmails) {
+        const parsed = JSON.parse(savedEmails);
+        if (Array.isArray(parsed)) {
+          return parsed.map(email => ({ email }));
+        }
+      }
+    } catch (e) {}
+    return [];
+  });
   const [userPermissions, setUserPermissions] = useState<{
     canAdd: boolean;
     canEdit: boolean;
@@ -157,7 +175,11 @@ export default function App() {
               });
             }
           } catch (err: any) {
-            console.error("Checking allowed users directory failed:", err);
+            const errMsg = err instanceof Error ? err.message : String(err);
+            const isOfflineErr = errMsg.toLowerCase().includes('offline') || 
+                                 errMsg.toLowerCase().includes('unavailable') || 
+                                 errMsg.toLowerCase().includes('network') ||
+                                 (err && err.code === 'unavailable');
             
             // Offline tolerance credentials check
             let isOfflineBypassed = false;
@@ -170,13 +192,18 @@ export default function App() {
             } catch (e) {}
 
             if (isOfflineBypassed) {
-              console.log("Device is offline, but user is pre-authorized via locally saved credentials cache.");
+              console.warn("Device/Firestore client currently offline, but user has pre-authorized login cached in credentials registry.", errMsg);
               setUser(currentUser);
             } else {
+              if (isOfflineErr) {
+                console.warn("Could not reach Trust directory database due to network connection warning.", errMsg);
+              } else {
+                console.error("Checking allowed users directory failed with unexpected error:", err);
+              }
               await signOut(auth);
               setUser(null);
               setAuthError({
-                message: `Verification failed. Could not verify login permission, please check your network.`
+                message: `Verification failed. Could not verify login permission, please check your network connection.`
               });
             }
           } finally {
@@ -347,14 +374,6 @@ export default function App() {
       setAllowedUsers([]);
       return;
     }
-    const isSuperAdmin = user.email && (
-      user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-      user.email.toLowerCase() === 'ignitina2@mail.com'
-    );
-    if (!isSuperAdmin) {
-      setAllowedUsers([]);
-      return;
-    }
 
     const unsubAllowed = onSnapshot(collection(db, 'allowedUsers'), (snapshot) => {
       const list: any[] = [];
@@ -362,15 +381,25 @@ export default function App() {
         list.push(d.data());
       });
       setAllowedUsers(list);
-      // Sync permitted email IDs list to localStorage
+      // Sync full allowed users data to localStorage for offline authorization & quick load
       try {
+        localStorage.setItem('scc_allowed_users_full', JSON.stringify(list));
         const emails = list.map(u => u.email.toLowerCase().trim()).filter(Boolean);
         localStorage.setItem('scc_permitted_emails', JSON.stringify(emails));
       } catch (e) {
-        console.error("Local caching from snapshots collection failed", e);
+        console.warn("Local caching from snapshots collection failed:", e);
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'allowedUsers');
+      const errStr = error instanceof Error ? error.message : String(error);
+      const isOfflineMsg = errStr.toLowerCase().includes('offline') || 
+                           errStr.toLowerCase().includes('unavailable') || 
+                           errStr.toLowerCase().includes('network') ||
+                           (error && typeof error === 'object' && (error as any).code === 'unavailable');
+      if (isOfflineMsg) {
+        console.warn("Firestore subscription 'allowedUsers' is using cached values (client offline):", errStr);
+      } else {
+        console.error("Firestore subscription 'allowedUsers' error:", error);
+      }
     });
 
     return () => unsubAllowed();
@@ -388,7 +417,8 @@ export default function App() {
       return;
     }
 
-    const isSuperAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@gmail.com';
+    const isSuperAdmin = cleanEmail === 'ignitina2@gmail.com' ||
+                         allowedUsers.some(u => u.email.toLowerCase() === cleanEmail && !u.disabled);
     if (isSuperAdmin) {
       setUserPermissions({ canAdd: true, canEdit: true, canDelete: true });
       return;
@@ -411,7 +441,7 @@ export default function App() {
     });
 
     return () => unsubUserPerm();
-  }, [user]);
+  }, [user, allowedUsers]);
 
   // Hook 1: Register active session in Firestore when user changes/logs in
   useEffect(() => {
@@ -422,14 +452,15 @@ export default function App() {
       if (!cleanEmail) return;
       
       const safeSessionId = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
-      const isSuperAdmin = cleanEmail === 'ignitina2@gmail.com' || cleanEmail === 'ignitina2@mail.com';
+      const isSccPrimaryAdmin = cleanEmail === 'ignitina2@gmail.com' ||
+                                allowedUsers.some(u => u.email.toLowerCase() === cleanEmail && !u.disabled);
       
       try {
         await setDoc(doc(db, 'userSessions', safeSessionId), {
           email: cleanEmail,
           displayName: user.displayName || user.name || cleanEmail.split('@')[0],
           photoURL: user.photoURL || `https://picsum.photos/seed/${safeSessionId}/100/100`,
-          role: isSuperAdmin ? 'Primary Admin' : 'Authorized Helper',
+          role: isSccPrimaryAdmin ? 'Primary Admin' : 'Authorized Helper',
           lastLoginAt: new Date().toISOString(),
           online: true,
           platform: window.innerWidth < 768 ? 'Mobile App' : 'Desktop Hub'
@@ -440,7 +471,7 @@ export default function App() {
     };
 
     registerSession();
-  }, [user]);
+  }, [user, allowedUsers]);
 
   // Hook 2: Subscribe to userSessions in real-time for any logged in user
   useEffect(() => {
