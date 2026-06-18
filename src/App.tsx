@@ -36,31 +36,43 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
 };
 
 export default function App() {
-  const setDoc = async (...args: any[]) => {
-    try {
-      return await (firestoreSetDoc as any)(...args);
-    } catch (error) {
-      console.error("Firebase SetDoc Error:", error);
-      throw error;
+  const [syncStatus, setSyncStatus] = useState<'connected' | 'offline' | 'pending'>('connected');
+  const [activeWrites, setActiveWrites] = useState(0);
+  const activeWritesRef = useRef(activeWrites);
+
+  useEffect(() => {
+    activeWritesRef.current = activeWrites;
+  }, [activeWrites]);
+
+  const wrapWrite = async (writeFn: () => Promise<any>) => {
+    setActiveWrites(c => c + 1);
+    if (navigator.onLine) {
+      setSyncStatus('pending');
+    } else {
+      setSyncStatus('offline');
     }
+    try {
+      return await writeFn();
+    } catch (error) {
+      console.error("Firebase Write Error:", error);
+      throw error;
+    } finally {
+      setTimeout(() => {
+        setActiveWrites(c => Math.max(0, c - 1));
+      }, 1000); // 1s debounce to prevent premature transitions to connected/green
+    }
+  };
+
+  const setDoc = async (...args: any[]) => {
+    return wrapWrite(() => (firestoreSetDoc as any)(...args));
   };
 
   const updateDoc = async (...args: any[]) => {
-    try {
-      return await (firestoreUpdateDoc as any)(...args);
-    } catch (error) {
-      console.error("Firebase UpdateDoc Error:", error);
-      throw error;
-    }
+    return wrapWrite(() => (firestoreUpdateDoc as any)(...args));
   };
 
   const deleteDoc = async (...args: any[]) => {
-    try {
-      return await (firestoreDeleteDoc as any)(...args);
-    } catch (error) {
-      console.error("Firebase DeleteDoc Error:", error);
-      throw error;
-    }
+    return wrapWrite(() => (firestoreDeleteDoc as any)(...args));
   };
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -104,7 +116,6 @@ export default function App() {
 
   // User state integration
   const [user, setUser] = useState<any>(null);
-  const [syncStatus, setSyncStatus] = useState<'connected' | 'offline' | 'pending'>('connected');
 
   useEffect(() => {
     let active = true;
@@ -113,6 +124,8 @@ export default function App() {
       if (!active) return;
       if (!navigator.onLine) {
         setSyncStatus('offline');
+      } else if (activeWritesRef.current > 0) {
+        setSyncStatus('pending');
       } else {
         setSyncStatus('connected');
       }
@@ -130,7 +143,7 @@ export default function App() {
           setSyncStatus('offline');
           return;
         }
-        if (snapshot.metadata.hasPendingWrites) {
+        if (snapshot.metadata.hasPendingWrites || activeWritesRef.current > 0) {
           setSyncStatus('pending');
         } else {
           setSyncStatus('connected');
@@ -149,7 +162,9 @@ export default function App() {
         setSyncStatus('offline');
         return;
       }
-      setSyncStatus('connected');
+      if (activeWritesRef.current === 0) {
+        setSyncStatus('connected');
+      }
     });
 
     // 3. Keep state updated on connection shifts
@@ -157,6 +172,8 @@ export default function App() {
       if (!active) return;
       if (!navigator.onLine) {
         setSyncStatus('offline');
+      } else if (activeWritesRef.current > 0) {
+        setSyncStatus('pending');
       } else {
         setSyncStatus('connected');
       }
@@ -172,7 +189,7 @@ export default function App() {
       window.removeEventListener('online', handleNetworkChange);
       window.removeEventListener('offline', handleNetworkChange);
     };
-  }, []);
+  }, [activeWrites]);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
