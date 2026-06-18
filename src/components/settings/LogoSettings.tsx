@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle, Laptop, Smartphone, Settings } from 'lucide-react';
 import { AppData } from '@/types';
-import { uploadFile, deleteFileFromStorage } from '@/lib/storage';
 import { cn } from '@/lib/utils';
 
 interface LogoSettingsProps {
@@ -41,55 +40,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
 
     setIsUploading(true);
     setUploadError(null);
-
-    const oldUrl = currentLogo;
-
-    if (user) {
-      // Timeout safeguard to prevent infinite hanging
-      const uploadWithTimeout = (fileObj: File, filePath: string, ms: number): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const timer = setTimeout(() => {
-            reject(new Error("Storage upload timed out"));
-          }, ms);
-          
-          uploadFile(fileObj, filePath).then(
-            (url) => {
-              clearTimeout(timer);
-              resolve(url);
-            },
-            (err) => {
-              clearTimeout(timer);
-              reject(err);
-            }
-          );
-        });
-      };
-
-      try {
-        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const prefix = isMobileLogo ? 'logo_mobile' : 'logo_desktop';
-        const uniquePath = `logos/${prefix}_${Date.now()}_${safeName}`;
-        
-        // Delete old storage logo if it was a storage URL to save space
-        if (oldUrl && oldUrl.startsWith('http')) {
-          await deleteFileFromStorage(oldUrl).catch(err => console.warn("Failed to delete old file:", err));
-        }
-
-        const downloadUrl = await uploadWithTimeout(file, uniquePath, 25000);
-        if (isMobileLogo) {
-          onUpdateLogoMobile?.(downloadUrl);
-        } else {
-          onUpdateLogoDesktop?.(downloadUrl);
-          onUpdateLogo(downloadUrl);
-        }
-        setIsUploading(false);
-      } catch (err: any) {
-        console.warn("Failed to upload logo to Firebase Storage, using local fallback:", err);
-        readAndSetLocal(file, isMobileLogo);
-      }
-    } else {
-      readAndSetLocal(file, isMobileLogo);
-    }
+    readAndSetLocal(file, isMobileLogo);
   };
 
   const readAndSetLocal = (file: File, forMobile: boolean) => {
@@ -112,15 +63,6 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
   };
 
   const handleDeleteLogo = async () => {
-    const oldUrl = currentLogo;
-    if (oldUrl && oldUrl.startsWith('http')) {
-      try {
-        await deleteFileFromStorage(oldUrl);
-      } catch (err) {
-        console.warn("Failed to delete stale logo file:", err);
-      }
-    }
-
     if (isMobileLogo) {
       onUpdateLogoMobile?.('');
     } else {

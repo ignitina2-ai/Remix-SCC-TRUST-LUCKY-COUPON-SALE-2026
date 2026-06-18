@@ -29,8 +29,6 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import ConfirmationModal from './ConfirmationModal';
-import { auth } from '@/lib/firebase';
-import { uploadFile, deleteFileFromStorage } from '@/lib/storage';
 
 interface IncomeExpenseManagementProps {
   entries: IncomeExpense[];
@@ -81,50 +79,29 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
 
     setIsUploadingReceipt(true);
     try {
-      if (auth.currentUser) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const uniquePath = `receipts/receipt_${Date.now()}_${safeName}`;
-        const downloadUrl = await uploadFile(file, uniquePath);
+      if (file.size > 1536 * 1024) {
+        alert("Maximum attachment size: 1.5MB to ensure optimal local performance.");
+        setIsUploadingReceipt(false);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
         setFormData(prev => ({
           ...prev,
-          receiptUrl: downloadUrl,
+          receiptUrl: reader.result as string,
           receiptName: file.name
         }));
-      } else {
-        // Local base64 mode
-        if (file.size > 512 * 1024) {
-          alert("Offline preview limit: 512KB. Connect cloud server to lift constraints.");
-          setIsUploadingReceipt(false);
-          return;
-        }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setFormData(prev => ({
-            ...prev,
-            receiptUrl: reader.result as string,
-            receiptName: file.name
-          }));
-          setIsUploadingReceipt(false);
-        };
-        reader.readAsDataURL(file);
-        return; // Avoid executing finally block synchronously
-      }
+        setIsUploadingReceipt(false);
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       console.error("Receipt upload failed:", err);
-      alert("Billing storage failed.");
-    } finally {
+      alert("Failed to process attachment file locally.");
       setIsUploadingReceipt(false);
     }
   };
 
   const handleDeleteReceipt = async () => {
-    if (formData.receiptUrl && formData.receiptUrl.startsWith('http')) {
-      try {
-        await deleteFileFromStorage(formData.receiptUrl);
-      } catch (err) {
-        console.warn("Could not delete receipt from cloud storage:", err);
-      }
-    }
     setFormData(prev => ({
       ...prev,
       receiptUrl: '',

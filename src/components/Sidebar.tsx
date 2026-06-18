@@ -91,26 +91,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
             ))}
           </nav>
 
-          {/* Logout Button */}
-          {user && (
-            <div className="px-2 py-2 border-t border-slate-800">
-              <button
-                onClick={() => {
-                  if (onLogout) {
-                    onLogout();
-                  }
-                }}
-                className={cn(
-                  "w-full flex items-center p-3 rounded-lg text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 transition-all duration-200 mt-1 cursor-pointer font-bold text-xs"
-                )}
-                title="Logout Account"
-              >
-                <LogOut size={20} className={cn(isOpen ? "mr-3" : "mx-auto")} />
-                {isOpen && <span className="font-extrabold uppercase tracking-wide">Logout / Exit</span>}
-              </button>
-            </div>
-          )}
-
           {/* Footer */}
           <div className="p-4 border-t border-slate-800 text-center text-xs text-slate-500">
             {isOpen ? "© 2026 Coupon Management, Developed by Ignatious Joshuva" : "v1.0"}
