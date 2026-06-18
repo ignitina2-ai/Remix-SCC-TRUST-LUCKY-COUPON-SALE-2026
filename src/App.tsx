@@ -23,7 +23,7 @@ import { Bell, BellRing } from 'lucide-react';
 
 // Firebase Integrations
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
-import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc as firestoreSetDoc, updateDoc as firestoreUpdateDoc, deleteDoc as firestoreDeleteDoc, collection, onSnapshot, getDoc } from 'firebase/firestore';
 import { auth, db, OperationType, handleFirestoreError } from './lib/firebase';
 import { uploadFile, dataURLtoFile } from './lib/storage';
 
@@ -36,6 +36,35 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
 };
 
 export default function App() {
+  const [inFlightWrites, setInFlightWrites] = useState(0);
+
+  const setDoc = async (...args: any[]) => {
+    setInFlightWrites(c => c + 1);
+    try {
+      return await (firestoreSetDoc as any)(...args);
+    } finally {
+      setInFlightWrites(c => Math.max(0, c - 1));
+    }
+  };
+
+  const updateDoc = async (...args: any[]) => {
+    setInFlightWrites(c => c + 1);
+    try {
+      return await (firestoreUpdateDoc as any)(...args);
+    } finally {
+      setInFlightWrites(c => Math.max(0, c - 1));
+    }
+  };
+
+  const deleteDoc = async (...args: any[]) => {
+    setInFlightWrites(c => c + 1);
+    try {
+      return await (firestoreDeleteDoc as any)(...args);
+    } finally {
+      setInFlightWrites(c => Math.max(0, c - 1));
+    }
+  };
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -77,6 +106,30 @@ export default function App() {
 
   // User state integration
   const [user, setUser] = useState<any>(null);
+  const [syncStatus, setSyncStatus] = useState<'connected' | 'offline' | 'pending'>('connected');
+
+  useEffect(() => {
+    const updateStatus = () => {
+      if (!navigator.onLine) {
+        setSyncStatus('offline');
+      } else if (inFlightWrites > 0) {
+        setSyncStatus('pending');
+      } else {
+        setSyncStatus('connected');
+      }
+    };
+
+    updateStatus();
+
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+
+    return () => {
+      window.removeEventListener('online', updateStatus);
+      window.removeEventListener('offline', updateStatus);
+    };
+  }, [inFlightWrites]);
+
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<{ email: string; addedAt?: string; addedBy?: string; disabled?: boolean; canAdd?: boolean; canEdit?: boolean; canDelete?: boolean; }[]>(() => {
@@ -711,6 +764,25 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
+    let batchPending = false;
+    let accumulatedUpdates: Partial<AppData> = {};
+
+    const queueAppDataUpdate = (updates: Partial<AppData>) => {
+      accumulatedUpdates = { ...accumulatedUpdates, ...updates };
+      if (!batchPending) {
+        batchPending = true;
+        // 100ms micro-batch window merges simultaneous streams during parallel edits
+        setTimeout(() => {
+          setAppData(prev => ({
+            ...prev,
+            ...accumulatedUpdates
+          }));
+          accumulatedUpdates = {};
+          batchPending = false;
+        }, 100);
+      }
+    };
+
     // Listen to Transactions
     const unsubTx = onSnapshot(collection(db, 'transactions'), (snapshot) => {
       const txs: Transaction[] = [];
@@ -726,25 +798,7 @@ export default function App() {
         return (b.id || '').localeCompare(a.id || '');
       });
 
-      setAppData(prev => {
-        const localOnly = prev.transactions.filter(local => !txs.some(cloud => cloud.id === local.id));
-        if (localOnly.length > 0) {
-          localOnly.forEach(t => {
-            setDoc(doc(db, 'transactions', t.id), cleanUndefined(t)).catch(e => {
-              console.warn("Background auto-upload of local transaction failed:", e);
-            });
-          });
-        }
-        const merged = [...localOnly, ...txs].sort((a, b) => {
-          const dateA = a.date ? new Date(a.date).getTime() : 0;
-          const dateB = b.date ? new Date(b.date).getTime() : 0;
-          const valA = isNaN(dateA) ? 0 : dateA;
-          const valB = isNaN(dateB) ? 0 : dateB;
-          if (valB !== valA) return valB - valA;
-          return (b.id || '').localeCompare(a.id || '');
-        });
-        return { ...prev, transactions: merged };
-      });
+      queueAppDataUpdate({ transactions: txs });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'transactions');
     });
@@ -756,17 +810,7 @@ export default function App() {
         sps.push(d.data() as Sponsor);
       });
 
-      setAppData(prev => {
-        const localOnly = (prev.sponsors || []).filter(local => !sps.some(cloud => cloud.id === local.id));
-        if (localOnly.length > 0) {
-          localOnly.forEach(s => {
-            setDoc(doc(db, 'sponsors', s.id), cleanUndefined(s)).catch(e => {
-              console.warn("Background auto-upload of local sponsor failed:", e);
-            });
-          });
-        }
-        return { ...prev, sponsors: [...localOnly, ...sps] };
-      });
+      queueAppDataUpdate({ sponsors: sps });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'sponsors');
     });
@@ -786,25 +830,7 @@ export default function App() {
         return (b.id || '').localeCompare(a.id || '');
       });
 
-      setAppData(prev => {
-        const localOnly = (prev.incomeExpenses || []).filter(local => !ies.some(cloud => cloud.id === local.id));
-        if (localOnly.length > 0) {
-          localOnly.forEach(i => {
-            setDoc(doc(db, 'incomeExpenses', i.id), cleanUndefined(i)).catch(e => {
-              console.warn("Background auto-upload of local incomeExpense failed:", e);
-            });
-          });
-        }
-        const merged = [...localOnly, ...ies].sort((a, b) => {
-          const dateA = a.date ? new Date(a.date).getTime() : 0;
-          const dateB = b.date ? new Date(b.date).getTime() : 0;
-          const valA = isNaN(dateA) ? 0 : dateA;
-          const valB = isNaN(dateB) ? 0 : dateB;
-          if (valB !== valA) return valB - valA;
-          return (b.id || '').localeCompare(a.id || '');
-        });
-        return { ...prev, incomeExpenses: merged };
-      });
+      queueAppDataUpdate({ incomeExpenses: ies });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'incomeExpenses');
     });
@@ -824,25 +850,7 @@ export default function App() {
         return (b.id || '').localeCompare(a.id || '');
       });
 
-      setAppData(prev => {
-        const localOnly = (prev.secretaryHandovers || []).filter(local => !hvs.some(cloud => cloud.id === local.id));
-        if (localOnly.length > 0) {
-          localOnly.forEach(h => {
-            setDoc(doc(db, 'secretaryHandovers', h.id), cleanUndefined(h)).catch(e => {
-              console.warn("Background auto-upload of local handover failed:", e);
-            });
-          });
-        }
-        const merged = [...localOnly, ...hvs].sort((a, b) => {
-          const dateA = a.date ? new Date(a.date).getTime() : 0;
-          const dateB = b.date ? new Date(b.date).getTime() : 0;
-          const valA = isNaN(dateA) ? 0 : dateA;
-          const valB = isNaN(dateB) ? 0 : dateB;
-          if (valB !== valA) return valB - valA;
-          return (b.id || '').localeCompare(a.id || '');
-        });
-        return { ...prev, secretaryHandovers: merged };
-      });
+      queueAppDataUpdate({ secretaryHandovers: hvs });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'secretaryHandovers');
     });
@@ -851,16 +859,15 @@ export default function App() {
     const unsubSettings = onSnapshot(doc(db, 'settings', 'appSettings'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setAppData(prev => ({
-          ...prev,
-          logo: data.logo ?? prev.logo,
-          logoMobile: data.logoMobile ?? prev.logoMobile,
-          logoDesktop: data.logoDesktop ?? prev.logoDesktop,
-          notificationsEnabled: data.notificationsEnabled ?? prev.notificationsEnabled,
-          creditSettings: data.creditSettings ?? prev.creditSettings,
-          customPaymentLabels: data.customPaymentLabels ?? prev.customPaymentLabels,
-          paymentMethodsList: data.paymentMethodsList ?? prev.paymentMethodsList
-        }));
+        const settingsUpdates: Partial<AppData> = {};
+        if (data.logo !== undefined) settingsUpdates.logo = data.logo;
+        if (data.logoMobile !== undefined) settingsUpdates.logoMobile = data.logoMobile;
+        if (data.logoDesktop !== undefined) settingsUpdates.logoDesktop = data.logoDesktop;
+        if (data.notificationsEnabled !== undefined) settingsUpdates.notificationsEnabled = data.notificationsEnabled;
+        if (data.creditSettings !== undefined) settingsUpdates.creditSettings = data.creditSettings;
+        if (data.customPaymentLabels !== undefined) settingsUpdates.customPaymentLabels = data.customPaymentLabels;
+        if (data.paymentMethodsList !== undefined) settingsUpdates.paymentMethodsList = data.paymentMethodsList;
+        queueAppDataUpdate(settingsUpdates);
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'settings/appSettings');
@@ -1637,6 +1644,22 @@ export default function App() {
           </button>
           
           <div className="flex items-center gap-2">
+            {/* Global Sync Status for Mobile */}
+            <div className={cn(
+              "inline-flex items-center justify-center p-1.5 rounded-lg border transition-all duration-300",
+              syncStatus === 'connected' && "bg-emerald-50 text-emerald-600 border-emerald-100",
+              syncStatus === 'pending' && "bg-amber-50 text-amber-600 border-amber-100 animate-pulse",
+              syncStatus === 'offline' && "bg-rose-50 text-rose-600 border-rose-100"
+            )} title={syncStatus === 'connected' ? 'Connected to Cloud Firestore' : syncStatus === 'pending' ? 'Changes Sync Pending...' : 'Database Offline Mode'}>
+              {syncStatus === 'connected' ? (
+                <Cloud size={14} className="text-emerald-500" />
+              ) : syncStatus === 'pending' ? (
+                <Cloud size={14} className="text-amber-500" />
+              ) : (
+                <CloudOff size={14} className="text-rose-500" />
+              )}
+            </div>
+
             {user ? (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-slate-700 bg-slate-100 hover:bg-slate-200/80 transition-colors px-2 py-0.5 rounded-md flex items-center justify-center shrink-0" title={user.displayName || user.email}>
@@ -1695,6 +1718,36 @@ export default function App() {
             </div>
           </button>
           <div className="flex items-center gap-4">
+            {/* Global Sync Status Indicator for Desktop */}
+            <div className={cn(
+              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-sm",
+              syncStatus === 'connected' && "bg-emerald-50 text-emerald-700 border-emerald-100",
+              syncStatus === 'pending' && "bg-amber-50 text-amber-700 border-amber-100 animate-pulse",
+              syncStatus === 'offline' && "bg-rose-50 text-rose-700 border-rose-100"
+            )}>
+              {syncStatus === 'connected' && (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <Cloud size={12} className="text-emerald-600 shrink-0" />
+                  <span>Cloud Synced</span>
+                </>
+              )}
+              {syncStatus === 'pending' && (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                  <Cloud size={12} className="text-amber-600 shrink-0" />
+                  <span>Sync Pending</span>
+                </>
+              )}
+              {syncStatus === 'offline' && (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  <CloudOff size={12} className="text-rose-600 shrink-0" />
+                  <span>Offline Mode</span>
+                </>
+              )}
+            </div>
+
             <div className="text-right">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Income & Expense Balance</p>
               <p className="text-lg font-black text-slate-900">
