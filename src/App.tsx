@@ -23,7 +23,7 @@ import { Bell, BellRing } from 'lucide-react';
 
 // Firebase Integrations
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
-import { doc, setDoc as firestoreSetDoc, updateDoc as firestoreUpdateDoc, deleteDoc as firestoreDeleteDoc, collection, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc as firestoreSetDoc, updateDoc as firestoreUpdateDoc, deleteDoc as firestoreDeleteDoc, collection, onSnapshot, getDoc, waitForPendingWrites } from 'firebase/firestore';
 import { auth, db, OperationType, handleFirestoreError } from './lib/firebase';
 import { uploadFile, dataURLtoFile } from './lib/storage';
 
@@ -109,13 +109,25 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'connected' | 'offline' | 'pending'>('connected');
 
   useEffect(() => {
-    const updateStatus = () => {
+    let active = true;
+    const updateStatus = async () => {
       if (!navigator.onLine) {
-        setSyncStatus('offline');
-      } else if (inFlightWrites > 0) {
-        setSyncStatus('pending');
+        if (active) setSyncStatus('offline');
+        return;
+      }
+
+      if (inFlightWrites > 0) {
+        if (active) setSyncStatus('pending');
+        try {
+          await waitForPendingWrites(db);
+          if (active && navigator.onLine) {
+            setSyncStatus('connected');
+          }
+        } catch (error) {
+          console.error("Sync resolution failed", error);
+        }
       } else {
-        setSyncStatus('connected');
+        if (active) setSyncStatus('connected');
       }
     };
 
@@ -125,6 +137,7 @@ export default function App() {
     window.addEventListener('offline', updateStatus);
 
     return () => {
+      active = false;
       window.removeEventListener('online', updateStatus);
       window.removeEventListener('offline', updateStatus);
     };
