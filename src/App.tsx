@@ -47,10 +47,9 @@ export default function App() {
     setInFlightWrites(c => c + 1);
     try {
       return await (firestoreSetDoc as any)(...args);
-    } finally {
-      setTimeout(() => {
-        setInFlightWrites(c => Math.max(0, c - 1));
-      }, 500);
+    } catch (error) {
+      setInFlightWrites(c => Math.max(0, c - 1));
+      throw error;
     }
   };
 
@@ -58,10 +57,9 @@ export default function App() {
     setInFlightWrites(c => c + 1);
     try {
       return await (firestoreUpdateDoc as any)(...args);
-    } finally {
-      setTimeout(() => {
-        setInFlightWrites(c => Math.max(0, c - 1));
-      }, 500);
+    } catch (error) {
+      setInFlightWrites(c => Math.max(0, c - 1));
+      throw error;
     }
   };
 
@@ -69,10 +67,9 @@ export default function App() {
     setInFlightWrites(c => c + 1);
     try {
       return await (firestoreDeleteDoc as any)(...args);
-    } finally {
-      setTimeout(() => {
-        setInFlightWrites(c => Math.max(0, c - 1));
-      }, 500);
+    } catch (error) {
+      setInFlightWrites(c => Math.max(0, c - 1));
+      throw error;
     }
   };
 
@@ -170,6 +167,7 @@ export default function App() {
     // Subscribe to Firestore onSnapshotsInSync callback event
     const unsubscribeSync = onSnapshotsInSync(db, () => {
       if (!active) return;
+      console.log("Current localWrites count:", inFlightWritesRef.current);
       if (!navigator.onLine) {
         setSyncStatus('offline');
         return;
@@ -178,7 +176,9 @@ export default function App() {
       if (inFlightWritesRef.current === 0) {
         setSyncStatus('connected');
       } else {
-        setSyncStatus('pending');
+        // Sync completed! We reset the flag and status
+        setInFlightWrites(0);
+        setSyncStatus('connected');
       }
     });
 
