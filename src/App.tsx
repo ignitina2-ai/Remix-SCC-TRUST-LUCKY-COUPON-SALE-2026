@@ -36,37 +36,30 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
 };
 
 export default function App() {
-  const [inFlightWrites, setInFlightWrites] = useState(0);
-  const inFlightWritesRef = useRef(inFlightWrites);
-
-  useEffect(() => {
-    inFlightWritesRef.current = inFlightWrites;
-  }, [inFlightWrites]);
-
   const setDoc = async (...args: any[]) => {
-    setInFlightWrites(c => c + 1);
     try {
       return await (firestoreSetDoc as any)(...args);
-    } finally {
-      setInFlightWrites(c => Math.max(0, c - 1));
+    } catch (error) {
+      console.error("Firebase SetDoc Error:", error);
+      throw error;
     }
   };
 
   const updateDoc = async (...args: any[]) => {
-    setInFlightWrites(c => c + 1);
     try {
       return await (firestoreUpdateDoc as any)(...args);
-    } finally {
-      setInFlightWrites(c => Math.max(0, c - 1));
+    } catch (error) {
+      console.error("Firebase UpdateDoc Error:", error);
+      throw error;
     }
   };
 
   const deleteDoc = async (...args: any[]) => {
-    setInFlightWrites(c => c + 1);
     try {
       return await (firestoreDeleteDoc as any)(...args);
-    } finally {
-      setInFlightWrites(c => Math.max(0, c - 1));
+    } catch (error) {
+      console.error("Firebase DeleteDoc Error:", error);
+      throw error;
     }
   };
 
@@ -116,44 +109,32 @@ export default function App() {
   useEffect(() => {
     let active = true;
 
-    const checkOnlineOffline = () => {
+    const checkStatus = () => {
+      if (!active) return;
       if (!navigator.onLine) {
         setSyncStatus('offline');
-        return true;
+      } else {
+        setSyncStatus('connected');
       }
-      return false;
     };
 
-    // Keep state current on offline mode
-    if (checkOnlineOffline()) {
-      const handleOnlineChange = () => {
-        if (!active) return;
-        if (navigator.onLine) {
-          setSyncStatus(inFlightWritesRef.current > 0 ? 'pending' : 'connected');
-        } else {
-          setSyncStatus('offline');
-        }
-      };
-      
-      window.addEventListener('online', handleOnlineChange);
-      window.addEventListener('offline', handleOnlineChange);
-      
-      return () => {
-        active = false;
-        window.removeEventListener('online', handleOnlineChange);
-        window.removeEventListener('offline', handleOnlineChange);
-      };
-    }
+    checkStatus();
 
-    // Set initial status based on known write state
-    setSyncStatus(inFlightWritesRef.current > 0 ? 'pending' : 'connected');
-
-    // 1. Heartbeat query to keep Firestore connection highly active and syncStatus highly responsive
+    // 1. Snapshot query to keep Firestore connection alive and listen to metadata changes (hasPendingWrites)
     let unsubscribeHeartbeat: (() => void) | null = null;
     try {
       const dummyQuery = query(collection(db, 'transactions'), limit(1));
-      unsubscribeHeartbeat = onSnapshot(dummyQuery, () => {
-        // Keeps the connection alive and responsive
+      unsubscribeHeartbeat = onSnapshot(dummyQuery, { includeMetadataChanges: true }, (snapshot) => {
+        if (!active) return;
+        if (!navigator.onLine) {
+          setSyncStatus('offline');
+          return;
+        }
+        if (snapshot.metadata.hasPendingWrites) {
+          setSyncStatus('pending');
+        } else {
+          setSyncStatus('connected');
+        }
       }, (err) => {
         console.debug("Heartbeat snapshot subscription info/error ignored:", err);
       });
@@ -161,28 +142,23 @@ export default function App() {
       console.debug("Heartbeat query creation ignored:", err);
     }
 
-    // Subscribe to Firestore onSnapshotsInSync callback event
+    // 2. Full synchronization sync hook
     const unsubscribeSync = onSnapshotsInSync(db, () => {
       if (!active) return;
-      console.log("Current localWrites count:", inFlightWritesRef.current);
       if (!navigator.onLine) {
         setSyncStatus('offline');
         return;
       }
-
-      if (inFlightWritesRef.current === 0) {
-        setSyncStatus('connected');
-      } else {
-        setSyncStatus('pending');
-      }
+      setSyncStatus('connected');
     });
 
+    // 3. Keep state updated on connection shifts
     const handleNetworkChange = () => {
       if (!active) return;
       if (!navigator.onLine) {
         setSyncStatus('offline');
       } else {
-        setSyncStatus(inFlightWritesRef.current > 0 ? 'pending' : 'connected');
+        setSyncStatus('connected');
       }
     };
 
@@ -196,7 +172,7 @@ export default function App() {
       window.removeEventListener('online', handleNetworkChange);
       window.removeEventListener('offline', handleNetworkChange);
     };
-  }, [inFlightWrites]);
+  }, []);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<{ message: string; code?: string } | null>(null);
