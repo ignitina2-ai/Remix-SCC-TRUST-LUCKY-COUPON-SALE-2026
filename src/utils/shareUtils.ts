@@ -43,11 +43,14 @@ export async function shareDailySalesCard(options: {
 }) {
   const { date, totalSales, totalCredit, totalCashSale, totalUPI, totalHandover, upiBreakdown } = options;
 
-  // Create temporary container placed outside viewport with explicit inline styles for full canvas rendering support
+  // Create temporary container placed inside viewport bounds but layered completely behind to force browser layout paint
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '3000px';
-  container.style.top = '3000px';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.zIndex = '-9999';
+  container.style.pointerEvents = 'none';
+  container.style.opacity = '0.99';
   container.style.width = '550px';
   container.style.backgroundColor = '#0f172a'; // slate-900 solid
   container.style.color = '#ffffff';
@@ -164,8 +167,11 @@ export async function shareUPIReceiptCard(options: {
 
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '3000px';
-  container.style.top = '3000px';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.zIndex = '-9999';
+  container.style.pointerEvents = 'none';
+  container.style.opacity = '0.99';
   container.style.width = '480px';
   container.style.backgroundColor = '#0f172a'; // slate-900 solid
   container.style.color = '#ffffff';
@@ -266,8 +272,11 @@ export async function shareUPIReceiptCard(options: {
 export async function shareTransactionReceiptCard(transaction: Transaction, paymentLabel: string) {
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '3000px';
-  container.style.top = '3000px';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.zIndex = '-9999';
+  container.style.pointerEvents = 'none';
+  container.style.opacity = '0.99';
   container.style.width = '450px';
   container.style.backgroundColor = '#0f172a'; // slate-900 solid
   container.style.color = '#ffffff';

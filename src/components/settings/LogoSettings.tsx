@@ -34,8 +34,8 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024) {
-      setUploadError("Image file size should be less than 1MB");
+    if (file.size > 700 * 1024) {
+      setUploadError("Image file size should be less than 700KB for highly responsive cloud syncing.");
       return;
     }
 
@@ -51,7 +51,11 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
         
         // Clean up previous logo if it was a storage URL
         if (currentLogo && currentLogo.includes('firebasestorage')) {
-          await deleteFileFromStorage(currentLogo);
+          try {
+            await deleteFileFromStorage(currentLogo);
+          } catch (delErr) {
+            console.warn("Could not delete old storage file, ignoring:", delErr);
+          }
         }
 
         if (isMobileLogo) {
@@ -60,11 +64,27 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
           onUpdateLogoDesktop?.(downloadUrl);
           onUpdateLogo(downloadUrl);
         }
-      } catch (err: any) {
-        console.error("Cloud logo upload failed:", err);
-        setUploadError("Underlying Cloud storage error: " + (err.message || err));
-      } finally {
         setIsUploading(false);
+      } catch (err: any) {
+        console.warn("Cloud storage upload failed, falling back to direct safe base64 encoding inside Firestore:", err);
+        // Fall back to direct local base64 reader but save into cloud settings
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          if (isMobileLogo) {
+            onUpdateLogoMobile?.(result);
+          } else {
+            onUpdateLogoDesktop?.(result);
+            onUpdateLogo(result);
+          }
+          setUploadError("Cloud storage bucket unavailable. Logo successfully saved as offline database text in Google Firestore settings instead!");
+          setIsUploading(false);
+        };
+        reader.onerror = () => {
+          setUploadError("Underlying upload and base64 fallback conversion failed.");
+          setIsUploading(false);
+        };
+        reader.readAsDataURL(file);
       }
     } else {
       // Fallback local reader
