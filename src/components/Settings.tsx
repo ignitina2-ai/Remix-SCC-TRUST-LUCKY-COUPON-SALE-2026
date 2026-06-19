@@ -328,6 +328,7 @@ const Settings: React.FC<SettingsProps> = ({
           onConfirm={handleRevokeConfirm}
           title="Revoke Admin Access"
           message={`Are you sure you want to revoke server database sync permissions for ${userToRevoke}? They will be immediately blocked from logging in.`}
+          size="xs"
         />
       )}
     </div>

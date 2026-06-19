@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Cloud, CloudOff, AlertCircle, CheckCircle, Bell, BellRing, Loader2 } from 'lucide-react';
+import { Menu, X, Cloud, CloudOff, AlertCircle, CheckCircle, Bell, BellRing, Loader2, LogOut } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
@@ -82,6 +82,16 @@ export default function App() {
   });
 
   const isPrimaryAdmin = user?.email?.toLowerCase() === 'ignitina2@gmail.com';
+
+  // Expose setActiveTab on window for sub-components to trigger tab switches easily
+  useEffect(() => {
+    (window as any).setActiveTab = (tab: string) => {
+      setActiveTab(tab);
+    };
+    return () => {
+      delete (window as any).setActiveTab;
+    };
+  }, []);
 
   // State model
   const [appData, setAppData] = useState<AppData>({
@@ -183,7 +193,9 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, transactions: list }));
-      }, (err) => console.error("Transactions snapshot failed:", err));
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'transactions');
+      });
       activeSubscriptions.push(unsubTransactions);
 
       // 2. Sponsors Listener
@@ -193,7 +205,9 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, sponsors: list }));
-      }, (err) => console.error("Sponsors snapshot failed:", err));
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'sponsors');
+      });
       activeSubscriptions.push(unsubSponsors);
 
       // 3. Income & Expenses Listener
@@ -203,7 +217,9 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, incomeExpenses: list }));
-      }, (err) => console.error("Income/Expenses snapshot failed:", err));
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'incomeExpenses');
+      });
       activeSubscriptions.push(unsubIncomeExpenses);
 
       // 4. Secretary Handovers Listener
@@ -213,20 +229,22 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, secretaryHandovers: list }));
-      }, (err) => console.error("Handovers snapshot failed:", err));
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'secretaryHandovers');
+      });
       activeSubscriptions.push(unsubHandovers);
 
       // 5. Whitelisted Users Admin Listener
-      if (isAdmin) {
-        const unsubAllowedUsers = onSnapshot(collection(db, 'allowedUsers'), (snap) => {
-          const list: AllowedUser[] = [];
-          snap.forEach(doc => {
-            list.push({ email: doc.id, ...doc.data() } as any);
-          });
-          setAllowedUsers(list);
-        }, (err) => console.error("AllowedUsers snapshot failed:", err));
-        activeSubscriptions.push(unsubAllowedUsers);
-      }
+      const unsubAllowedUsers = onSnapshot(collection(db, 'allowedUsers'), (snap) => {
+        const list: AllowedUser[] = [];
+        snap.forEach(doc => {
+          list.push({ email: doc.id, ...doc.data() } as any);
+        });
+        setAllowedUsers(list);
+      }, (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'allowedUsers');
+      });
+      activeSubscriptions.push(unsubAllowedUsers);
 
       // 6. Global Branding Settings Listener
       const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snap) => {
@@ -243,7 +261,9 @@ export default function App() {
             paymentMethodsList: d.paymentMethodsList || prev.paymentMethodsList
           }));
         }
-      }, (err) => console.error("System settings snapshot failed:", err));
+      }, (err) => {
+        handleFirestoreError(err, OperationType.GET, 'settings/global');
+      });
       activeSubscriptions.push(unsubSettings);
     }
 
@@ -868,6 +888,7 @@ export default function App() {
         setIsOpen={setIsSidebarOpen} 
         user={user}
         isPrimaryAdmin={isPrimaryAdmin}
+        onLogout={handleGoogleLogout}
       />
 
       {/* Main Content */}
@@ -933,21 +954,32 @@ export default function App() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3 bg-white border border-slate-100 shadow-sm pl-4 pr-1.5 py-1 rounded-2xl">
-              <div className="text-right">
-                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Cloud Synced Team Active
-                </p>
-                <span className="text-[11px] font-bold text-slate-700 block">{user.displayName}</span>
-              </div>
-              {user.photoURL ? (
-                <img src={user.photoURL} alt="User photo" className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-inner" referrerPolicy="no-referrer" />
-              ) : (
-                <div className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-inner bg-blue-50 flex items-center justify-center text-xs font-bold text-blue-600">
-                  {user.displayName.substring(0, 2).toUpperCase()}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 bg-white border border-slate-100 shadow-sm pl-4 pr-1.5 py-1 rounded-2xl">
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Cloud Synced Team Active
+                  </p>
+                  <span className="text-[11px] font-bold text-slate-700 block">{user.displayName}</span>
                 </div>
-              )}
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="User photo" className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-inner" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-inner bg-blue-50 flex items-center justify-center text-xs font-bold text-blue-600">
+                    {user.displayName.substring(0, 2).toUpperCase()}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleGoogleLogout}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 border border-rose-100 bg-rose-50/50 hover:bg-rose-50 hover:border-rose-200 text-rose-600 rounded-xl text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer"
+                title="Sign Out of App"
+              >
+                <LogOut size={14} />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </div>

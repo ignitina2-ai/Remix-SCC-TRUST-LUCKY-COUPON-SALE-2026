@@ -1,18 +1,45 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDocFromServer } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager, 
+  doc, 
+  getDocFromServer,
+  getFirestore,
+  memoryLocalCache
+} from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with multi-tab offline persistence enabled
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-}, firebaseConfig.firestoreDatabaseId);
+// Initialize Firestore with robust try-catch fallback and long polling enabled
+let firestoreDb;
+const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+
+try {
+  firestoreDb = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    }),
+    experimentalForceLongPolling: true
+  }, dbId);
+} catch (error) {
+  console.warn("Firestore persistent local cache failed to initialize, falling back to memory cache:", error);
+  try {
+    firestoreDb = initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+      experimentalForceLongPolling: true
+    }, dbId);
+  } catch (err2) {
+    // If already initialized, fetch the existing instance
+    firestoreDb = getFirestore(app, dbId);
+  }
+}
+
+export const db = firestoreDb;
 
 // Initialize Authentication and Storage
 export const auth = getAuth(app);

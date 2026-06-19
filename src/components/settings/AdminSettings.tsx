@@ -37,15 +37,11 @@ export function AdminSettings({
   const [perms, setPerms] = useState({ canAdd: true, canEdit: true, canDelete: false });
   const [isAdding, setIsAdding] = useState(false);
 
-  // Checks if current user is primary main admin
-  const isPrimary = user?.email?.toLowerCase() === 'ignitina2@gmail.com';
+  // Since the admin setting page is now allowed for all active authorized users, we set isPrimary to true
+  const isPrimary = true;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isPrimary) {
-      showNotification('error', 'Only the primary main admin (ignitina2@gmail.com) can adjust allowed users registry!');
-      return;
-    }
 
     const emailToRegister = newEmail.trim().toLowerCase();
     if (!emailToRegister) return;
@@ -99,21 +95,21 @@ export function AdminSettings({
       </div>
 
       {isPrimary ? (
-        <form onSubmit={handleSubmit} className="bg-slate-50 p-5 rounded-2xl border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-end text-left">
-          <div className="md:col-span-5 space-y-1.5 col-span-1">
-            <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Email Address to Allow</label>
+        <form onSubmit={handleSubmit} className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end text-left">
+          <div className="md:col-span-4 space-y-1 col-span-1">
+            <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Email Address to Allow</label>
             <input
               type="email"
               required
               placeholder="e.g. couponhelper@gmail.com"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-sm transition-colors"
+              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-sm transition-colors placeholder:text-slate-400"
             />
           </div>
 
-          <div className="md:col-span-3 space-y-1.5 col-span-1">
-            <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Default Role</label>
+          <div className="md:col-span-3 space-y-1 col-span-1">
+            <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Default Role</label>
             <select
               value={newRole}
               onChange={(e) => {
@@ -127,7 +123,7 @@ export function AdminSettings({
                   setPerms({ canAdd: true, canEdit: false, canDelete: false });
                 }
               }}
-              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-sm transition-colors"
+              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-sm transition-colors cursor-pointer"
             >
               <option value="Super Admin">Super Admin (All Access)</option>
               <option value="Helper Admin">Helper Admin (Add & Edit)</option>
@@ -135,50 +131,50 @@ export function AdminSettings({
             </select>
           </div>
 
-          <div className="md:col-span-2 space-y-1.5 col-span-1">
-            <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">Explicit Actions</label>
-            <div className="flex gap-2 items-center h-10 select-none">
-              <label className="inline-flex items-center gap-1.5 text-[10px] font-black cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+          <div className="md:col-span-3 space-y-1 col-span-1">
+            <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider block">Explicit Actions</label>
+            <div className="flex gap-1 items-center h-8.5 select-none">
+              <label className="inline-flex items-center gap-1 text-[9px] font-black cursor-pointer bg-white px-2 py-1 rounded-md border border-slate-200 shrink-0">
                 <input
                   type="checkbox"
                   checked={perms.canAdd}
                   disabled={newRole === 'Super Admin'}
                   onChange={(e) => setPerms(prev => ({ ...prev, canAdd: e.target.checked }))}
-                  className="rounded text-blue-600 focus:ring-0 focus:ring-offset-0"
+                  className="rounded text-blue-600 focus:ring-0 focus:ring-offset-0 w-3 h-3"
                 />
                 ADD
               </label>
-              <label className="inline-flex items-center gap-1.5 text-[10px] font-black cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+              <label className="inline-flex items-center gap-1 text-[9px] font-black cursor-pointer bg-white px-2 py-1 rounded-md border border-slate-200 shrink-0">
                 <input
                   type="checkbox"
                   checked={perms.canEdit}
                   disabled={newRole === 'Super Admin'}
                   onChange={(e) => setPerms(prev => ({ ...prev, canEdit: e.target.checked }))}
-                  className="rounded text-blue-600 focus:ring-0 focus:ring-offset-0"
+                  className="rounded text-blue-600 focus:ring-0 focus:ring-offset-0 w-3 h-3"
                 />
                 EDIT
               </label>
-              <label className="inline-flex items-center gap-1.5 text-[10px] font-black cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+              <label className="inline-flex items-center gap-1 text-[9px] font-black cursor-pointer bg-white px-2 py-1 rounded-md border border-slate-200 shrink-0">
                 <input
                   type="checkbox"
                   checked={perms.canDelete}
                   disabled={newRole === 'Super Admin'}
                   onChange={(e) => setPerms(prev => ({ ...prev, canDelete: e.target.checked }))}
-                  className="rounded text-blue-600 focus:ring-0 focus:ring-offset-0"
+                  className="rounded text-blue-600 focus:ring-0 focus:ring-offset-0 w-3 h-3"
                 />
                 DEL
               </label>
             </div>
           </div>
 
-          <div className="md:col-span-2 col-span-1 h-10 flex items-center justify-end">
+          <div className="md:col-span-2 col-span-1 flex items-center justify-end h-8.5">
             <button
               type="submit"
               disabled={isAdding}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 text-xs font-black tracking-wide flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+              className="w-full h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black tracking-wide flex items-center justify-center gap-1 shadow-md shadow-blue-500/5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
             >
-              <Plus size={14} />
-              <span>ALLOW USER</span>
+              <Plus size={12} />
+              <span>USER</span>
             </button>
           </div>
         </form>
