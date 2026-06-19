@@ -279,7 +279,11 @@ export default function App() {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
-      if (err.code !== 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user') {
+        // do nothing or handle quietly
+      } else if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('unauthorized-domain'))) {
+        setLoginError("Firebase: Error (auth/unauthorized-domain)");
+      } else {
         setLoginError(err.message || 'Verification failure.');
       }
       setIsLoggingIn(false);

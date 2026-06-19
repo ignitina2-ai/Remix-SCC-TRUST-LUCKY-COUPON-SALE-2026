@@ -167,11 +167,12 @@ export function AdminSettings({
             </div>
           </div>
 
-          <div className="md:col-span-2 col-span-1 flex items-center justify-end h-8.5">
+          <div className="md:col-span-2 col-span-1 space-y-1">
+            <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider block opacity-0 select-none">Add User</span>
             <button
               type="submit"
               disabled={isAdding}
-              className="w-full h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black tracking-wide flex items-center justify-center gap-1 shadow-md shadow-blue-500/5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+              className="w-full h-8.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black tracking-wide flex items-center justify-center gap-1 shadow-md shadow-blue-500/5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
             >
               <Plus size={12} />
               <span>USER</span>
@@ -196,57 +197,57 @@ export function AdminSettings({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-500 select-none font-bold text-[10px] uppercase tracking-wider">
-                <th className="px-6 py-4">Helper Email Address</th>
-                <th className="px-6 py-4">Assigned Role</th>
-                <th className="px-6 py-4">Login Status</th>
-                <th className="px-6 py-4 text-center">Permitted Actions</th>
-                {isPrimary && <th className="px-6 py-4 text-center">Revoke Access</th>}
+                <th className="px-3 sm:px-4 py-3">Helper Email Address</th>
+                <th className="px-3 sm:px-4 py-3">Assigned Role</th>
+                <th className="px-3 sm:px-4 py-3">Login Status</th>
+                <th className="px-3 sm:px-4 py-3 text-center">Permitted Actions</th>
+                {isPrimary && <th className="px-3 sm:px-4 py-3 text-center">Revoke Access</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {/* Implicit Primary Admin is always active */}
               <tr className="bg-white hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4">
+                <td className="px-3 sm:px-4 py-3">
                   <div className="font-extrabold text-slate-950 flex items-center gap-1.5">
                     ignitina2@gmail.com
                     <BadgeCheck size={14} className="text-blue-500" />
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-3 sm:px-4 py-3">
                   <span className="bg-blue-100 text-blue-800 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
                     Primary Owner
                   </span>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-3 sm:px-4 py-3">
                   <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     ACTIVE INDEFINITELY
                   </span>
                 </td>
-                <td className="px-6 py-4 text-center">
+                <td className="px-3 sm:px-4 py-3 text-center">
                   <div className="inline-flex gap-1">
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">ADD</span>
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">EDIT</span>
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">DEL</span>
                   </div>
                 </td>
-                {isPrimary && <td className="px-6 py-4 text-center text-slate-400 font-bold text-[10px]">—</td>}
+                {isPrimary && <td className="px-3 sm:px-4 py-3 text-center text-slate-400 font-bold text-[10px]">—</td>}
               </tr>
 
               {allowedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={isPrimary ? 5 : 4} className="px-6 py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={isPrimary ? 5 : 4} className="px-3 sm:px-4 py-12 text-center text-slate-400 font-medium">
                     No secondary administrators are registered yet. All logged-in Google users besides the primary owner will be blocked until listed above!
                   </td>
                 </tr>
               ) : (
                 allowedUsers.map((userObj) => (
                   <tr key={userObj.email} className="bg-white hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-4 py-3">
                       <div className="font-semibold text-slate-800">{userObj.email}</div>
                       <div className="text-[9px] text-slate-400 font-bold">Added {new Date(userObj.addedAt).toLocaleDateString()}</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-4 py-3">
                       <span className={cn(
                         "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded",
                         userObj.role === 'Super Admin' 
@@ -258,7 +259,7 @@ export function AdminSettings({
                         {userObj.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-4 py-3">
                       {isPrimary ? (
                         <button
                           type="button"
@@ -284,7 +285,7 @@ export function AdminSettings({
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center items-center">
                         <button
                           type="button"
@@ -328,7 +329,7 @@ export function AdminSettings({
                       </div>
                     </td>
                     {isPrimary && (
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-3 sm:px-4 py-3 text-center">
                         <button
                           type="button"
                           onClick={() => setUserToRevoke(userObj.email)}

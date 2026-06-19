@@ -19,6 +19,7 @@ export default function LoginPage({
   setLoginError,
 }: LoginPageProps) {
   const [attemptedEmail, setAttemptedEmail] = useState<string | null>(null);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     setIsLoggingIn(true);
@@ -35,12 +36,31 @@ export default function LoginPage({
       // Handle the case where user cancels the popup gracefully
       if (err.code === 'auth/popup-closed-by-user') {
         setLoginError("Login popup was closed. Please try again.");
+      } else if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('unauthorized-domain'))) {
+        setLoginError("Firebase: Error (auth/unauthorized-domain)");
       } else {
         setLoginError(err.message || "An unexpected error occurred during Google Sign-In.");
       }
       setIsLoggingIn(false);
     }
   };
+
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const devDomain = "ais-dev-yhzvgo6zw6fd7pywvkqg4h-287602769187.asia-southeast1.run.app";
+  const preDomain = "ais-pre-yhzvgo6zw6fd7pywvkqg4h-287602769187.asia-southeast1.run.app";
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => {
+      setCopiedText(null);
+    }, 2000);
+  };
+
+  const isUnauthorizedDomain = loginError && (
+    loginError.includes('auth/unauthorized-domain') || 
+    loginError.includes('unauthorized-domain')
+  );
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -80,14 +100,89 @@ export default function LoginPage({
         {/* Main interactive login block */}
         <div className="space-y-4">
           {loginError && (
-            <div className="bg-rose-950/40 border border-rose-900/50 p-4 rounded-2xl text-left flex items-start gap-3">
-              <ShieldAlert className="text-rose-400 shrink-0 mt-0.5" size={16} />
-              <div className="space-y-1">
-                <p className="text-xs font-black text-rose-300">Access Restricted</p>
-                <p className="text-[10px] text-rose-400 leading-relaxed font-semibold">
-                  {loginError}. If you are a newly appointed trust helper, please contact the primary administrator (<span className="underline font-bold text-slate-200">ignitina2@gmail.com</span>) to list your email.
-                </p>
+            <div className="space-y-3">
+              <div className="bg-rose-950/40 border border-rose-900/50 p-4 rounded-2xl text-left flex items-start gap-3">
+                <ShieldAlert className="text-rose-400 shrink-0 mt-0.5" size={16} />
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-rose-300">Access Restricted</p>
+                  <p className="text-[10px] text-rose-400 leading-relaxed font-semibold">
+                    {loginError}. If you are a newly appointed trust helper, please contact the primary administrator (<span className="underline font-bold text-slate-200">ignitina2@gmail.com</span>) to list your email.
+                  </p>
+                </div>
               </div>
+
+              {isUnauthorizedDomain && (
+                <div className="bg-amber-950/40 border border-amber-900/50 p-4 rounded-2xl text-left space-y-2">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={15} />
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-black text-amber-300 uppercase tracking-wide">Domain Authorized Domains Action Required</p>
+                      <p className="text-[9.5px] text-amber-400/90 leading-relaxed font-semibold">
+                        This preview domain is not listed in your Firebase project's authorized authentication domains.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 bg-slate-900/80 p-3 rounded-xl space-y-2 border border-slate-800">
+                    <p className="text-[9px] font-black text-slate-350 uppercase tracking-widest">How to enable in 60s:</p>
+                    <ol className="list-decimal list-inside text-[9px] text-slate-400 space-y-1.5 leading-snug">
+                      <li>
+                        Go to the <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline font-bold inline-flex items-center">Firebase Console</a>.
+                      </li>
+                      <li>
+                        Open your project &rarr; <strong className="text-slate-300 font-bold">Authentication</strong> &rarr; <strong className="text-slate-300 font-bold">Settings</strong> (tab) &rarr; <strong className="text-slate-300 font-bold">Authorized domains</strong>.
+                      </li>
+                      <li>
+                        Click <strong className="text-slate-300 font-bold">Add domain</strong> and add these hostnames:
+                      </li>
+                    </ol>
+
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between bg-slate-950/80 px-2 py-1.5 rounded border border-slate-800">
+                        <code className="text-[9px] text-emerald-400 font-mono select-all break-all mr-2">
+                          {currentHostname || devDomain}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(currentHostname || devDomain)}
+                          className="text-[8px] bg-slate-800 hover:bg-slate-700 text-blue-300 px-1.5 py-0.5 rounded font-black tracking-wider uppercase shrink-0 transition-all active:scale-95"
+                        >
+                          {copiedText === (currentHostname || devDomain) ? 'COPIED!' : 'COPY'}
+                        </button>
+                      </div>
+
+                      {currentHostname !== devDomain && currentHostname !== preDomain && (
+                        <>
+                          <div className="flex items-center justify-between bg-slate-950/80 px-2 py-1.5 rounded border border-slate-800">
+                            <code className="text-[9px] text-emerald-400 font-mono select-all break-all mr-2">
+                              {devDomain}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(devDomain)}
+                              className="text-[8px] bg-slate-800 hover:bg-slate-700 text-blue-300 px-1.5 py-0.5 rounded font-black tracking-wider uppercase shrink-0 transition-all active:scale-95"
+                            >
+                              {copiedText === devDomain ? 'COPIED!' : 'COPY'}
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between bg-slate-950/80 px-2 py-1.5 rounded border border-slate-800">
+                            <code className="text-[9px] text-emerald-400 font-mono select-all break-all mr-2">
+                              {preDomain}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(preDomain)}
+                              className="text-[8px] bg-slate-800 hover:bg-slate-700 text-blue-300 px-1.5 py-0.5 rounded font-black tracking-wider uppercase shrink-0 transition-all active:scale-95"
+                            >
+                              {copiedText === preDomain ? 'COPIED!' : 'COPY'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
