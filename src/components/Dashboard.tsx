@@ -10,8 +10,10 @@ import {
   QrCode,
   PlusCircle,
   History,
-  Users
+  Users,
+  Share2
 } from 'lucide-react';
+import { shareDailySalesCard, shareUPIReceiptCard } from '../utils/shareUtils';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -65,6 +67,25 @@ const Dashboard: React.FC<DashboardProps> = ({
   permissions
 }) => {
   const [timeframe, setTimeframe] = useState<'overall' | 'today'>('overall');
+
+  // Helper to share modern daily sales overview report card
+  const handleShareDailyCard = async () => {
+    const todayStr = timeframe === 'today' ? getTodayISTStr() : 'Overall';
+    const upiBreakdown = nonCashCreditMethods.map(m => ({
+      label: m.label,
+      amount: getAmountByMethod(m.id, timeframe),
+    })).filter(item => item.amount > 0);
+
+    await shareDailySalesCard({
+      date: todayStr,
+      totalSales,
+      totalCredit,
+      totalCashSale,
+      totalUPI,
+      totalHandover,
+      upiBreakdown,
+    });
+  };
 
   // Unified string-based date helpers for consistent calculation across timezones to match Asia/Kolkata perfectly
   const getTodayISTStr = () => {
@@ -245,34 +266,44 @@ const Dashboard: React.FC<DashboardProps> = ({
           <h2 className="text-xl font-black text-slate-800 tracking-tight uppercase">Overview</h2>
           
         </div>
-        <div className="flex flex-wrap items-center gap-2 md:gap-3">
-          <div className="flex items-center gap-1 bg-slate-100 p-0.5 md:p-1 rounded-xl md:rounded-2xl border border-slate-200 shadow-inner">
-            <button
-              onClick={() => setTimeframe('overall')}
-              className={cn(
-                "px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
-                timeframe === 'overall'
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
-              )}
-            >
-              Overall
-            </button>
-            <button
-              onClick={() => setTimeframe('today')}
-              className={cn(
-                "px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
-                timeframe === 'today'
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
-              )}
-            >
-              Today's Sale
-            </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 bg-slate-100 p-0.5 md:p-1 rounded-xl md:rounded-2xl border border-slate-200 shadow-inner">
+              <button
+                onClick={() => setTimeframe('overall')}
+                className={cn(
+                  "px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
+                  timeframe === 'overall'
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                Overall
+              </button>
+              <button
+                onClick={() => setTimeframe('today')}
+                className={cn(
+                  "px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
+                  timeframe === 'today'
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                Today's Sale
+              </button>
+            </div>
+            <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100">
+              <span className="text-blue-700 font-bold text-xs">Today: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            </div>
           </div>
-          <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100">
-            <span className="text-blue-700 font-bold text-xs">Today: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-          </div>
+          
+          <button 
+            onClick={handleShareDailyCard}
+            className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
+          >
+            <Share2 size={13} className="animate-pulse" />
+            <span>Share Daily Report</span>
+          </button>
         </div>
       </header>
 
@@ -376,14 +407,38 @@ const Dashboard: React.FC<DashboardProps> = ({
                   else if (method.id === 'JOHNY GPAY') cardColor = 'bg-sky-600';
                   else if (method.id === 'OTHER_UPI') cardColor = 'bg-rose-500';
 
+                  const amount = getAmountByMethod(method.id, timeframe);
+                  const methodTxnsCount = (transactions || []).filter(t => {
+                    const sameMethod = t.paymentMethod === method.id;
+                    if (!sameMethod) return false;
+                    if (timeframe === 'today') {
+                      return getLocalDatePart(t.date) === getTodayISTStr();
+                    }
+                    return true;
+                  }).length;
+
                   return (
-                    <StatCard 
-                      key={method.id}
-                      title={method.label} 
-                      value={getAmountByMethod(method.id, timeframe)} 
-                      icon={IconComponent} 
-                      color={cardColor} 
-                    />
+                    <div key={method.id} className="relative group/upi">
+                      <StatCard 
+                        title={method.label} 
+                        value={amount} 
+                        icon={IconComponent} 
+                        color={cardColor} 
+                      />
+                      <button 
+                        onClick={() => shareUPIReceiptCard({
+                          methodLabel: method.label,
+                          totalReceived: amount,
+                          date: timeframe === 'today' ? getTodayISTStr() : 'Overall',
+                          transactionsCount: methodTxnsCount,
+                          paymentMethodId: method.id
+                        })}
+                        className="absolute right-2.5 top-2.5 p-1 bg-slate-900/60 hover:bg-slate-950/80 active:scale-90 text-white hover:text-indigo-300 rounded-lg transition-all cursor-pointer shadow-sm md:opacity-0 group-hover/upi:opacity-100 flex items-center justify-center"
+                        title={`Share ${method.label} Card`}
+                      >
+                        <Share2 size={11} />
+                      </button>
+                    </div>
                   );
                 })}
             </div>

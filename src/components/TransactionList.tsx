@@ -20,8 +20,10 @@ import {
   Wallet,
   Smartphone,
   Eye,
-  EyeOff
+  EyeOff,
+  Share2
 } from 'lucide-react';
+import { shareTransactionReceiptCard } from '../utils/shareUtils';
 import { Transaction, PaymentMethod, DEFAULT_PAYMENT_LABELS } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -583,6 +585,17 @@ const TransactionList: React.FC<TransactionListProps> = ({
                   
                   {/* Action buttons in expanded mode */}
                   <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      onClick={() => {
+                        const paymentLabel = customPaymentLabels?.[t.paymentMethod] || DEFAULT_PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod;
+                        shareTransactionReceiptCard(t, paymentLabel);
+                      }}
+                      className="flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-[9px] md:text-[10px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all cursor-pointer"
+                      title="Share Receipt Card"
+                    >
+                      <Share2 size={10} />
+                      Share Card
+                    </button>
                     {onEdit && (
                       <button 
                         disabled={permissions?.canEdit === false}
