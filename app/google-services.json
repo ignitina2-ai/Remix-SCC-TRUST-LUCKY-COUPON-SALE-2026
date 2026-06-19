@@ -1,41 +1,42 @@
 {
   "project_info": {
-    "project_number": "287461567164",
-    "project_id": "scc-trust-coupon-sale-2026",
-    "storage_bucket": "scc-trust-coupon-sale-2026.firebasestorage.app"
+    "project_number": "812000983987",
+    "firebase_url": "https://coupon-sale-tracker-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "coupon-sale-tracker-2026",
+    "storage_bucket": "coupon-sale-tracker-2026.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:287461567164:android:50035ec8a10c06e6083eb9",
+        "mobilesdk_app_id": "1:812000983987:android:67365be1786b5bbb39e9c6",
         "android_client_info": {
-          "package_name": "scctrust_coupon_sale_2026.app"
+          "package_name": "com.COUPON_SALE_TRACKER_2026.App"
         }
       },
       "oauth_client": [
         {
-          "client_id": "287461567164-f0ch34paq1ci0vlaed06ve03umpj7qss.apps.googleusercontent.com",
+          "client_id": "812000983987-8mh8hsvmka4qslhpd40i3jkik5nkbeae.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "scctrust_coupon_sale_2026.app",
-            "certificate_hash": "22680f697105ee89695fef4b27e9687ee7054fd8"
+            "package_name": "com.COUPON_SALE_TRACKER_2026.App",
+            "certificate_hash": "739de5264e4940b652c85ec29c23413438e3305a"
           }
         },
         {
-          "client_id": "287461567164-qmufk40tuvp13h9li14pr0hu15ta59ht.apps.googleusercontent.com",
+          "client_id": "812000983987-0ak1pn5ur7gpm7vn6u3hlk69vc994tcn.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyD7Lm-VoSjZzRScl423sXaXxtu_xEjQ_z0"
+          "current_key": "AIzaSyCgS3AUCoxZ70nUZag_AkEplDHCXs0YOn8"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "287461567164-qmufk40tuvp13h9li14pr0hu15ta59ht.apps.googleusercontent.com",
+              "client_id": "812000983987-0ak1pn5ur7gpm7vn6u3hlk69vc994tcn.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

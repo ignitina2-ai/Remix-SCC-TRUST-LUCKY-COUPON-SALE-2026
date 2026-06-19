@@ -1,11 +1,11 @@
 {
-  "projectId": "promising-reference-qpp0d",
-  "appId": "1:66495620877:web:6c13685f5dd33481607244",
-  "apiKey": "AIzaSyDZYylWygmGVaO4-zznkpvNnT30NydvMz4",
-  "authDomain": "promising-reference-qpp0d.firebaseapp.com",
-  "databaseURL": "https://coupon-sale-tracker-2026-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  "projectId": "coupon-sale-tracker-2026",
+  "appId": "1:812000983987:web:6c853eeba42a512339e9c6",
+  "apiKey": "AIzaSyCgS3AUCoxZ70nUZag_AkEplDHCXs0YOn8",
+  "authDomain": "coupon-sale-tracker-2026.firebaseapp.com",
+  "databaseURL": "https://coupon-sale-tracker-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
   "firestoreDatabaseId": "(default)",
-  "storageBucket": "promising-reference-qpp0d.firebasestorage.app",
-  "messagingSenderId": "66495620877",
+  "storageBucket": "coupon-sale-tracker-2026.firebasestorage.app",
+  "messagingSenderId": "812000983987",
   "measurementId": ""
 }
