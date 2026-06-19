@@ -17,7 +17,8 @@ import {
   ChevronUp,
   Table as TableIcon,
   LayoutGrid,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from 'lucide-react';
 import { Sponsor } from '@/types';
 import { cn } from '@/lib/utils';
@@ -306,7 +307,7 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
         `Rs. ${(s.amount || 0).toLocaleString('en-IN')}`,
         `Rs. ${(s.collectedAmount || 0).toLocaleString('en-IN')}`,
         s.status || 'PENDING',
-        s.collectedDate ? format(new Date(s.collectedDate), 'dd/MM/yyyy') : '-'
+        s.collectedDate ? format(new Date(s.collectedDate), 'dd.MM.yyyy') : '-'
       ]),
       [
         'TOTAL SUMMARY',
@@ -438,6 +439,14 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
           >
             <FileText size={14} className="text-rose-600" />
             <span>Export</span>
+          </button>
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-xs cursor-pointer"
+            title="Print List"
+          >
+            <Printer size={14} className="text-blue-600" />
+            <span>Print</span>
           </button>
           <button 
             disabled={permissions?.canAdd === false}
@@ -824,7 +833,7 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
                         {s.collectedDate ? (
                           <p className="text-slate-700 font-bold flex items-center gap-1.5">
                             <CheckCircle2 size={14} className="text-emerald-600" />
-                            Collected on: {format(new Date(s.collectedDate), 'dd MMM yyyy')}
+                            Collected on: {format(new Date(s.collectedDate), 'dd.MM.yyyy')}
                           </p>
                         ) : (
                           <p className="text-slate-500 font-semibold flex items-center gap-1.5">
@@ -969,7 +978,7 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
                       s.status === 'COLLECTED' ? "text-emerald-700" : "text-rose-700"
                     )}>
                       <CheckCircle2 size={10} />
-                      <span>{s.status === 'COLLECTED' ? 'Collected' : 'Flagged'}: {format(new Date(s.collectedDate), 'dd MMM')}</span>
+                      <span>{s.status === 'COLLECTED' ? 'Collected' : 'Flagged'}: {format(new Date(s.collectedDate), 'dd.MM.yyyy')}</span>
                     </div>
                   )}
                 </div>

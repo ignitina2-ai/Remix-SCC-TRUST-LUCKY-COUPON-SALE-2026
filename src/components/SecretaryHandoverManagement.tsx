@@ -17,7 +17,8 @@ import {
   CreditCard,
   Wallet,
   QrCode,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from 'lucide-react';
 import { SecretaryHandover, Transaction, CustomPaymentMethod, PaymentMethod, DEFAULT_PAYMENT_LABELS, getDefaultPaymentMethodsList } from '@/types';
 import { cn } from '@/lib/utils';
@@ -331,7 +332,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     // 3. Prepare table rows
     const tableData = [
       ...filteredHandovers.map(h => [
-        format(new Date(h.date), 'dd/MM/yyyy'),
+        format(new Date(h.date), 'dd.MM.yyyy'),
         h.name,
         h.description || '-',
         `Rs. ${h.amount.toLocaleString('en-IN')}`
@@ -417,7 +418,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
 
   const exportCSV = () => {
     const csvData = filteredHandovers.map(h => ({
-      Date: format(new Date(h.date), 'dd/MM/yyyy'),
+      Date: format(new Date(h.date), 'dd.MM.yyyy'),
       Name: h.name,
       Description: h.description || '',
       Amount: h.amount
@@ -470,6 +471,13 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
             className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg md:rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             <Download size={14} />
+          </button>
+          <button
+            onClick={() => window.print()}
+            title="Print Handover Report"
+            className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg md:rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <Printer size={14} />
           </button>
           {selectedIds.size > 0 && (
             <button 
@@ -688,7 +696,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-[9px] font-bold uppercase tracking-wider leading-none">
-                        <span className="flex items-center gap-1"><Calendar size={10} /> <span className="font-sans">{format(new Date(handover.date), 'dd MMM')}</span></span>
+                        <span className="flex items-center gap-1"><Calendar size={10} /> <span className="font-sans">{format(new Date(handover.date), 'dd.MM.yyyy')}</span></span>
                       </div>
                     </div>
                   </div>

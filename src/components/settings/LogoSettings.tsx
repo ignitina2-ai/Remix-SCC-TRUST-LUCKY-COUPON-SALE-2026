@@ -34,8 +34,8 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 700 * 1024) {
-      setUploadError("Image file size should be less than 700KB for highly responsive cloud syncing.");
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Image file size should be less than 5MB to ensure optimal cloud scaling.");
       return;
     }
 

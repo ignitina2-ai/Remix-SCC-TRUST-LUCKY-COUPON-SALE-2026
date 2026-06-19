@@ -429,6 +429,22 @@ export default function App() {
     return result;
   };
 
+  const cleanUndefined = (obj: any): any => {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(cleanUndefined);
+    }
+    const clean: any = {};
+    for (const key of Object.keys(obj)) {
+      if (obj[key] !== undefined) {
+        clean[key] = cleanUndefined(obj[key]);
+      }
+    }
+    return clean;
+  };
+
   // 100% Secure cloud synchronised operations writing to multi-tab cache
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     const transactionId = generateSafeId();
@@ -438,7 +454,7 @@ export default function App() {
     };
 
     try {
-      await setDoc(doc(db, 'transactions', transactionId), docData);
+      await setDoc(doc(db, 'transactions', transactionId), cleanUndefined(docData));
 
       if (appData.notificationsEnabled) {
         sendNotification('New Transaction Added', {
@@ -452,7 +468,7 @@ export default function App() {
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
-      await updateDoc(doc(db, 'transactions', id), updates);
+      await updateDoc(doc(db, 'transactions', id), cleanUndefined(updates));
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
     }
@@ -476,10 +492,10 @@ export default function App() {
     const treasurerPaidDate = paidToTreasurer ? new Date().toISOString() : null;
 
     try {
-      await updateDoc(doc(db, 'transactions', id), {
+      await updateDoc(doc(db, 'transactions', id), cleanUndefined({
         paidToTreasurer,
         treasurerPaidDate
-      });
+      }));
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
     }
@@ -493,7 +509,7 @@ export default function App() {
     };
 
     try {
-      await setDoc(doc(db, 'sponsors', sponsorId), docData);
+      await setDoc(doc(db, 'sponsors', sponsorId), cleanUndefined(docData));
 
       if (appData.notificationsEnabled) {
         sendNotification('New Sponsor Added', {
@@ -508,7 +524,7 @@ export default function App() {
   const updateSponsor = async (id: string, updates: Partial<Sponsor>) => {
     const oldSponsor = appData.sponsors.find(s => s.id === id);
     try {
-      await updateDoc(doc(db, 'sponsors', id), updates);
+      await updateDoc(doc(db, 'sponsors', id), cleanUndefined(updates));
 
       if (appData.notificationsEnabled && updates.status === 'COLLECTED' && oldSponsor?.status !== 'COLLECTED') {
         sendNotification('Sponsor Payment Collected', {
@@ -536,7 +552,7 @@ export default function App() {
     };
 
     try {
-      await setDoc(doc(db, 'incomeExpenses', entryId), docData);
+      await setDoc(doc(db, 'incomeExpenses', entryId), cleanUndefined(docData));
 
       if (appData.notificationsEnabled) {
         sendNotification(`New ${docData.type.toLowerCase()} Added`, {
@@ -550,7 +566,7 @@ export default function App() {
 
   const updateIncomeExpense = async (id: string, updates: Partial<IncomeExpense>) => {
     try {
-      await updateDoc(doc(db, 'incomeExpenses', id), updates);
+      await updateDoc(doc(db, 'incomeExpenses', id), cleanUndefined(updates));
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `incomeExpenses/${id}`);
     }
@@ -574,7 +590,7 @@ export default function App() {
     };
 
     try {
-      await setDoc(doc(db, 'secretaryHandovers', handoverId), docData);
+      await setDoc(doc(db, 'secretaryHandovers', handoverId), cleanUndefined(docData));
 
       if (appData.notificationsEnabled) {
         sendNotification('Cash Handed Over', {
@@ -588,7 +604,7 @@ export default function App() {
 
   const updateSecretaryHandover = async (id: string, updates: Partial<SecretaryHandover>) => {
     try {
-      await updateDoc(doc(db, 'secretaryHandovers', id), updates);
+      await updateDoc(doc(db, 'secretaryHandovers', id), cleanUndefined(updates));
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `secretaryHandovers/${id}`);
     }
@@ -676,22 +692,22 @@ export default function App() {
       
       // Upload transactions in bulk batch
       for (const tx of data.transactions) {
-        batch.set(doc(db, 'transactions', tx.id), tx);
+        batch.set(doc(db, 'transactions', tx.id), cleanUndefined(tx));
       }
       // Upload sponsors
       for (const sp of data.sponsors) {
-        batch.set(doc(db, 'sponsors', sp.id), sp);
+        batch.set(doc(db, 'sponsors', sp.id), cleanUndefined(sp));
       }
       // Upload income expenses
       if (Array.isArray(data.incomeExpenses)) {
         for (const ie of data.incomeExpenses) {
-          batch.set(doc(db, 'incomeExpenses', ie.id), ie);
+          batch.set(doc(db, 'incomeExpenses', ie.id), cleanUndefined(ie));
         }
       }
       // Upload handovers
       if (Array.isArray(data.secretaryHandovers)) {
         for (const sh of data.secretaryHandovers) {
-          batch.set(doc(db, 'secretaryHandovers', sh.id), sh);
+          batch.set(doc(db, 'secretaryHandovers', sh.id), cleanUndefined(sh));
         }
       }
       

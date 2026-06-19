@@ -43,14 +43,24 @@ export async function shareDailySalesCard(options: {
 }) {
   const { date, totalSales, totalCredit, totalCashSale, totalUPI, totalHandover, upiBreakdown } = options;
 
+  const formattedDate = date && !isNaN(new Date(date).getTime()) ? (() => {
+    const parts = date.split('-');
+    if (parts.length === 3) {
+      return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
+    }
+    const d = new Date(date);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  })() : (date || 'Overall');
+
   // Create temporary container placed inside viewport bounds but layered completely behind to force browser layout paint
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '0px';
+  container.style.left = '-9999px';
   container.style.top = '0px';
-  container.style.zIndex = '-9999';
+  container.style.zIndex = '99999';
   container.style.pointerEvents = 'none';
-  container.style.opacity = '0.99';
+  container.style.opacity = '1';
   container.style.width = '550px';
   container.style.backgroundColor = '#0f172a'; // slate-900 solid
   container.style.color = '#ffffff';
@@ -73,7 +83,7 @@ export async function shareDailySalesCard(options: {
       </div>
       <div style="background-color: rgba(59, 130, 246, 0.15); border: 2px solid #3b82f6; color: #60a5fa; padding: 10px 18px; border-radius: 12px; text-align: right;">
         <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block; color: #94a3b8; margin-bottom: 2px;">Report Date</span>
-        <span style="font-size: 14px; font-weight: 800; font-family: monospace; color: #ffffff;">${date || 'Overall'}</span>
+        <span style="font-size: 14px; font-weight: 800; font-family: monospace; color: #ffffff;">${formattedDate}</span>
       </div>
     </div>
 
@@ -165,13 +175,23 @@ export async function shareUPIReceiptCard(options: {
 }) {
   const { methodLabel, totalReceived, date, transactionsCount, paymentMethodId } = options;
 
+  const formattedDate = date && !isNaN(new Date(date).getTime()) ? (() => {
+    const parts = date.split('-');
+    if (parts.length === 3) {
+      return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
+    }
+    const d = new Date(date);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  })() : (date || 'Overall');
+
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '0px';
+  container.style.left = '-9999px';
   container.style.top = '0px';
-  container.style.zIndex = '-9999';
+  container.style.zIndex = '99999';
   container.style.pointerEvents = 'none';
-  container.style.opacity = '0.99';
+  container.style.opacity = '1';
   container.style.width = '480px';
   container.style.backgroundColor = '#0f172a'; // slate-900 solid
   container.style.color = '#ffffff';
@@ -218,7 +238,7 @@ export async function shareUPIReceiptCard(options: {
       </div>
       <div style="background-color: #1e293b; padding: 6px 14px; border-radius: 12px; text-align: right;">
         <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; display: block;">Timeframe</span>
-        <span style="font-size: 12px; font-weight: 700; font-family: monospace; color: #cbd5e1;">${date || 'Overall'}</span>
+        <span style="font-size: 12px; font-weight: 700; font-family: monospace; color: #cbd5e1;">${formattedDate}</span>
       </div>
     </div>
 
@@ -272,11 +292,11 @@ export async function shareUPIReceiptCard(options: {
 export async function shareTransactionReceiptCard(transaction: Transaction, paymentLabel: string) {
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '0px';
+  container.style.left = '-9999px';
   container.style.top = '0px';
-  container.style.zIndex = '-9999';
+  container.style.zIndex = '99999';
   container.style.pointerEvents = 'none';
-  container.style.opacity = '0.99';
+  container.style.opacity = '1';
   container.style.width = '450px';
   container.style.backgroundColor = '#0f172a'; // slate-900 solid
   container.style.color = '#ffffff';
@@ -348,7 +368,12 @@ export async function shareTransactionReceiptCard(transaction: Transaction, paym
 
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
         <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Transaction Date (തീയതി)</span>
-        <span style="font-weight: 600; color: #cbd5e1; font-family: monospace; text-align: right;">${new Date(transaction.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+        <span style="font-weight: 600; color: #cbd5e1; font-family: monospace; text-align: right;">${(() => {
+          const d = new Date(transaction.date);
+          if (isNaN(d.getTime())) return transaction.date;
+          const pad = (n: number) => String(n).padStart(2, '0');
+          return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+        })()}</span>
       </div>
     </div>
 

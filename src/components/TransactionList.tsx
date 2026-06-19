@@ -21,7 +21,8 @@ import {
   Smartphone,
   Eye,
   EyeOff,
-  Share2
+  Share2,
+  Printer
 } from 'lucide-react';
 import { shareTransactionReceiptCard } from '../utils/shareUtils';
 import { Transaction, PaymentMethod, DEFAULT_PAYMENT_LABELS } from '@/types';
@@ -227,7 +228,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
       ...filteredTransactions.map(t => {
         const methodLabel = customPaymentLabels?.[t.paymentMethod] || DEFAULT_PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod.replace('_', ' ');
         return [
-          format(new Date(t.date), 'dd/MM/yyyy'),
+          format(new Date(t.date), 'dd.MM.yyyy'),
           t.name,
           t.area && t.area !== 'N/A' ? t.area : '-',
           t.books.toString(),
@@ -339,7 +340,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
 
   const exportCSV = () => {
     const csvData = filteredTransactions.map(t => ({
-      Date: format(new Date(t.date), 'dd/MM/yyyy'),
+      Date: format(new Date(t.date), 'dd.MM.yyyy'),
       Name: t.name,
       Area: t.area,
       Books: t.books,
@@ -430,6 +431,14 @@ const TransactionList: React.FC<TransactionListProps> = ({
           >
             <TableIcon size={14} className="text-emerald-600 md:w-4 md:h-4" />
             CSV
+          </button>
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-[10px] md:text-xs cursor-pointer"
+            title="Print List"
+          >
+            <Printer size={14} className="text-blue-600 md:w-4 md:h-4" />
+            Print
           </button>
         </div>
       </header>
@@ -525,7 +534,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
                     </div>
                     <div className="flex items-center gap-2.5 mt-0.5 text-slate-500 text-[9px] md:text-[11px] font-semibold">
                       <span className="flex items-center gap-0.5"><MapPin size={10} /> {t.area}</span>
-                      <span className="flex items-center gap-0.5"><Calendar size={10} /> {format(new Date(t.date), 'dd MMM')}</span>
+                      <span className="flex items-center gap-0.5"><Calendar size={10} /> {format(new Date(t.date), 'dd.MM.yyyy')}</span>
                     </div>
                   </div>
                 </div>

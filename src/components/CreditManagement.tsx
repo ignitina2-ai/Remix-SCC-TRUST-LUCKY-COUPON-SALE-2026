@@ -22,7 +22,8 @@ import {
   Edit2,
   QrCode,
   Copy,
-  Check
+  Check,
+  Printer
 } from 'lucide-react';
 import { Transaction, CreditSettings, PaymentMethod, DEFAULT_PAYMENT_LABELS, CustomPaymentMethod } from '@/types';
 import { cn } from '@/lib/utils';
@@ -238,7 +239,7 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
     // 3. Prepare table report rows & headers
     const tableData = [
       ...filteredCredits.map(t => [
-        format(new Date(t.date), 'dd/MM/yyyy'),
+        format(new Date(t.date), 'dd.MM.yyyy'),
         t.name,
         t.area && t.area !== 'N/A' ? t.area : '-',
         `Rs. ${t.totalAmount.toLocaleString('en-IN')}`,
@@ -334,7 +335,7 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
 
   const exportCSV = () => {
     const csvData = filteredCredits.map(t => ({
-      Date: format(new Date(t.date), 'dd/MM/yyyy'),
+      Date: format(new Date(t.date), 'dd.MM.yyyy'),
       Name: t.name,
       Area: t.area,
       TotalAmount: t.totalAmount,
@@ -376,6 +377,13 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
             className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg md:rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             <Download size={16} />
+          </button>
+          <button
+            onClick={() => window.print()}
+            title="Print Ledger"
+            className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg md:rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <Printer size={16} />
           </button>
           <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm">
             <div className="px-2 py-0.5 md:px-3 md:py-1 bg-amber-50 rounded-lg md:rounded-xl">
@@ -459,7 +467,7 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
                           )}
                         </div>
                         <p className="text-slate-500 text-[9px] md:text-xs font-semibold flex items-center gap-1 mt-0.5">
-                          <Calendar size={10} /> {format(new Date(t.date), 'dd MMM')} • {t.area}
+                          <Calendar size={10} /> {format(new Date(t.date), 'dd.MM.yyyy')} • {t.area}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={cn(
@@ -519,7 +527,7 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
                                 <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider bg-white px-1 py-0.5 rounded border border-slate-100">
                                   {mLabel}
                                 </span>
-                                <span className="text-[9px] text-slate-400">{format(new Date(entry.date), 'dd MMM')}</span>
+                                <span className="text-[9px] text-slate-400">{format(new Date(entry.date), 'dd.MM.yyyy')}</span>
                               </div>
                             );
                           })}

@@ -20,7 +20,8 @@ import {
   Loader2,
   X,
   Upload,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from 'lucide-react';
 import { IncomeExpense, EntryType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -74,6 +75,8 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
   });
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingError, setSubmittingError] = useState<string | null>(null);
 
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,8 +84,8 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
 
     setIsUploadingReceipt(true);
     try {
-      if (file.size > 1536 * 1024) {
-        alert("Maximum attachment size: 1.5MB to ensure optimal local performance.");
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Maximum attachment size: 5MB to ensure optimal local performance.");
         setIsUploadingReceipt(false);
         return;
       }
@@ -203,45 +206,60 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
       return (b.id || '').localeCompare(a.id || '');
     });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.description || !formData.amount) return;
 
-    if (editingId && onUpdateEntry) {
-       onUpdateEntry(editingId, {
-        description: formData.description,
-        amount: Number(formData.amount),
-        type: formData.type,
-        category: formData.category,
-        date: new Date(formData.date).toISOString(),
-        receiptUrl: formData.receiptUrl || undefined,
-        receiptName: formData.receiptName || undefined
-      });
-      setEditingId(null);
-    } else {
-      onAddEntry({
-        description: formData.description,
-        amount: Number(formData.amount),
-        type: formData.type,
-        category: formData.category,
-        date: new Date(formData.date).toISOString(),
-        receiptUrl: formData.receiptUrl || undefined,
-        receiptName: formData.receiptName || undefined
-      });
-    }
+    setIsSubmitting(true);
+    setSubmittingError(null);
 
-    setFormData({
-      description: '',
-      amount: '',
-      type: 'EXPENSE',
-      category: '',
-      date: getTodayISTStr(),
-      receiptUrl: '',
-      receiptName: ''
-    });
-    setShowForm(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+    const now = new Date();
+    const pad = (num: number, size: number = 2) => String(num).padStart(size, '0');
+    const timeStr = `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
+    const finalDateStr = new Date(formData.date + timeStr).toISOString();
+
+    try {
+      if (editingId && onUpdateEntry) {
+         await onUpdateEntry(editingId, {
+          description: formData.description,
+          amount: Number(formData.amount),
+          type: formData.type,
+          category: formData.category,
+          date: finalDateStr,
+          receiptUrl: formData.receiptUrl || undefined,
+          receiptName: formData.receiptName || undefined
+        });
+        setEditingId(null);
+      } else {
+        await onAddEntry({
+          description: formData.description,
+          amount: Number(formData.amount),
+          type: formData.type,
+          category: formData.category,
+          date: finalDateStr,
+          receiptUrl: formData.receiptUrl || undefined,
+          receiptName: formData.receiptName || undefined
+        });
+      }
+
+      setFormData({
+        description: '',
+        amount: '',
+        type: 'EXPENSE',
+        category: '',
+        date: getTodayISTStr(),
+        receiptUrl: '',
+        receiptName: ''
+      });
+      setShowForm(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("Failed to save Income & Expense entry:", err);
+      setSubmittingError(err?.message || "Verify your connection. Ensure all data fields are populated correctly.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const exportPDF = () => {
@@ -373,7 +391,7 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
     // 3. Prepare table rows
     const tableData = [
       ...filteredEntries.map(e => [
-        format(new Date(e.date), 'dd/MM/yyyy'),
+        format(new Date(e.date), 'dd.MM.yyyy'),
         e.description,
         e.category || '-',
         e.type === 'INCOME' ? 'INCOME' : 'EXPENSE',
@@ -471,7 +489,7 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
 
   const exportCSV = () => {
     const csvData = filteredEntries.map(e => ({
-      Date: format(new Date(e.date), 'dd/MM/yyyy'),
+      Date: format(new Date(e.date), 'dd.MM.yyyy'),
       Description: e.description,
       Category: e.category || '',
       Type: e.type,
@@ -560,6 +578,13 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
             <Download size={14} />
           </button>
           <button 
+            onClick={() => window.print()}
+            className="p-2 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="Print Ledger"
+          >
+            <Printer size={14} />
+          </button>
+          <button 
             disabled={permissions?.canAdd === false}
             onClick={() => permissions?.canAdd !== false && setShowForm(!showForm)}
             className={cn(
@@ -618,6 +643,12 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
       {showForm && (
         <div className="bg-white p-4 rounded-xl md:rounded-2xl border border-slate-100 shadow-lg animate-in slide-in-from-top-4 duration-300">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {submittingError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl flex items-center gap-2.5 text-xs font-semibold leading-tight animate-in shake duration-300">
+                <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                <span>{submittingError}</span>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider">Type</label>
@@ -758,15 +789,16 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
 
             <button 
               type="submit"
-              disabled={editingId ? (permissions?.canEdit === false) : (permissions?.canAdd === false)}
+              disabled={isSubmitting || (editingId ? (permissions?.canEdit === false) : (permissions?.canAdd === false))}
               className={cn(
-                "w-full py-2.5 rounded-lg font-bold shadow-md transition-all active:scale-95 text-xs cursor-pointer",
-                (editingId ? (permissions?.canEdit === false) : (permissions?.canAdd === false))
+                "w-full py-2.5 rounded-lg font-bold shadow-md transition-all active:scale-95 text-xs cursor-pointer flex items-center justify-center gap-2",
+                (isSubmitting || (editingId ? (permissions?.canEdit === false) : (permissions?.canAdd === false)))
                   ? "bg-slate-300 border border-slate-400 cursor-not-allowed opacity-50 shadow-none text-slate-500"
                   : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/15"
               )}
             >
-              {editingId ? 'Update Entry' : 'Save Entry'}
+              {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+              <span>{isSubmitting ? 'Saving Entry...' : (editingId ? 'Update Entry' : 'Save Entry')}</span>
             </button>
           </form>
         </div>
@@ -901,7 +933,7 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5 leading-none">
                           <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
-                            <Calendar size={10} /> <span className="font-sans">{format(new Date(entry.date), 'dd MMM')}</span>
+                            <Calendar size={10} /> <span className="font-sans">{format(new Date(entry.date), 'dd.MM.yyyy')}</span>
                           </span>
                           {entry.category && (
                             <span className="inline-flex items-center gap-1 text-[8px] font-black text-blue-600 bg-blue-50 px-1 py-0.2 rounded font-sans uppercase">
