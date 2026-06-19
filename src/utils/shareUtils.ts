@@ -1,7 +1,7 @@
 import { toPng } from 'html-to-image';
-import { Transaction, CustomPaymentMethod } from '../types';
+import { Transaction } from '../types';
 
-// Utility to share or download the generated PNG image
+// Utility to share or download the generated PNG image with improved mobile browser compatibility
 export async function shareOrDownloadImage(dataUrl: string, fileName: string, title: string) {
   try {
     // Convert dataUrl to blob
@@ -43,97 +43,111 @@ export async function shareDailySalesCard(options: {
 }) {
   const { date, totalSales, totalCredit, totalCashSale, totalUPI, totalHandover, upiBreakdown } = options;
 
-  // Create temporary offscreen div styled precisely with Tailwind
+  // Create temporary container placed outside viewport with explicit inline styles for full canvas rendering support
   const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
+  container.style.position = 'fixed';
+  container.style.left = '3000px';
+  container.style.top = '3000px';
   container.style.width = '550px';
-  container.className = 'bg-slate-900 text-white rounded-3xl overflow-hidden shadow-2xl p-8 flex flex-col gap-6 border border-slate-800';
+  container.style.backgroundColor = '#0f172a'; // slate-900 solid
+  container.style.color = '#ffffff';
+  container.style.borderRadius = '24px';
+  container.style.padding = '32px';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '24px';
+  container.style.border = '1px solid #1e293b';
+  container.style.boxShadow = '0 25px 50px -12px rgb(0 0 0 / 0.25)';
+  container.className = 'text-white font-sans';
 
   container.innerHTML = `
     <!-- Header with royal slate/neon layout -->
-    <div class="flex items-center justify-between border-b border-slate-800 pb-5">
-      <div class="space-y-1">
-        <span class="text-xs font-black text-blue-400 uppercase tracking-widest block">Daily Ledger Share</span>
-        <h2 class="text-xl font-black tracking-tight text-white uppercase">Coupon Sales Summary</h2>
-        <p class="text-xs font-semibold text-slate-400">കൂപ്പൺ വില്പന റിപ്പോർട്ട്</p>
+    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 11px; font-weight: 900; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.15em;">Daily Ledger Share</span>
+        <h2 style="font-size: 20px; font-weight: 900; letter-spacing: -0.025em; text-transform: uppercase; margin: 0; color: #ffffff;">Coupon Sales Summary</h2>
+        <p style="font-size: 12px; font-weight: 600; color: #94a3b8; margin: 0;">കൂപ്പൺ വില്പന റിപ്പോർട്ട്</p>
       </div>
-      <div class="bg-blue-600/10 border border-blue-500/20 text-blue-400 px-4 py-2 rounded-2xl text-right">
-        <span class="text-[9px] font-black uppercase tracking-widest block opacity-70">Report Date</span>
-        <span class="text-xs font-bold font-mono">${date || 'Overall'}</span>
+      <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 8px 16px; border-radius: 12px; text-align: right;">
+        <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block; opacity: 0.7;">Report Date</span>
+        <span style="font-size: 13px; font-weight: 700; font-family: monospace;">${date || 'Overall'}</span>
       </div>
     </div>
 
     <!-- Main Metrics Grid -->
-    <div class="grid grid-cols-2 gap-4">
-      <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex flex-col">
-        <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Total Sales (ആകെ വില്പന)</span>
-        <span class="text-2xl font-black text-blue-400 mt-1">₹${totalSales.toLocaleString('en-IN')}</span>
+    <div style="display: grid; grid-template-cols: 1fr 1fr; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
+        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Total Sales (ആകെ വില്പന)</span>
+        <span style="font-size: 22px; font-weight: 900; color: #60a5fa;">₹${totalSales.toLocaleString('en-IN')}</span>
       </div>
-      <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex flex-col">
-        <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Total Credits (ബാക്കി പത്രം)</span>
-        <span class="text-2xl font-black text-amber-500 mt-1">₹${totalCredit.toLocaleString('en-IN')}</span>
+      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
+        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Total Credits (ബാക്കി പത്രം)</span>
+        <span style="font-size: 22px; font-weight: 900; color: #f59e0b;">₹${totalCredit.toLocaleString('en-IN')}</span>
       </div>
-      <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex flex-col">
-        <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Cash Collections (ക്യാഷ്)</span>
-        <span class="text-2xl font-black text-emerald-400 mt-1">₹${totalCashSale.toLocaleString('en-IN')}</span>
+      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
+        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Cash Collections (ക്യാഷ്)</span>
+        <span style="font-size: 22px; font-weight: 900; color: #10b981;">₹${totalCashSale.toLocaleString('en-IN')}</span>
       </div>
-      <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex flex-col">
-        <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">UPI Receipts (ആകെ യു.പി.ഐ)</span>
-        <span class="text-2xl font-black text-indigo-400 mt-1">₹${totalUPI.toLocaleString('en-IN')}</span>
+      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
+        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">UPI Receipts (ആകെ യു.പി.ഐ)</span>
+        <span style="font-size: 22px; font-weight: 900; color: #818cf8;">₹${totalUPI.toLocaleString('en-IN')}</span>
       </div>
     </div>
 
     <!-- Handover Sub-card -->
     ${totalHandover > 0 ? `
-    <div class="bg-teal-500/5 border border-teal-500/15 p-4 rounded-2xl flex items-center justify-between">
+    <div style="background-color: rgba(20, 184, 166, 0.05); border: 1px solid rgba(20, 184, 166, 0.15); padding: 16px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between;">
       <div>
-        <span class="text-teal-400 text-[10px] font-black uppercase tracking-widest block">Secretary Handover</span>
-        <span class="text-xs text-slate-300 font-semibold mt-0.5 block">ട്രഷറർക്ക് കൈമാറിയ തുക</span>
+        <span style="color: #2dd4bf; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block;">Secretary Handover</span>
+        <span style="font-size: 12px; color: #cbd5e1; font-weight: 600; margin-top: 2px; display: block;">ട്രഷറർക്ക് കൈമാറിയ തുക</span>
       </div>
-      <span class="text-xl font-black text-teal-400">₹${totalHandover.toLocaleString('en-IN')}</span>
+      <span style="font-size: 20px; font-weight: 900; color: #2dd4bf;">₹${totalHandover.toLocaleString('en-IN')}</span>
     </div>
     ` : ''}
 
     <!-- Each UPI Receipts Breakdown -->
-    <div class="bg-slate-800/20 border border-slate-800/80 p-5 rounded-2xl space-y-3">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Each UPI Receipts Breakdown</span>
-        <span class="text-[10px] font-bold text-slate-500">(യു.പി.ഐ വിവരങ്ങൾ)</span>
+    <div style="background-color: rgba(30, 41, 59, 0.2); border: 1px solid rgba(30, 41, 59, 0.8); padding: 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Each UPI Receipts Breakdown</span>
+        <span style="font-size: 10px; font-weight: 700; color: #64748b;">(യു.പി.ഐ വിവരങ്ങൾ)</span>
       </div>
-      <div class="grid grid-cols-2 gap-3">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
         ${upiBreakdown.length === 0 ? `
-          <div class="col-span-2 text-center py-2 text-slate-600 text-xs font-bold">No UPI Transactions Recorded</div>
+          <div style="grid-column: span 2; text-align: center; padding: 12px; color: #475569; font-size: 12px; font-weight: 700;">No UPI Transactions Recorded</div>
         ` : upiBreakdown.map(u => `
-          <div class="flex justify-between items-center bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/60">
-            <span class="text-xs font-bold text-slate-300">${u.label}</span>
-            <span class="text-xs font-mono font-black text-white">₹${u.amount.toLocaleString('en-IN')}</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; background-color: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 12px; border: 1px solid rgba(30, 41, 59, 0.6);">
+            <span style="font-size: 12px; font-weight: 700; color: #cbd5e1;">${u.label}</span>
+            <span style="font-size: 12px; font-family: monospace; font-weight: 900; color: #ffffff;">₹${u.amount.toLocaleString('en-IN')}</span>
           </div>
         `).join('')}
       </div>
     </div>
 
-    <!-- Card Brand Tag / Illustration pattern -->
-    <div class="flex items-center justify-between mt-2 pt-4 border-t border-slate-800 text-slate-500">
-      <p class="text-[9px] font-black uppercase tracking-wider">© ${new Date().getFullYear()} Coupon Sale Tracker App • Verified Digital Signature</p>
-      <div class="flex gap-1">
-        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
-        <span class="h-1.5 w-1.5 rounded-full bg-teal-500"></span>
-        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+    <!-- Card Brand Tag -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 16px; border-top: 1px solid #1e293b; color: #64748b;">
+      <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">© ${new Date().getFullYear()} Coupon Sale Tracker App • Verified Digital Signature</p>
+      <div style="display: flex; gap: 4px;">
+        <span style="height: 6px; width: 6px; border-radius: 50%; background-color: #3b82f6; display: inline-block;"></span>
+        <span style="height: 6px; width: 6px; border-radius: 50%; background-color: #14b8a6; display: inline-block;"></span>
+        <span style="height: 6px; width: 6px; border-radius: 50%; background-color: #10b981; display: inline-block;"></span>
       </div>
     </div>
   `;
 
   document.body.appendChild(container);
 
+  // Give standard style and image assets time to compute/paint fully
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
   try {
-    const dataUrl = await toPng(container, { cacheBust: true, width: 550, height: container.clientHeight || 550 });
+    const dataUrl = await toPng(container, { cacheBust: true, width: 550 });
     document.body.removeChild(container);
     await shareOrDownloadImage(dataUrl, `daily_coupon_sales_${date.replace(/[^a-zA-Z0-9]/g, '_')}`, `Coupon Sales Report (${date})`);
   } catch (e) {
     console.error("Error creating image card:", e);
-    document.body.removeChild(container);
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
     alert("Error occurred while generating Sale report card image.");
   }
 }
@@ -149,69 +163,82 @@ export async function shareUPIReceiptCard(options: {
   const { methodLabel, totalReceived, date, transactionsCount, paymentMethodId } = options;
 
   const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
+  container.style.position = 'fixed';
+  container.style.left = '3000px';
+  container.style.top = '3000px';
   container.style.width = '480px';
-  container.className = 'bg-slate-900 text-white rounded-3xl overflow-hidden shadow-2xl p-8 flex flex-col gap-6 border border-slate-800';
+  container.style.backgroundColor = '#0f172a'; // slate-900 solid
+  container.style.color = '#ffffff';
+  container.style.borderRadius = '24px';
+  container.style.padding = '32px';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '24px';
+  container.style.border = '1px solid #1e293b';
+  container.style.boxShadow = '0 25px 50px -12px rgb(0 0 0 / 0.25)';
+  container.className = 'text-white font-sans';
 
   // Customize layout based on UPI method name
-  let brandColor = 'bg-indigo-600';
+  let brandHex = '#4f46e5'; // indigo-600
+  let brandColorClass = 'text-indigo-400';
   let badgeText = 'UPI Receipt';
   if (paymentMethodId === 'TRUST GPAY') {
-    brandColor = 'bg-teal-600';
+    brandHex = '#0d9488'; // teal-600
+    brandColorClass = 'text-teal-400';
     badgeText = 'TRUST APPROVED';
   } else if (paymentMethodId === 'SOFIA GPAY') {
-    brandColor = 'bg-violet-600';
+    brandHex = '#7c3aed'; // violet-600
+    brandColorClass = 'text-violet-400';
     badgeText = 'SOFIA BRANDED';
   } else if (paymentMethodId === 'JOHNY GPAY') {
-    brandColor = 'bg-sky-600';
+    brandHex = '#0284c7'; // sky-600
+    brandColorClass = 'text-sky-400';
     badgeText = 'JOHNY KEY';
   } else if (paymentMethodId === 'OTHER_UPI') {
-    brandColor = 'bg-rose-600';
+    brandHex = '#e11d48'; // rose-600
+    brandColorClass = 'text-rose-400';
     badgeText = 'OTHER CHANNEL';
   }
 
   container.innerHTML = `
     <!-- Top Colored Accent bar -->
-    <div class="h-2 w-full ${brandColor} -mt-8 -mx-8"></div>
+    <div style="height: 8px; width: 100%; background-color: ${brandHex}; margin-top: -32px; border-radius: 24px 24px 0 0; margin-left: -32px; padding-right: 64px; box-sizing: content-box;"></div>
 
-    <div class="flex items-start justify-between">
-      <div class="space-y-1">
-        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">${badgeText}</span>
-        <h2 class="text-xl font-black text-white uppercase">${methodLabel}</h2>
-        <p class="text-[10px] font-semibold text-slate-400">യു.പി.ഐ രസീത് സ്റ്റേറ്റ്മെന്റ്</p>
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-top: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 9px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.15em;">${badgeText}</span>
+        <h2 style="font-size: 20px; font-weight: 900; color: #ffffff; text-transform: uppercase; margin: 0;">${methodLabel}</h2>
+        <p style="font-size: 11px; font-weight: 600; color: #94a3b8; margin: 0;">യു.പി.ഐ രസീത് സ്റ്റേറ്റ്മെന്റ്</p>
       </div>
-      <div class="bg-slate-800 px-3.5 py-1.5 rounded-xl text-right">
-        <span class="text-[8px] font-black uppercase text-slate-500 tracking-wider block">Timeframe</span>
-        <span class="text-xs font-bold font-mono text-slate-300">${date || 'Overall'}</span>
+      <div style="background-color: #1e293b; padding: 6px 14px; border-radius: 12px; text-align: right;">
+        <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; display: block;">Timeframe</span>
+        <span style="font-size: 12px; font-weight: 700; font-family: monospace; color: #cbd5e1;">${date || 'Overall'}</span>
       </div>
     </div>
 
     <!-- Centered Visual Amount Display -->
-    <div class="text-center py-6 bg-slate-800/40 border border-slate-800/80 rounded-2xl relative overflow-hidden flex flex-col items-center justify-center">
-      <div class="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/50"></div>
-      <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Ledger Collections</span>
-      <span class="text-3xl font-black ${brandColor.replace('bg-', 'text-')} relative z-10 font-mono">₹${totalReceived.toLocaleString('en-IN')}</span>
-      <div class="mt-2.5 px-3 py-1 bg-slate-900/80 border border-slate-800 text-[10px] text-slate-300 font-bold rounded-full relative z-10 flex items-center gap-1.5">
-        <span class="h-1.5 w-1.5 rounded-full ${brandColor}"></span>
+    <div style="text-align: center; padding: 24px 0; background-color: rgba(30, 41, 59, 0.4); border: 1px solid rgba(30, 41, 59, 0.8); border-radius: 16px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+      <span style="font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Total Ledger Collections</span>
+      <span style="font-size: 30px; font-weight: 900; color: ${brandHex}; font-family: monospace;">₹${totalReceived.toLocaleString('en-IN')}</span>
+      <div style="margin-top: 10px; padding: 4px 12px; background-color: rgba(15, 23, 42, 0.8); border: 1px solid #1e293b; font-size: 10px; color: #cbd5e1; font-weight: 700; border-radius: 9999px; display: inline-flex; align-items: center; gap: 6px;">
+        <span style="height: 6px; width: 6px; border-radius: 50%; background-color: ${brandHex}; display: inline-block;"></span>
         ${transactionsCount} Sales Approved
       </div>
     </div>
 
     <!-- Official Validation Badge -->
-    <div class="bg-emerald-500/5 border border-emerald-500/15 p-4 rounded-xl flex items-center gap-3">
-      <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle-2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+    <div style="background-color: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); padding: 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px;">
+      <div style="padding: 8px; background-color: rgba(16, 185, 129, 0.1); border-radius: 8px; color: #34d399; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center;">
+        ✓
       </div>
       <div>
-        <h4 class="text-[10px] font-black uppercase text-emerald-400 tracking-wider">Verified UPI Deposit Ledger</h4>
-        <p class="text-[9px] text-slate-400 leading-normal mt-0.5">ഈ തുക ബാങ്ക് ഡെപ്പോസിറ്റുമായി ക്രോസ് വെരിഫിക്കേഷൻ ചെയ്തിട്ടുള്ളതാണ്.</p>
+        <h4 style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #34d399; letter-spacing: 0.05em; margin: 0;">Verified UPI Deposit Ledger</h4>
+        <p style="font-size: 9px; color: #94a3b8; line-height: 1.4; margin: 4px 0 0 0;">ഈ തുക ബാങ്ക് ഡെപ്പോസിറ്റുമായി ക്രോസ് വെരിഫിക്കേഷൻ ചെയ്തിട്ടുള്ളതാണ്.</p>
       </div>
     </div>
 
     <!-- Footer of individual card -->
-    <div class="flex items-center justify-between text-slate-500 text-[8px] uppercase tracking-widest pt-2 border-t border-slate-800 font-mono">
+    <div style="display: flex; align-items: center; justify-content: space-between; color: #64748b; font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; padding-top: 8px; border-top: 1px solid #1e293b; font-family: monospace;">
       <span>Auto-Audit Verified</span>
       <span>${new Date().toLocaleTimeString()}</span>
     </div>
@@ -219,13 +246,18 @@ export async function shareUPIReceiptCard(options: {
 
   document.body.appendChild(container);
 
+  // Give style and image resources time to compute/paint fully
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
   try {
-    const dataUrl = await toPng(container, { cacheBust: true, width: 480, height: 420 });
+    const dataUrl = await toPng(container, { cacheBust: true, width: 480 });
     document.body.removeChild(container);
     await shareOrDownloadImage(dataUrl, `upi_receipt_${paymentMethodId.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, `${methodLabel} Total Report`);
   } catch (e) {
     console.error("Error creating image card:", e);
-    document.body.removeChild(container);
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
     alert("Error occurred while generating UPI report card image.");
   }
 }
@@ -233,123 +265,139 @@ export async function shareUPIReceiptCard(options: {
 // 3. Generate Individual Transaction Receipt Card
 export async function shareTransactionReceiptCard(transaction: Transaction, paymentLabel: string) {
   const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
+  container.style.position = 'fixed';
+  container.style.left = '3000px';
+  container.style.top = '3000px';
   container.style.width = '450px';
-  container.className = 'bg-slate-900 border border-slate-800 text-white rounded-3xl overflow-hidden shadow-2xl p-6 flex flex-col gap-5 relative font-sans';
+  container.style.backgroundColor = '#0f172a'; // slate-900 solid
+  container.style.color = '#ffffff';
+  container.style.borderRadius = '24px';
+  container.style.padding = '24px';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '20px';
+  container.style.border = '1px solid #1e293b';
+  container.style.boxShadow = '0 25px 50px -12px rgb(0 0 0 / 0.25)';
+  container.className = 'text-white font-sans';
 
-  // Treasurer Approval Status color
-  const statusBg = transaction.paidToTreasurer ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400';
+  // Treasurer Approval Status colors
+  const statusBg = transaction.paidToTreasurer ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+  const statusBorder = transaction.paidToTreasurer ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)';
+  const statusTextColor = transaction.paidToTreasurer ? '#34d399' : '#fbbf24';
   const statusLabelEn = transaction.paidToTreasurer ? 'VERIFIED & AUDITED' : 'PENDING TREASURER AUDIT';
   const statusLabelMl = transaction.paidToTreasurer ? 'ട്രഷറർ അംഗീകരിച്ചു' : 'ഓഡിറ്റിംഗ് പൂർത്തിയാകാനുണ്ട്';
 
   container.innerHTML = `
-    <!-- Decorative Coupon Strip background at top -->
-    <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+    <!-- Top colored bar mimicking strip ticket border -->
+    <div style="height: 6px; width: 100%; background: linear-gradient(to right, #3b82f6, #6366f1, #a855f7); margin-left: -24px; margin-top: -24px; padding-right: 48px; box-sizing: content-box; border-radius: 24px 24px 0 0;"></div>
 
-    <div class="text-center pt-2 pb-3 border-b border-slate-800">
-      <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-0.5">Coupon Sale Receipt</span>
-      <h2 class="text-lg font-black text-white tracking-wider uppercase">SALES RECEIPT</h2>
-      <p class="text-[9px] font-bold text-slate-400 mt-0.5">കൂപ്പൺ വിതരണ രസീത്</p>
+    <div style="text-align: center; padding-top: 8px; padding-bottom: 12px; border-bottom: 1px solid #1e293b;">
+      <span style="font-size: 9px; font-weight: 900; color: #818cf8; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 2px;">Coupon Sale Receipt</span>
+      <h2 style="font-size: 18px; font-weight: 900; color: #ffffff; tracking: 0.05em; text-transform: uppercase; margin: 0;">SALES RECEIPT</h2>
+      <p style="font-size: 10px; font-weight: 700; color: #64748b; margin: 4px 0 0 0;">കൂപ്പൺ വിതരണ രസീത്</p>
     </div>
 
     <!-- Status Badge -->
-    <div class="px-4 py-2 border rounded-xl text-center flex flex-col items-center justify-center ${statusBg}">
-      <span class="text-[8px] font-black tracking-widest uppercase block">${statusLabelEn}</span>
-      <span class="text-[10px] font-extrabold tracking-normal block mt-0.5">${statusLabelMl}</span>
+    <div style="background-color: ${statusBg}; border: 1px solid ${statusBorder}; color: ${statusTextColor}; padding: 8px 16px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-size: 8px; font-weight: 950; letter-spacing: 0.1em; text-transform: uppercase; display: block;">${statusLabelEn}</span>
+      <span style="font-size: 11px; font-weight: 800; display: block;">${statusLabelMl}</span>
     </div>
 
     <!-- Receipt Details Table style -->
-    <div class="space-y-2.5">
-      <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-800/60">
-        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Customer Name (പേര്)</span>
-        <span class="font-black text-slate-200 text-right">${transaction.name}</span>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Customer Name (പേര്)</span>
+        <span style="font-weight: 900; color: #e2e8f0; text-align: right;">${transaction.name}</span>
       </div>
       
       ${transaction.phone ? `
-      <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-800/60">
-        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Phone Number (ഫോൺ)</span>
-        <span class="font-bold font-mono text-slate-300 text-right">${transaction.phone}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Phone Number (ഫോൺ)</span>
+        <span style="font-weight: 700; font-family: monospace; color: #cbd5e1; text-align: right;">${transaction.phone}</span>
       </div>
       ` : ''}
 
-      <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-800/60">
-        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Area / Location (മേഖല)</span>
-        <span class="font-bold text-slate-300 text-right">${transaction.area}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Area / Location (മേഖല)</span>
+        <span style="font-weight: 700; color: #cbd5e1; text-align: right;">${transaction.area}</span>
       </div>
 
-      <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-800/60">
-        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Book Number (ബുക്ക് നമ്പർ)</span>
-        <span class="font-mono text-slate-300 text-right font-black">${transaction.bookNumber || 'N/A'}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Book Number (ബുക്ക് നമ്പർ)</span>
+        <span style="font-family: monospace; color: #cbd5e1; text-align: right; font-weight: 900;">${transaction.bookNumber || 'N/A'}</span>
       </div>
 
-      <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-800/60">
-        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Books Delivered (ബുക്കുകൾ)</span>
-        <span class="font-mono text-slate-300 text-right font-black">${transaction.books} Books (${transaction.coupons} Coupons)</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Books Delivered (ബുക്കുകൾ)</span>
+        <span style="font-family: monospace; color: #cbd5e1; text-align: right; font-weight: 900;">${transaction.books} Books (${transaction.coupons} Coupons)</span>
       </div>
 
-      <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-800/60">
-        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Payment Method (രീതി)</span>
-        <span class="font-bold text-indigo-400 tracking-wider text-right uppercase">${paymentLabel}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Payment Method (രീതി)</span>
+        <span style="font-weight: 700; color: #818cf8; letter-spacing: 0.05em; text-align: right; text-transform: uppercase;">${paymentLabel}</span>
       </div>
 
-      <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-800/60">
-        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Transaction Date (തീയതി)</span>
-        <span class="font-semibold text-slate-300 font-mono text-right">${new Date(transaction.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Transaction Date (തീയതി)</span>
+        <span style="font-weight: 600; color: #cbd5e1; font-family: monospace; text-align: right;">${new Date(transaction.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
       </div>
     </div>
 
     <!-- Invoice Amount section -->
-    <div class="bg-gradient-to-r from-slate-800 to-indigo-950 p-4 rounded-2xl flex items-center justify-between border border-slate-700/50 mt-1">
+    <div style="background: linear-gradient(to right, #1e293b, #1e1b4b); padding: 16px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(30, 41, 59, 0.5); margin-top: 4px;">
       <div>
-        <span class="text-slate-400 text-[9px] font-black uppercase tracking-widest block">Total Amount Paid</span>
-        <p class="text-[9px] text-slate-400">ആകെ ലഭിച്ച തുക</p>
+        <span style="color: #94a3b8; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block;">Total Amount Paid</span>
+        <p style="font-size: 9px; color: #64748b; margin: 2px 0 0 0;">ആകെ ലഭിച്ച തുക</p>
       </div>
-      <span class="text-2xl font-black text-white font-mono">₹${transaction.totalAmount.toLocaleString('en-IN')}</span>
+      <span style="font-size: 24px; font-weight: 900; color: #ffffff; font-family: monospace;">₹${transaction.totalAmount.toLocaleString('en-IN')}</span>
     </div>
 
     <!-- Outstanding credit flag if applicable -->
     ${transaction.creditAmount > 0 ? `
-    <div class="bg-amber-500/5 border border-amber-500/15 p-3 rounded-xl flex justify-between items-center mt-1">
+    <div style="background-color: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.15); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
       <div>
-        <span class="text-amber-500 text-[9px] font-black uppercase tracking-widest block">CREDIT BALANCE DUE</span>
-        <span class="text-[8px] text-slate-400 block mt-0.5">ബാക്കി നൽകാനുള്ള തുക</span>
+        <span style="color: #f59e0b; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block;">CREDIT BALANCE DUE</span>
+        <span style="font-size: 8px; color: #94a3b8; display: block; margin-top: 2px;">ബാക്കി നൽകാനുള്ള തുക</span>
       </div>
-      <span class="text-base font-black text-amber-500 font-mono">₹${transaction.creditAmount.toLocaleString('en-IN')}</span>
+      <span style="font-size: 16px; font-weight: 900; color: #f59e0b; font-family: monospace;">₹${transaction.creditAmount.toLocaleString('en-IN')}</span>
     </div>
     ` : ''}
 
     <!-- Barcode-like visual pattern lines -->
-    <div class="flex flex-col items-center justify-center pt-2 gap-1.5 mt-2 border-t border-slate-800">
-      <div class="flex gap-0.5 h-6 opacity-30">
-        <span class="w-1 bg-white"></span>
-        <span class="w-0.5 bg-white"></span>
-        <span class="w-1.5 bg-white"></span>
-        <span class="w-0.5 bg-white"></span>
-        <span class="w-1 bg-white"></span>
-        <span class="w-2 bg-white"></span>
-        <span class="w-0.5 bg-white"></span>
-        <span class="w-1 bg-white"></span>
-        <span class="w-1.5 bg-white"></span>
-        <span class="w-0.5 bg-white"></span>
-        <span class="w-1 bg-white"></span>
-        <span class="w-0.5 bg-white"></span>
-        <span class="w-2 bg-white"></span>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; gap: 6px; margin-top: 8px; border-top: 1px solid #1e293b;">
+      <div style="display: flex; gap: 2px; height: 24px; opacity: 0.3;">
+        <span style="width: 4px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 2px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 6px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 2px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 4px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 8px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 2px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 4px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 6px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 2px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 4px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 2px; background-color: #ffffff; display: inline-block;"></span>
+        <span style="width: 8px; background-color: #ffffff; display: inline-block;"></span>
       </div>
-      <p class="text-[8px] text-slate-500 tracking-widest font-mono text-center">TXN-${transaction.id.toUpperCase().substring(0, 10)}</p>
+      <p style="font-size: 8px; color: #64748b; letter-spacing: 0.25em; font-family: monospace; text-align: center; margin: 0;">TXN-${transaction.id.toUpperCase().substring(0, 10)}</p>
     </div>
   `;
 
   document.body.appendChild(container);
 
+  // Give style and image assets time to compute/paint fully
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
   try {
-    const dataUrl = await toPng(container, { cacheBust: true, width: 450, height: 580 });
+    const dataUrl = await toPng(container, { cacheBust: true, width: 450 });
     document.body.removeChild(container);
     await shareOrDownloadImage(dataUrl, `receipt_${transaction.name.replace(/[^a-zA-Z0-9]/g, '_')}_${transaction.id.substring(0, 5)}`, `Receipt of ${transaction.name}`);
   } catch (e) {
     console.error("Error creating image card:", e);
-    document.body.removeChild(container);
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
     alert("Error occurred while generating individual transaction receipt image.");
   }
 }
