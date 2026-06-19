@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle, Laptop, Smartphone, Settings } from 'lucide-react';
 import { AppData } from '@/types';
 import { cn } from '@/lib/utils';
+import { uploadFile, deleteFileFromStorage } from '@/lib/storage';
 
 interface LogoSettingsProps {
   appData: AppData;
@@ -40,7 +41,35 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
 
     setIsUploading(true);
     setUploadError(null);
-    readAndSetLocal(file, isMobileLogo);
+
+    // If connected to Cloud, upload to Firebase Cloud Storage!
+    if (user && !user.isLocal) {
+      try {
+        const fileExtension = file.name.split('.').pop() || 'png';
+        const storagePath = `logos/${isMobileLogo ? 'mobile' : 'desktop'}_${Date.now()}.${fileExtension}`;
+        const downloadUrl = await uploadFile(file, storagePath);
+        
+        // Clean up previous logo if it was a storage URL
+        if (currentLogo && currentLogo.includes('firebasestorage')) {
+          await deleteFileFromStorage(currentLogo);
+        }
+
+        if (isMobileLogo) {
+          onUpdateLogoMobile?.(downloadUrl);
+        } else {
+          onUpdateLogoDesktop?.(downloadUrl);
+          onUpdateLogo(downloadUrl);
+        }
+      } catch (err: any) {
+        console.error("Cloud logo upload failed:", err);
+        setUploadError("Underlying Cloud storage error: " + (err.message || err));
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      // Fallback local reader
+      readAndSetLocal(file, isMobileLogo);
+    }
   };
 
   const readAndSetLocal = (file: File, forMobile: boolean) => {
@@ -63,6 +92,15 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
   };
 
   const handleDeleteLogo = async () => {
+    // Delete from cloud storage if active
+    if (currentLogo && currentLogo.includes('firebasestorage')) {
+      try {
+        await deleteFileFromStorage(currentLogo);
+      } catch (e) {
+        console.warn("Could not delete from storage bucket:", e);
+      }
+    }
+
     if (isMobileLogo) {
       onUpdateLogoMobile?.('');
     } else {

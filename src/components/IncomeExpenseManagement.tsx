@@ -28,6 +28,8 @@ import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
+import { uploadFile, deleteFileFromStorage } from '../lib/storage';
+import { auth } from '../lib/firebase';
 import ConfirmationModal from './ConfirmationModal';
 
 interface IncomeExpenseManagementProps {
@@ -84,24 +86,53 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
         setIsUploadingReceipt(false);
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
+
+      if (auth.currentUser) {
+        // If logged in, upload directly to Firebase Cloud Storage
+        const fileExtension = file.name.split('.').pop() || 'png';
+        const storagePath = `receipts/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExtension}`;
+        const downloadUrl = await uploadFile(file, storagePath);
+
+        // Delete previous receipt image if it was a storage upload
+        if (formData.receiptUrl && formData.receiptUrl.includes('firebasestorage')) {
+          await deleteFileFromStorage(formData.receiptUrl);
+        }
+
         setFormData(prev => ({
           ...prev,
-          receiptUrl: reader.result as string,
+          receiptUrl: downloadUrl,
           receiptName: file.name
         }));
         setIsUploadingReceipt(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
+      } else {
+        // Local offline base64 fallback
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFormData(prev => ({
+            ...prev,
+            receiptUrl: reader.result as string,
+            receiptName: file.name
+          }));
+          setIsUploadingReceipt(false);
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err: any) {
       console.error("Receipt upload failed:", err);
-      alert("Failed to process attachment file locally.");
+      alert("Failed to process attachment file: " + (err.message || err));
       setIsUploadingReceipt(false);
     }
   };
 
   const handleDeleteReceipt = async () => {
+    if (formData.receiptUrl && formData.receiptUrl.includes('firebasestorage')) {
+      try {
+        await deleteFileFromStorage(formData.receiptUrl);
+      } catch (e) {
+        console.warn("Could not delete from storage bucket:", e);
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       receiptUrl: '',

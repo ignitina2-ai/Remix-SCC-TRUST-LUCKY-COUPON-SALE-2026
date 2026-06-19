@@ -15,18 +15,9 @@ import { cn } from '@/lib/utils';
 import { LogoSettings } from './settings/LogoSettings';
 import { BackupSettings } from './settings/BackupSettings';
 import { PaymentSettings } from './settings/PaymentSettings';
+import { AdminSettings, AllowedUser } from './settings/AdminSettings';
 import { DangerSettings } from './settings/DangerSettings';
 import ConfirmationModal from './ConfirmationModal';
-
-interface AllowedUser {
-  email: string;
-  addedAt?: string;
-  addedBy?: string;
-  disabled?: boolean;
-  canAdd?: boolean;
-  canEdit?: boolean;
-  canDelete?: boolean;
-}
 
 interface SettingsProps {
   appData: AppData;
@@ -41,9 +32,9 @@ interface SettingsProps {
   onUpdatePaymentMethodsList?: (list: CustomPaymentMethod[]) => void;
   user: any; // User | null
   allowedUsers?: AllowedUser[];
-  onAddAllowedUser?: (email: string) => Promise<void>;
+  onAddAllowedUser?: (email: string, role: AllowedUser['role'], perms: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) => Promise<void>;
   onDeleteAllowedUser?: (email: string) => Promise<void>;
-  onToggleAllowedUserDisabled?: (email: string, disabled: boolean) => Promise<void>;
+  onToggleAllowedUserDisabled?: (email: string, currentStatus: AllowedUser['status']) => Promise<void>;
   onUpdateAllowedUserPermission?: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', value: boolean) => Promise<void>;
   activeSessions?: any[];
   onGoogleLogin?: () => Promise<void>;
@@ -94,11 +85,6 @@ const Settings: React.FC<SettingsProps> = ({
     }
     setUserToRevoke(null);
   };
-
-  const isPrimaryAdmin = !!(user && user.email && (
-    user.email.toLowerCase() === 'ignitina2@gmail.com' ||
-    user.email.toLowerCase() === 'ignitina2@mail.com'
-  ));
 
   return (
     <div id="settings-management-container" className="max-w-4xl mx-auto space-y-10 p-4 font-sans pb-16">
@@ -151,10 +137,168 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       </div>
 
-      {/* SECTION 2: SYSTEM DATA MAINTENANCE */}
+      {/* SECTION 2: CLOUD SYNC & TEAM SECURITY */}
       <div className="space-y-4">
         <div className="text-left border-b border-slate-100 pb-2">
           <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider">Section 02</span>
+          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1.5 flex items-center gap-2">
+            <Cloud size={16} className="text-slate-500" />
+            Database Synchronisation & Team Security
+          </h2>
+        </div>
+
+        <div className="space-y-6">
+          {/* Google Firebase Sync Section - TOP SIDE */}
+          <div id="settings-firebase-sync-section" className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6 text-left">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className={cn(
+                  "p-3 rounded-2xl shrink-0 border",
+                  user && !user.isLocal 
+                    ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                    : user && user.isLocal 
+                      ? "bg-amber-50 text-amber-600 border-amber-100"
+                      : "bg-slate-50 text-slate-400 border-slate-100"
+                )}>
+                  {user && !user.isLocal ? (
+                    <Cloud size={24} className="animate-bounce" style={{ animationDuration: '3s' }} />
+                  ) : (
+                    <CloudOff size={24} />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-bold text-slate-900 leading-tight">Google Firebase Cloud Sync</h3>
+                    {user && !user.isLocal ? (
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Connected & Synced
+                      </span>
+                    ) : user && user.isLocal ? (
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        Device-Isolated (Local Bypass)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                        Offline / Disconnected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-500 text-xs font-semibold leading-relaxed">
+                    Connect your Google Account to automatically synchronize sales entries, prize sponsors, secretary handovers, and system settings securely in Google Cloud Firestore and Cloud Storage.
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 flex items-center md:justify-end">
+                {user && !user.isLocal ? (
+                  <button
+                    onClick={onGoogleLogout}
+                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-sm border border-slate-200/50"
+                  >
+                    <LogOut size={14} />
+                    <span>Disconnect Sync</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={onGoogleLogin}
+                    disabled={isLoggingIn}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black tracking-wide shadow-lg shadow-blue-600/15 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {isLoggingIn ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Connecting Account...</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogIn size={14} />
+                        <span>Sync with Google</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Sync Status Details / Warnings */}
+            {user && (
+              <div className={cn(
+                "p-5 rounded-2xl text-xs font-medium border space-y-3",
+                user.isLocal 
+                  ? "bg-amber-50/50 border-amber-100/80 text-amber-900" 
+                  : "bg-emerald-50/30 border-emerald-100/50 text-emerald-950"
+              )}>
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={user.photoURL || `https://picsum.photos/seed/${(user.email || 'helper').replace(/[^a-zA-Z0-9]/g, '_')}/100/100`} 
+                    alt="Profile Avatar" 
+                    referrerPolicy="no-referrer"
+                    className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-sm shrink-0"
+                  />
+                  <div>
+                    <p className="font-extrabold text-slate-800 text-sm">{user.displayName || 'Authorized Admin / Helper'}</p>
+                    <p className="text-[11px] text-slate-500 font-bold">{user.email || 'No email provided'}</p>
+                  </div>
+                </div>
+
+                {user.isLocal ? (
+                  <p className="text-[11px] text-amber-800 leading-relaxed font-semibold bg-white p-3 rounded-xl border border-amber-100">
+                    ⚠️ <strong className="font-bold text-amber-950">You are browsing in Local Bypass Mode.</strong> Your added entries, transactions, and settings updates are currently locked to your browser's private local state. To merge this data and enable multi-user real-time syncing, click the <strong className="font-bold text-amber-950">Sync with Google</strong> button above to link this device.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-800 leading-relaxed font-semibold bg-white p-3 rounded-xl border border-emerald-100 flex items-start gap-2">
+                    <span className="text-base leading-none">✅</span>
+                    <span>
+                      <strong className="font-bold text-emerald-950">Active cloud database connection running.</strong> Your data is perfectly secure. Every transaction record and picture receipt is continuously synced to Google Cloud Firestore & Cloud Storage.
+                    </span>
+                  </p>
+                )}
+
+                <div className="pt-3 border-t border-slate-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-slate-800">Different dashboard amounts on mobile/desktop?</p>
+                    <p className="text-[10px] text-slate-400 font-bold">If this device has any local/offline data that isn't appearing on other screens, run a force sync to publish them.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (onSyncLocalToCloud) {
+                        const success = await onSyncLocalToCloud();
+                        if (success) {
+                          showNotification('success', 'Database cloud synchronization succeeded!');
+                        } else {
+                          showNotification('error', 'Database cloud sync failed. Please check your network connection.');
+                        }
+                      }
+                    }}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 px-3.5 rounded-xl text-[10px] shadow-sm transition-all active:scale-95 flex items-center gap-1.5 border border-blue-100 shrink-0 cursor-pointer justify-center"
+                  >
+                    <RefreshCw size={13} />
+                    <span>Force Database Cloud Sync</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Admin User Management Center */}
+          <AdminSettings 
+            user={user}
+            allowedUsers={allowedUsers}
+            onAddAllowedUser={onAddAllowedUser || (async () => {})}
+            onToggleAllowedUserDisabled={onToggleAllowedUserDisabled || (async () => {})}
+            onUpdateAllowedUserPermission={onUpdateAllowedUserPermission || (async () => {})}
+            setUserToRevoke={setUserToRevoke}
+            showNotification={showNotification}
+          />
+        </div>
+      </div>
+
+      {/* SECTION 3: SYSTEM DATA MAINTENANCE */}
+      <div className="space-y-4">
+        <div className="text-left border-b border-slate-100 pb-2">
+          <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider">Section 03</span>
           <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1.5 flex items-center gap-2">
             <Database size={16} className="text-slate-500" />
             Data Backups & Local Maintenance

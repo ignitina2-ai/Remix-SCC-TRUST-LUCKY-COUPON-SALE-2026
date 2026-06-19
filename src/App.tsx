@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Cloud, CloudOff, AlertCircle, CheckCircle, Bell, BellRing } from 'lucide-react';
+import { Menu, X, Cloud, CloudOff, AlertCircle, CheckCircle, Bell, BellRing, Loader2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
@@ -14,6 +14,7 @@ import SponsorsList from './components/SponsorsList';
 import IncomeExpenseManagement from './components/IncomeExpenseManagement';
 import SecretaryHandoverManagement from './components/SecretaryHandoverManagement';
 import Settings from './components/Settings';
+import LoginPage from './components/LoginPage';
 import { SplashComponent } from './components/SplashComponent';
 import { 
   AppData, 
@@ -30,6 +31,29 @@ import {
 import { cn } from './lib/utils';
 import { sendNotification, requestNotificationPermission } from './lib/notifications';
 
+// Firebase core modules and standard handlers
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  OperationType, 
+  handleFirestoreError 
+} from './lib/firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot, 
+  getDoc,
+  getDocFromServer,
+  writeBatch
+} from 'firebase/firestore';
+import { signOut, signInWithPopup } from 'firebase/auth';
+import { AllowedUser } from './components/settings/AdminSettings';
+
 const STORAGE_KEY = 'coupon_sale_app_data_2026';
 
 const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
@@ -39,71 +63,292 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab ] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
-  // Since we require NO login or authentication, everyone is verified as an active trust admin!
-  const [user] = useState<any>({
-    email: 'admin@stcasimir.org',
-    displayName: 'ST. Casimir Trust Admin',
-    photoURL: '',
-    isLocal: true,
-  });
+  // Auth and sync statuses
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [allowedUsers, setAllowedUsers] = useState<AllowedUser[]>([]);
 
-  const [userPermissions] = useState({
+  const [userPermissions, setUserPermissions] = useState({
     canAdd: true,
     canEdit: true,
     canDelete: true,
   });
 
-  const isPrimaryAdmin = true; // Complete access to settings, branding, backups
+  const isPrimaryAdmin = user?.email?.toLowerCase() === 'ignitina2@gmail.com';
 
-  // Initialize AppData from LocalStorage
-  const [appData, setAppData] = useState<AppData>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          return {
-            transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
-            sponsors: Array.isArray(parsed.sponsors) ? parsed.sponsors : [],
-            incomeExpenses: Array.isArray(parsed.incomeExpenses) ? parsed.incomeExpenses : [],
-            secretaryHandovers: Array.isArray(parsed.secretaryHandovers) ? parsed.secretaryHandovers : [],
-            logo: typeof parsed.logo === 'string' ? parsed.logo : '',
-            logoMobile: typeof parsed.logoMobile === 'string' ? parsed.logoMobile : '',
-            logoDesktop: typeof parsed.logoDesktop === 'string' ? parsed.logoDesktop : '',
-            notificationsEnabled: !!parsed.notificationsEnabled,
-            creditSettings: parsed.creditSettings || DEFAULT_CREDIT_SETTINGS,
-            customPaymentLabels: parsed.customPaymentLabels || DEFAULT_PAYMENT_LABELS,
-            paymentMethodsList: Array.isArray(parsed.paymentMethodsList) 
-              ? parsed.paymentMethodsList 
-              : (getDefaultPaymentMethodsList ? getDefaultPaymentMethodsList() : [])
-          };
-        }
-      }
-    } catch (e) {
-      console.warn("Failed parsing saved coupon sale local storage data:", e);
-    }
-
-    return {
-      transactions: [],
-      sponsors: [],
-      incomeExpenses: [],
-      secretaryHandovers: [],
-      logo: '',
-      logoMobile: '',
-      logoDesktop: '',
-      notificationsEnabled: false,
-      creditSettings: DEFAULT_CREDIT_SETTINGS,
-      customPaymentLabels: DEFAULT_PAYMENT_LABELS,
-      paymentMethodsList: getDefaultPaymentMethodsList ? getDefaultPaymentMethodsList() : []
-    };
+  // State model
+  const [appData, setAppData] = useState<AppData>({
+    transactions: [],
+    sponsors: [],
+    incomeExpenses: [],
+    secretaryHandovers: [],
+    logo: '',
+    logoMobile: '',
+    logoDesktop: '',
+    notificationsEnabled: false,
+    creditSettings: DEFAULT_CREDIT_SETTINGS,
+    customPaymentLabels: DEFAULT_PAYMENT_LABELS,
+    paymentMethodsList: getDefaultPaymentMethodsList ? getDefaultPaymentMethodsList() : []
   });
 
   const [showSplash, setShowSplash] = useState(true);
+
+  // Authenticated state listener
+  useEffect(() => {
+    let activeSubscriptions: (() => void)[] = [];
+
+    const unsubscribeAuth = auth.onAuthStateChanged(async (firebaseUser) => {
+      // Clean up previous snapshots
+      activeSubscriptions.forEach((unsub) => unsub());
+      activeSubscriptions = [];
+
+      if (!firebaseUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      const email = firebaseUser.email?.toLowerCase().trim() || '';
+
+      // Direct access for the primary administrator
+      if (email === 'ignitina2@gmail.com') {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || 'Primary Administrator',
+          photoURL: firebaseUser.photoURL || '',
+          isLocal: false,
+        });
+        setUserPermissions({
+          canAdd: true,
+          canEdit: true,
+          canDelete: true,
+        });
+        setLoading(false);
+        setupDbSyncs(true);
+        return;
+      }
+
+      // Check allowedUsers whitelist registry for helper sub-users
+      try {
+        const userDocRef = doc(db, 'allowedUsers', email);
+        const serverSnapshot = await getDocFromServer(userDocRef).catch(() => null);
+        const snapshot = serverSnapshot || await getDoc(userDocRef);
+
+        if (snapshot.exists() && snapshot.data()?.status === 'ACTIVE') {
+          const schema = snapshot.data() as AllowedUser;
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName || 'Authorized Helper',
+            photoURL: firebaseUser.photoURL || '',
+            isLocal: false,
+            role: schema.role,
+          });
+          setUserPermissions({
+            canAdd: schema.canAdd !== false,
+            canEdit: schema.canEdit !== false,
+            canDelete: schema.canDelete === true,
+          });
+          setLoading(false);
+          setupDbSyncs(false);
+        } else {
+          setLoginError(`Google account ${email} is not listed in the authorized registry helpers list. Please contact ignitina2@gmail.com to request access.`);
+          await signOut(auth);
+          setUser(null);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Helper whitelist check failed:", err);
+        setLoginError("Could not connect to verify system permissions. Please check your internet connection.");
+        await signOut(auth);
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    // Setup real-time listeners across multi-tabs
+    function setupDbSyncs(isAdmin: boolean) {
+      // 1. Transactions Listener
+      const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snap) => {
+        const list: Transaction[] = [];
+        snap.forEach(doc => {
+          list.push({ id: doc.id, ...doc.data() } as any);
+        });
+        setAppData(prev => ({ ...prev, transactions: list }));
+      }, (err) => console.error("Transactions snapshot failed:", err));
+      activeSubscriptions.push(unsubTransactions);
+
+      // 2. Sponsors Listener
+      const unsubSponsors = onSnapshot(collection(db, 'sponsors'), (snap) => {
+        const list: Sponsor[] = [];
+        snap.forEach(doc => {
+          list.push({ id: doc.id, ...doc.data() } as any);
+        });
+        setAppData(prev => ({ ...prev, sponsors: list }));
+      }, (err) => console.error("Sponsors snapshot failed:", err));
+      activeSubscriptions.push(unsubSponsors);
+
+      // 3. Income & Expenses Listener
+      const unsubIncomeExpenses = onSnapshot(collection(db, 'incomeExpenses'), (snap) => {
+        const list: IncomeExpense[] = [];
+        snap.forEach(doc => {
+          list.push({ id: doc.id, ...doc.data() } as any);
+        });
+        setAppData(prev => ({ ...prev, incomeExpenses: list }));
+      }, (err) => console.error("Income/Expenses snapshot failed:", err));
+      activeSubscriptions.push(unsubIncomeExpenses);
+
+      // 4. Secretary Handovers Listener
+      const unsubHandovers = onSnapshot(collection(db, 'secretaryHandovers'), (snap) => {
+        const list: SecretaryHandover[] = [];
+        snap.forEach(doc => {
+          list.push({ id: doc.id, ...doc.data() } as any);
+        });
+        setAppData(prev => ({ ...prev, secretaryHandovers: list }));
+      }, (err) => console.error("Handovers snapshot failed:", err));
+      activeSubscriptions.push(unsubHandovers);
+
+      // 5. Whitelisted Users Admin Listener
+      if (isAdmin) {
+        const unsubAllowedUsers = onSnapshot(collection(db, 'allowedUsers'), (snap) => {
+          const list: AllowedUser[] = [];
+          snap.forEach(doc => {
+            list.push({ email: doc.id, ...doc.data() } as any);
+          });
+          setAllowedUsers(list);
+        }, (err) => console.error("AllowedUsers snapshot failed:", err));
+        activeSubscriptions.push(unsubAllowedUsers);
+      }
+
+      // 6. Global Branding Settings Listener
+      const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          setAppData(prev => ({
+            ...prev,
+            logo: d.logo || '',
+            logoMobile: d.logoMobile || '',
+            logoDesktop: d.logoDesktop || '',
+            notificationsEnabled: !!d.notificationsEnabled,
+            creditSettings: d.creditSettings || DEFAULT_CREDIT_SETTINGS,
+            customPaymentLabels: d.customPaymentLabels || DEFAULT_PAYMENT_LABELS,
+            paymentMethodsList: d.paymentMethodsList || prev.paymentMethodsList
+          }));
+        }
+      }, (err) => console.error("System settings snapshot failed:", err));
+      activeSubscriptions.push(unsubSettings);
+    }
+
+    return () => {
+      unsubscribeAuth();
+      activeSubscriptions.forEach((unsub) => unsub());
+    };
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    setIsLoggingIn(true);
+    setLoginError(null);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setLoginError(err.message || 'Verification failure.');
+      }
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleGoogleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  };
+
+  // Administration whitelisting controllers
+  const handleAddAllowedUser = async (email: string, role: AllowedUser['role'], perms: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) => {
+    const emailId = email.toLowerCase().trim();
+    try {
+      await setDoc(doc(db, 'allowedUsers', emailId), {
+        email: emailId,
+        role,
+        status: 'ACTIVE',
+        canAdd: perms.canAdd,
+        canEdit: perms.canEdit,
+        canDelete: perms.canDelete,
+        addedAt: new Date().toISOString(),
+        addedBy: user?.email || 'ignitina2@gmail.com'
+      });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleDeleteAllowedUser = async (email: string) => {
+    const emailId = email.toLowerCase().trim();
+    try {
+      await deleteDoc(doc(db, 'allowedUsers', emailId));
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleToggleAllowedUserDisabled = async (email: string, currentStatus: AllowedUser['status']) => {
+    const emailId = email.toLowerCase().trim();
+    const nextStatus = currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+    try {
+      await updateDoc(doc(db, 'allowedUsers', emailId), {
+        status: nextStatus
+      });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleUpdateAllowedUserPermission = async (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', value: boolean) => {
+    const emailId = email.toLowerCase().trim();
+    try {
+      await updateDoc(doc(db, 'allowedUsers', emailId), {
+        [field]: value
+      });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleForceSyncLocalToCloud = async (): Promise<boolean> => {
+    // Merges local storage settings to Google cloud database when requested
+    try {
+      const globalDocRef = doc(db, 'settings', 'global');
+      await setDoc(globalDocRef, {
+        logo: appData.logo || '',
+        logoMobile: appData.logoMobile || '',
+        logoDesktop: appData.logoDesktop || '',
+        notificationsEnabled: appData.notificationsEnabled,
+        creditSettings: appData.creditSettings || DEFAULT_CREDIT_SETTINGS,
+        customPaymentLabels: appData.customPaymentLabels || DEFAULT_PAYMENT_LABELS,
+        paymentMethodsList: appData.paymentMethodsList || []
+      }, { merge: true });
+      return true;
+    } catch (err) {
+      console.error("Local sync flush failed:", err);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const checkNotificationPermission = async () => {
@@ -122,207 +367,235 @@ export default function App() {
     setShowNotificationPrompt(false);
   };
 
-  // Keep state updated in premium local storage Hybrid cache whenever it shifts
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-  }, [appData]);
-
-  // Expose setActiveTab to window for quick actions dashboard trigger lists
-  useEffect(() => {
-    (window as any).setActiveTab = setActiveTab;
-    return () => { delete (window as any).setActiveTab; };
-  }, []);
-
-  // Responsive sidebar toggles
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // 100% Offline Pure Local State Mutation Handlers
+  // 100% Secure cloud synchronised operations writing to multi-tab cache
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction: Transaction = {
+    const transactionId = crypto.randomUUID();
+    const docData: Transaction = {
       ...transaction,
-      id: crypto.randomUUID(),
+      id: transactionId,
     };
-    setAppData(prev => ({
-      ...prev,
-      transactions: [newTransaction, ...prev.transactions],
-    }));
 
-    if (appData.notificationsEnabled) {
-      sendNotification('New Transaction Added', {
-        body: `${newTransaction.name} - ₹${newTransaction.totalAmount.toLocaleString('en-IN')}`,
-      });
+    try {
+      await setDoc(doc(db, 'transactions', transactionId), docData);
+
+      if (appData.notificationsEnabled) {
+        sendNotification('New Transaction Added', {
+          body: `${docData.name} - ₹${docData.totalAmount.toLocaleString('en-IN')}`,
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `transactions/${transactionId}`);
     }
   };
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
-    setAppData(prev => ({
-      ...prev,
-      transactions: prev.transactions.map(t => t.id === id ? { ...t, ...updates } : t),
-    }));
+    try {
+      await updateDoc(doc(db, 'transactions', id), updates);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
+    }
   };
 
   const deleteTransaction = async (ids: string[]) => {
-    setAppData(prev => ({
-      ...prev,
-      transactions: prev.transactions.filter(t => !ids.includes(t.id)),
-    }));
+    try {
+      for (const id of ids) {
+        await deleteDoc(doc(db, 'transactions', id));
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `transactions/${ids.join(',')}`);
+    }
   };
 
   const toggleTreasurer = async (id: string) => {
-    setAppData(prev => ({
-      ...prev,
-      transactions: prev.transactions.map(t => {
-        if (t.id === id) {
-          const paidToTreasurer = !t.paidToTreasurer;
-          const treasurerPaidDate = paidToTreasurer ? new Date().toISOString() : undefined;
-          return {
-            ...t,
-            paidToTreasurer,
-            treasurerPaidDate
-          };
-        }
-        return t;
-      }),
-    }));
+    const tx = appData.transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    const paidToTreasurer = !tx.paidToTreasurer;
+    const treasurerPaidDate = paidToTreasurer ? new Date().toISOString() : null;
+
+    try {
+      await updateDoc(doc(db, 'transactions', id), {
+        paidToTreasurer,
+        treasurerPaidDate
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
+    }
   };
 
   const addSponsor = async (sponsor: Omit<Sponsor, 'id'>) => {
-    const newSponsor: Sponsor = {
+    const sponsorId = crypto.randomUUID();
+    const docData: Sponsor = {
       ...sponsor,
-      id: crypto.randomUUID(),
+      id: sponsorId,
     };
-    setAppData(prev => ({
-      ...prev,
-      sponsors: [newSponsor, ...prev.sponsors],
-    }));
 
-    if (appData.notificationsEnabled) {
-      sendNotification('New Sponsor Added', {
-        body: `${newSponsor.name} - ₹${newSponsor.amount.toLocaleString('en-IN')}`,
-      });
+    try {
+      await setDoc(doc(db, 'sponsors', sponsorId), docData);
+
+      if (appData.notificationsEnabled) {
+        sendNotification('New Sponsor Added', {
+          body: `${docData.name} - ₹${docData.amount.toLocaleString('en-IN')}`,
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `sponsors/${sponsorId}`);
     }
   };
 
   const updateSponsor = async (id: string, updates: Partial<Sponsor>) => {
     const oldSponsor = appData.sponsors.find(s => s.id === id);
-    setAppData(prev => ({
-      ...prev,
-      sponsors: prev.sponsors.map(s => s.id === id ? { ...s, ...updates } : s),
-    }));
+    try {
+      await updateDoc(doc(db, 'sponsors', id), updates);
 
-    if (appData.notificationsEnabled && updates.status === 'COLLECTED' && oldSponsor?.status !== 'COLLECTED') {
-      sendNotification('Sponsor Payment Collected', {
-        body: `${oldSponsor?.name} - ₹${oldSponsor?.amount.toLocaleString('en-IN')}`,
-      });
+      if (appData.notificationsEnabled && updates.status === 'COLLECTED' && oldSponsor?.status !== 'COLLECTED') {
+        sendNotification('Sponsor Payment Collected', {
+          body: `${oldSponsor?.name} - ₹${oldSponsor?.amount.toLocaleString('en-IN')}`,
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `sponsors/${id}`);
     }
   };
 
   const deleteSponsor = async (id: string) => {
-    setAppData(prev => ({
-      ...prev,
-      sponsors: prev.sponsors.filter(s => s.id !== id),
-    }));
+    try {
+      await deleteDoc(doc(db, 'sponsors', id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `sponsors/${id}`);
+    }
   };
 
   const addIncomeExpense = async (entry: Omit<IncomeExpense, 'id'>) => {
-    const newEntry: IncomeExpense = {
+    const entryId = crypto.randomUUID();
+    const docData: IncomeExpense = {
       ...entry,
-      id: crypto.randomUUID(),
+      id: entryId,
     };
-    setAppData(prev => ({
-      ...prev,
-      incomeExpenses: [newEntry, ...(prev.incomeExpenses || [])],
-    }));
 
-    if (appData.notificationsEnabled) {
-      sendNotification(`New ${newEntry.type.toLowerCase()} Added`, {
-        body: `${newEntry.description} - ₹${newEntry.amount.toLocaleString('en-IN')}`,
-      });
+    try {
+      await setDoc(doc(db, 'incomeExpenses', entryId), docData);
+
+      if (appData.notificationsEnabled) {
+        sendNotification(`New ${docData.type.toLowerCase()} Added`, {
+          body: `${docData.description} - ₹${docData.amount.toLocaleString('en-IN')}`,
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `incomeExpenses/${entryId}`);
     }
   };
 
   const updateIncomeExpense = async (id: string, updates: Partial<IncomeExpense>) => {
-    setAppData(prev => ({
-      ...prev,
-      incomeExpenses: (prev.incomeExpenses || []).map(e => e.id === id ? { ...e, ...updates } : e),
-    }));
+    try {
+      await updateDoc(doc(db, 'incomeExpenses', id), updates);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `incomeExpenses/${id}`);
+    }
   };
 
   const deleteIncomeExpense = async (ids: string[]) => {
-    setAppData(prev => ({
-      ...prev,
-      incomeExpenses: (prev.incomeExpenses || []).filter(e => !ids.includes(e.id)),
-    }));
+    try {
+      for (const id of ids) {
+        await deleteDoc(doc(db, 'incomeExpenses', id));
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `incomeExpenses/${ids.join(',')}`);
+    }
   };
 
   const addSecretaryHandover = async (handover: Omit<SecretaryHandover, 'id'>) => {
-    const newHandover: SecretaryHandover = {
+    const handoverId = crypto.randomUUID();
+    const docData: SecretaryHandover = {
       ...handover,
-      id: crypto.randomUUID(),
+      id: handoverId,
     };
-    setAppData(prev => ({
-      ...prev,
-      secretaryHandovers: [newHandover, ...(prev.secretaryHandovers || [])],
-    }));
 
-    if (appData.notificationsEnabled) {
-      sendNotification('Cash Handed Over', {
-        body: `${newHandover.name} - ₹${newHandover.amount.toLocaleString('en-IN')}`,
-      });
+    try {
+      await setDoc(doc(db, 'secretaryHandovers', handoverId), docData);
+
+      if (appData.notificationsEnabled) {
+        sendNotification('Cash Handed Over', {
+          body: `${docData.name} - ₹${docData.amount.toLocaleString('en-IN')}`,
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `secretaryHandovers/${handoverId}`);
     }
   };
 
   const updateSecretaryHandover = async (id: string, updates: Partial<SecretaryHandover>) => {
-    setAppData(prev => ({
-      ...prev,
-      secretaryHandovers: (prev.secretaryHandovers || []).map(h => h.id === id ? { ...h, ...updates } : h),
-    }));
+    try {
+      await updateDoc(doc(db, 'secretaryHandovers', id), updates);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `secretaryHandovers/${id}`);
+    }
   };
 
   const deleteSecretaryHandover = async (ids: string[]) => {
-    setAppData(prev => ({
-      ...prev,
-      secretaryHandovers: (prev.secretaryHandovers || []).filter(h => !ids.includes(h.id)),
-    }));
+    try {
+      for (const id of ids) {
+        await deleteDoc(doc(db, 'secretaryHandovers', id));
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `secretaryHandovers/${ids.join(',')}`);
+    }
   };
 
   const updateLogo = async (logo: string) => {
-    setAppData(prev => ({ ...prev, logo }));
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { logo }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
   };
 
   const updateLogoMobile = async (logoMobile: string) => {
-    setAppData(prev => ({ ...prev, logoMobile }));
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { logoMobile }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
   };
 
   const updateLogoDesktop = async (logoDesktop: string) => {
-    setAppData(prev => ({ ...prev, logoDesktop }));
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { logoDesktop }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
   };
 
   const updateCreditSettings = async (settings: CreditSettings) => {
-    setAppData(prev => ({ ...prev, creditSettings: settings }));
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { creditSettings: settings }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
   };
 
   const updatePaymentLabels = async (labels: Record<PaymentMethod, string>) => {
-    setAppData(prev => ({ ...prev, customPaymentLabels: labels }));
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { customPaymentLabels: labels }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
   };
 
   const updatePaymentMethodsList = async (list: CustomPaymentMethod[]) => {
-    setAppData(prev => ({ ...prev, paymentMethodsList: list }));
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { paymentMethodsList: list }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
   };
 
   const toggleNotifications = async (enabled: boolean) => {
-    setAppData(prev => ({ ...prev, notificationsEnabled: enabled }));
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { notificationsEnabled: enabled }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
   };
 
   const backupData = () => {
@@ -335,26 +608,68 @@ export default function App() {
     linkElement.click();
   };
 
-  const restoreData = (data: AppData) => {
-    setAppData(data);
+  const restoreData = async (data: AppData) => {
+    try {
+      const batch = writeBatch(db);
+      
+      // Upload transactions in bulk batch
+      for (const tx of data.transactions) {
+        batch.set(doc(db, 'transactions', tx.id), tx);
+      }
+      // Upload sponsors
+      for (const sp of data.sponsors) {
+        batch.set(doc(db, 'sponsors', sp.id), sp);
+      }
+      // Upload income expenses
+      if (Array.isArray(data.incomeExpenses)) {
+        for (const ie of data.incomeExpenses) {
+          batch.set(doc(db, 'incomeExpenses', ie.id), ie);
+        }
+      }
+      // Upload handovers
+      if (Array.isArray(data.secretaryHandovers)) {
+        for (const sh of data.secretaryHandovers) {
+          batch.set(doc(db, 'secretaryHandovers', sh.id), sh);
+        }
+      }
+      
+      // Upload branding/settings
+      batch.set(doc(db, 'settings', 'global'), {
+        logo: data.logo || '',
+        logoMobile: data.logoMobile || '',
+        logoDesktop: data.logoDesktop || '',
+        notificationsEnabled: !!data.notificationsEnabled,
+        creditSettings: data.creditSettings || DEFAULT_CREDIT_SETTINGS,
+        customPaymentLabels: data.customPaymentLabels || DEFAULT_PAYMENT_LABELS,
+        paymentMethodsList: data.paymentMethodsList || []
+      }, { merge: true });
+
+      await batch.commit();
+    } catch (err) {
+      console.error("Bulk restoration failed:", err);
+      alert("Failed to sync some imported backup records to Google cloud database.");
+    }
   };
 
   const clearData = async () => {
-    const defaultData: AppData = {
-      transactions: [],
-      sponsors: [],
-      incomeExpenses: [],
-      secretaryHandovers: [],
-      logo: '',
-      logoMobile: '',
-      logoDesktop: '',
-      notificationsEnabled: false,
-      creditSettings: DEFAULT_CREDIT_SETTINGS,
-      customPaymentLabels: DEFAULT_PAYMENT_LABELS,
-      paymentMethodsList: []
-    };
-    setAppData(defaultData);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+    try {
+      const batch = writeBatch(db);
+      for (const tx of appData.transactions) {
+        batch.delete(doc(db, 'transactions', tx.id));
+      }
+      for (const sp of appData.sponsors) {
+        batch.delete(doc(db, 'sponsors', sp.id));
+      }
+      for (const ie of appData.incomeExpenses) {
+        batch.delete(doc(db, 'incomeExpenses', ie.id));
+      }
+      for (const sh of appData.secretaryHandovers) {
+        batch.delete(doc(db, 'secretaryHandovers', sh.id));
+      }
+      await batch.commit();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const renderContent = () => {
@@ -479,7 +794,13 @@ export default function App() {
             onUpdatePaymentLabels={updatePaymentLabels}
             onUpdatePaymentMethodsList={updatePaymentMethodsList}
             user={user}
-            allowedUsers={[]}
+            allowedUsers={allowedUsers}
+            onAddAllowedUser={handleAddAllowedUser}
+            onDeleteAllowedUser={handleDeleteAllowedUser}
+            onToggleAllowedUserDisabled={handleToggleAllowedUserDisabled}
+            onUpdateAllowedUserPermission={handleUpdateAllowedUserPermission}
+            onLogout={handleGoogleLogout}
+            onForceSyncLocalToCloud={handleForceSyncLocalToCloud}
             activeSessions={[]}
           />
         );
@@ -506,6 +827,34 @@ export default function App() {
       <SplashComponent 
         onComplete={() => setShowSplash(false)} 
         appData={appData} 
+      />
+    );
+  }
+
+  // Loading state gate
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center font-sans text-white p-8">
+        <div className="text-center space-y-6">
+          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto" />
+          <div className="space-y-1">
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-200">Verifying Security Credentials</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Connecting to Firestore server security hub...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Security Login Gate block
+  if (!user) {
+    return (
+      <LoginPage 
+        onLoginSuccess={() => {}}
+        isLoggingIn={isLoggingIn}
+        setIsLoggingIn={setIsLoggingIn}
+        loginError={loginError}
+        setLoginError={setLoginError}
       />
     );
   }
@@ -559,8 +908,8 @@ export default function App() {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-4 hover:opacity-80 transition-opacity text-left bg-transparent border-0"
           >
-            {appData.logo ? (
-              <img src={appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg shadow-sm" referrerPolicy="no-referrer" />
+            {appData.logoDesktop || appData.logo ? (
+              <img src={appData.logoDesktop || appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg shadow-sm" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">C</div>
             )}
@@ -571,7 +920,7 @@ export default function App() {
           </button>
           <div className="flex items-center gap-6">
             <div className="text-right">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Income & Expense Balance</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Inc & Exp Balance</p>
               <p className="text-lg font-black text-slate-900">
                 ₹{(
                   (appData.incomeExpenses || [])
@@ -588,13 +937,17 @@ export default function App() {
               <div className="text-right">
                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider flex items-center justify-end gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Active Local Private State
+                  Cloud Synced Team Active
                 </p>
                 <span className="text-[11px] font-bold text-slate-700 block">{user.displayName}</span>
               </div>
-              <div className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-inner bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
-                SC
-              </div>
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="User photo" className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-inner" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-inner bg-blue-50 flex items-center justify-center text-xs font-bold text-blue-600">
+                  {user.displayName.substring(0, 2).toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
         </div>

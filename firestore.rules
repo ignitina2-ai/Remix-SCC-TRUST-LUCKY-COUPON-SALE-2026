@@ -1,8 +1,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    
+    // Helper function to check if the user is the primary admin
+    function isPrimaryAdmin() {
+      return request.auth != null && request.auth.token.email.lower() == 'ignitina2@gmail.com';
+    }
+
+    // Helper function to check if user is whitelisted and active
+    function isWhitelisted() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email.lower())) &&
+        get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email.lower())).data.status == 'ACTIVE';
+    }
+
+    // Transactions
+    match /transactions/{transactionId} {
+      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+    }
+
+    // Sponsors
+    match /sponsors/{sponsorId} {
+      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+    }
+
+    // Income and Expenses
+    match /incomeExpenses/{incomeExpenseId} {
+      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+    }
+
+    // Secretary Handovers
+    match /secretaryHandovers/{secretaryHandoverId} {
+      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+    }
+
+    // App Settings
+    match /settings/{settingsId} {
+      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+    }
+
+    // Allowed Users (Whitelist Registry)
+    match /allowedUsers/{emailId} {
+      // Any authenticated user should be able to get their own whitelist status during sign in,
+      // but only the primary admin can edit, write or list all users.
+      allow get: if request.auth != null && (isPrimaryAdmin() || request.auth.token.email.lower() == emailId);
+      allow list, write: if isPrimaryAdmin();
     }
   }
 }
