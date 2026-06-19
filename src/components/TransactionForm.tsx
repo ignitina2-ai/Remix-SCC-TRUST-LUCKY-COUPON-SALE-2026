@@ -102,42 +102,42 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       case 'CASH': 
         return { 
           color: 'text-green-950', 
-          bg: 'bg-green-500/50', 
+          bg: 'bg-green-600/50', 
           border: 'border-green-600', 
           text: 'text-green-950 font-black', 
-          ring: 'ring-green-300/50' 
+          ring: 'ring-green-400/50' 
         };
       case 'CREDIT': 
         return { 
           color: 'text-red-950', 
-          bg: 'bg-red-500/50', 
+          bg: 'bg-red-600/50', 
           border: 'border-red-600', 
           text: 'text-red-950 font-black', 
-          ring: 'ring-red-300/50' 
+          ring: 'ring-red-400/50' 
         };
       case 'TRUST GPAY': 
         return { 
           color: 'text-blue-950', 
-          bg: 'bg-blue-500/50', 
+          bg: 'bg-blue-600/50', 
           border: 'border-blue-600', 
           text: 'text-blue-950 font-black', 
-          ring: 'ring-blue-300/50' 
+          ring: 'ring-blue-400/50' 
         };
       case 'SOFIA GPAY': 
         return { 
           color: 'text-orange-950', 
           bg: 'bg-orange-500/50', 
-          border: 'border-orange-600', 
+          border: 'border-orange-500', 
           text: 'text-orange-950 font-black', 
-          ring: 'ring-orange-300/50' 
+          ring: 'ring-orange-350/50' 
         };
       case 'JOHNY GPAY': 
         return { 
           color: 'text-violet-950', 
-          bg: 'bg-violet-500/50', 
+          bg: 'bg-violet-600/50', 
           border: 'border-violet-600', 
           text: 'text-violet-950 font-black', 
-          ring: 'ring-violet-300/50' 
+          ring: 'ring-violet-400/50' 
         };
       default: 
         return { 
@@ -145,7 +145,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           bg: 'bg-slate-500/50', 
           border: 'border-slate-600', 
           text: 'text-slate-950 font-black', 
-          ring: 'ring-slate-300/50' 
+          ring: 'ring-slate-400/50' 
         };
     }
   };
