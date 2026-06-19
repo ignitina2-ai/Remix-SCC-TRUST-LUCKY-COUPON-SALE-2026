@@ -16,6 +16,7 @@ import SecretaryHandoverManagement from './components/SecretaryHandoverManagemen
 import Settings from './components/Settings';
 import LoginPage from './components/LoginPage';
 import { SplashComponent } from './components/SplashComponent';
+import { useActiveResponsiveLogo } from './lib/logo-resolver';
 import { 
   AppData, 
   Transaction, 
@@ -110,6 +111,7 @@ export default function App() {
   });
 
   const [showSplash, setShowSplash] = useState(true);
+  const { resolvedLogo } = useActiveResponsiveLogo(appData);
 
   // Authenticated state listener
   useEffect(() => {
@@ -974,8 +976,8 @@ export default function App() {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left text-slate-950 bg-transparent border-0"
           >
-            {appData.logo ? (
-              <img src={appData.logo} alt="Logo" className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
+            {resolvedLogo ? (
+              <img src={resolvedLogo} alt="Logo" className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-[10px] shrink-0">C</div>
             )}
@@ -1001,8 +1003,8 @@ export default function App() {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-4 hover:opacity-80 transition-opacity text-left bg-transparent border-0"
           >
-            {appData.logoDesktop || appData.logo ? (
-              <img src={appData.logoDesktop || appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg shadow-sm" referrerPolicy="no-referrer" />
+            {resolvedLogo ? (
+              <img src={resolvedLogo} alt="Logo" className="w-10 h-10 object-contain rounded-lg shadow-sm" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">C</div>
             )}
@@ -1062,8 +1064,8 @@ export default function App() {
           <div className="hidden print:block print-header">
             <div className="flex items-center justify-between border-b pb-2 mb-4 border-slate-900 font-sans">
               <div className="flex items-center gap-3">
-                {appData.logo ? (
-                  <img src={appData.logo} alt="Logo" className="w-10 h-10 object-contain rounded-lg" referrerPolicy="no-referrer" />
+                {resolvedLogo ? (
+                  <img src={resolvedLogo} alt="Logo" className="w-10 h-10 object-contain rounded-lg" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">C</div>
                 )}
