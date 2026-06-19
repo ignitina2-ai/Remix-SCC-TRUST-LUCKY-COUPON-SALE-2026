@@ -101,51 +101,51 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     switch(id) {
       case 'CASH': 
         return { 
-          color: 'text-green-600', 
-          bg: 'bg-green-50/70', 
-          border: 'border-green-500', 
-          text: 'text-green-800', 
-          ring: 'ring-green-100' 
+          color: 'text-green-950', 
+          bg: 'bg-green-500/50', 
+          border: 'border-green-600', 
+          text: 'text-green-950 font-black', 
+          ring: 'ring-green-300/50' 
         };
       case 'CREDIT': 
         return { 
-          color: 'text-red-600', 
-          bg: 'bg-red-50/70', 
-          border: 'border-red-500', 
-          text: 'text-red-800', 
-          ring: 'ring-red-100' 
+          color: 'text-red-950', 
+          bg: 'bg-red-500/50', 
+          border: 'border-red-600', 
+          text: 'text-red-950 font-black', 
+          ring: 'ring-red-300/50' 
         };
       case 'TRUST GPAY': 
         return { 
-          color: 'text-blue-600', 
-          bg: 'bg-blue-50/70', 
-          border: 'border-blue-500', 
-          text: 'text-blue-800', 
-          ring: 'ring-blue-100' 
+          color: 'text-blue-950', 
+          bg: 'bg-blue-500/50', 
+          border: 'border-blue-600', 
+          text: 'text-blue-950 font-black', 
+          ring: 'ring-blue-300/50' 
         };
       case 'SOFIA GPAY': 
         return { 
-          color: 'text-orange-600', 
-          bg: 'bg-orange-50/70', 
-          border: 'border-orange-500', 
-          text: 'text-orange-850', 
-          ring: 'ring-orange-100' 
+          color: 'text-orange-950', 
+          bg: 'bg-orange-500/50', 
+          border: 'border-orange-600', 
+          text: 'text-orange-950 font-black', 
+          ring: 'ring-orange-300/50' 
         };
       case 'JOHNY GPAY': 
         return { 
-          color: 'text-violet-600', 
-          bg: 'bg-violet-50/70', 
-          border: 'border-violet-500', 
-          text: 'text-violet-850', 
-          ring: 'ring-violet-100' 
+          color: 'text-violet-950', 
+          bg: 'bg-violet-500/50', 
+          border: 'border-violet-600', 
+          text: 'text-violet-950 font-black', 
+          ring: 'ring-violet-300/50' 
         };
       default: 
         return { 
-          color: 'text-slate-600', 
-          bg: 'bg-slate-50/70', 
-          border: 'border-slate-500', 
-          text: 'text-slate-800', 
-          ring: 'ring-slate-100' 
+          color: 'text-slate-950', 
+          bg: 'bg-slate-500/50', 
+          border: 'border-slate-600', 
+          text: 'text-slate-950 font-black', 
+          ring: 'ring-slate-300/50' 
         };
     }
   };
