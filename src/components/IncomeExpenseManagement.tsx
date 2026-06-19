@@ -564,20 +564,6 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
             </button>
           )}
           <button 
-            onClick={exportPDF}
-            className="p-2 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95 cursor-pointer"
-            title="Export PDF"
-          >
-            <FileText size={14} />
-          </button>
-          <button 
-            onClick={exportCSV}
-            className="p-2 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95 cursor-pointer"
-            title="Export CSV"
-          >
-            <Download size={14} />
-          </button>
-          <button 
             onClick={() => window.print()}
             className="p-2 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95 cursor-pointer"
             title="Print Ledger"

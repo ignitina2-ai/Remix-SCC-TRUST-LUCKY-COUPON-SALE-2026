@@ -77,9 +77,10 @@ export async function shareDailySalesCard(options: {
     <!-- Header with royal slate/neon layout -->
     <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1e293b; padding-bottom: 20px;">
       <div style="display: flex; flex-direction: column; gap: 4px;">
-        <span style="font-size: 11px; font-weight: 900; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.15em;">Daily Ledger Share</span>
-        <h2 style="font-size: 22px; font-weight: 900; letter-spacing: -0.025em; text-transform: uppercase; margin: 0; color: #ffffff;">Coupon Sales Summary</h2>
-        <p style="font-size: 13px; font-weight: 700; color: #a5b4fc; margin: 0;">കൂപ്പൺ വില്പന റിപ്പോർട്ട് (Daily Report)</p>
+        <span style="font-size: 11px; font-weight: 900; color: #818cf8; text-transform: uppercase; letter-spacing: 0.12em; display: block;">ST. CASIMIR CHARITABLE TRUST</span>
+        <span style="font-size: 10px; font-weight: 800; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.15em;">Daily Ledger Share</span>
+        <h2 style="font-size: 20px; font-weight: 900; letter-spacing: -0.025em; text-transform: uppercase; margin: 0; color: #ffffff;">Coupon Sales Summary</h2>
+        <p style="font-size: 12px; font-weight: 700; color: #a5b4fc; margin: 0;">കൂപ്പൺ വില്പന റിപ്പോർട്ട് (Daily Report)</p>
       </div>
       <div style="background-color: rgba(59, 130, 246, 0.15); border: 2px solid #3b82f6; color: #60a5fa; padding: 10px 18px; border-radius: 12px; text-align: right;">
         <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block; color: #94a3b8; margin-bottom: 2px;">Report Date</span>
@@ -321,8 +322,9 @@ export async function shareTransactionReceiptCard(transaction: Transaction, paym
     <div style="height: 6px; width: 100%; background: linear-gradient(to right, #3b82f6, #6366f1, #a855f7); margin-left: -24px; margin-top: -24px; padding-right: 48px; box-sizing: content-box; border-radius: 24px 24px 0 0;"></div>
 
     <div style="text-align: center; padding-top: 8px; padding-bottom: 12px; border-bottom: 1px solid #1e293b;">
-      <span style="font-size: 9px; font-weight: 900; color: #818cf8; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 2px;">Coupon Sale Receipt</span>
-      <h2 style="font-size: 18px; font-weight: 900; color: #ffffff; tracking: 0.05em; text-transform: uppercase; margin: 0;">SALES RECEIPT</h2>
+      <span style="font-size: 11px; font-weight: 900; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 2px;">ST. CASIMIR CHARITABLE TRUST</span>
+      <span style="font-size: 8px; font-weight: 900; color: #818cf8; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 2px;">Coupon Sale Receipt</span>
+      <h2 style="font-size: 16px; font-weight: 900; color: #ffffff; tracking: 0.05em; text-transform: uppercase; margin: 0;">SALES RECEIPT</h2>
       <p style="font-size: 10px; font-weight: 700; color: #64748b; margin: 4px 0 0 0;">കൂപ്പൺ വിതരണ രസീത്</p>
     </div>
 

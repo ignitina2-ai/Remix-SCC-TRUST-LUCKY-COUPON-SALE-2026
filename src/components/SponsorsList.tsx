@@ -82,6 +82,8 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
   const pendingAmount = totalAmount - totalCollected;
   const flaggedCount = (sponsors || []).filter(s => s.status === 'FLAGGED').length;
   const flaggedAmount = (sponsors || []).filter(s => s.status === 'FLAGGED').reduce((acc, s) => acc + (s.amount || 0), 0);
+  const totalCount = (sponsors || []).length;
+  const collectedCount = (sponsors || []).filter(s => s.status === 'COLLECTED').length;
 
   const isDuplicatePrizeNumber = (pNum: number, currentId?: string) => {
     return (sponsors || []).some(s => s.prizeNumber === pNum && s.id !== currentId);
@@ -434,13 +436,6 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={exportPDF}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-xs cursor-pointer"
-          >
-            <FileText size={14} className="text-rose-600" />
-            <span>Export</span>
-          </button>
-          <button 
             onClick={() => window.print()}
             className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-xs cursor-pointer"
             title="Print List"
@@ -465,22 +460,35 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
       </header>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 md:gap-4">
-        <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm">
-          <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Total Committed</p>
-          <h3 className="text-lg md:text-2xl font-black text-slate-900">₹{totalAmount.toLocaleString('en-IN')}</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4">
+        <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-blue-500">
+          <p className="text-blue-600 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-0.5">Total Prizes</p>
+          <p className="text-[10px] text-slate-400 font-semibold mb-1">ആകെ സമ്മാനങ്ങൾ</p>
+          <h3 className="text-lg md:text-2xl font-black text-slate-900">{totalCount}</h3>
         </div>
         <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-emerald-500">
-          <p className="text-emerald-600 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Total Collected</p>
-          <h3 className="text-lg md:text-2xl font-black text-slate-900">₹{totalCollected.toLocaleString('en-IN')}</h3>
+          <p className="text-emerald-600 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-0.5">Total Amount</p>
+          <p className="text-[10px] text-slate-400 font-semibold mb-1">ആകെ തുക</p>
+          <h3 className="text-lg md:text-2xl font-black text-slate-900 font-mono">₹{totalAmount.toLocaleString('en-IN')}</h3>
         </div>
         <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-amber-500">
-          <p className="text-amber-600 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Total Pending</p>
-          <h3 className="text-lg md:text-2xl font-black text-slate-900">₹{pendingAmount.toLocaleString('en-IN')}</h3>
-        </div>
-        <div className="bg-blue-55/70 p-3 md:p-5 rounded-xl md:rounded-2xl border border-blue-200/60 bg-[#eaf4fe] shadow-sm border-l-4 border-l-blue-500">
-          <p className="text-blue-700 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Total Flagged</p>
-          <h3 className="text-lg md:text-2xl font-black text-blue-900">₹{flaggedAmount.toLocaleString('en-IN')}</h3>
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-amber-600 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-0.5">Prize Collection</p>
+              <p className="text-[10px] text-slate-400 font-semibold mb-1">സമ്മാന ശേഖരണം</p>
+            </div>
+            <span className="text-[9px] bg-amber-50 text-amber-700 font-black px-1.5 py-0.5 rounded border border-amber-200">
+              {collectedCount}/{totalCount} Collected
+            </span>
+          </div>
+          <h3 className="text-lg md:text-2xl font-black text-slate-900 font-mono">
+            {collectedCount} <span className="text-xs font-medium text-slate-400 font-sans">/ {totalCount} collected</span>
+          </h3>
+          <div className="mt-2 flex items-center gap-1.5 text-[9px] md:text-[10px] text-slate-500 font-semibold">
+            <span className="text-emerald-600">₹{totalCollected.toLocaleString('en-IN')} Raised</span>
+            <span>•</span>
+            <span className="text-amber-600">₹{pendingAmount.toLocaleString('en-IN')} Pending</span>
+          </div>
         </div>
       </div>
 
