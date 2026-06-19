@@ -365,6 +365,13 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
         </div>
         <div className="flex items-center gap-1.5">
           <button
+            onClick={exportCSV}
+            title="Export as CSV"
+            className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg md:rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <Download size={16} />
+          </button>
+          <button
             onClick={() => window.print()}
             title="Print Ledger"
             className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg md:rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm active:scale-95 cursor-pointer"

@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ConfirmationModal from './ConfirmationModal';
+import Papa from 'papaparse';
 
 interface SponsorsListProps {
   sponsors: Sponsor[];
@@ -413,6 +414,30 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
     doc.save(filename);
   };
 
+  const exportCSV = () => {
+    const csvData = (filteredSponsors || []).map(s => ({
+      'Prize Number': s.prizeNumber || '',
+      'Prize Name/Description': s.prizeDescription || '',
+      'Sponsor Name': s.name || '',
+      'Area/Location': s.area || '',
+      Price: s.amount || 0,
+      'Collected Amount': s.collectedAmount || 0,
+      Status: s.status || 'PENDING',
+      'Collected Date': s.collectedDate ? format(new Date(s.collectedDate), 'dd.MM.yyyy') : ''
+    }));
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `prize_sponsors_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500">
       {permissions && !permissions.canAdd && (
@@ -435,6 +460,14 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
           <p className="text-slate-500 font-semibold text-xs mt-0.5">Manage contributions and prize collections</p>
         </div>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={exportCSV}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-xs cursor-pointer"
+            title="Export CSV"
+          >
+            <TableIcon size={14} className="text-emerald-600" />
+            <span>CSV</span>
+          </button>
           <button 
             onClick={() => window.print()}
             className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-xs cursor-pointer"

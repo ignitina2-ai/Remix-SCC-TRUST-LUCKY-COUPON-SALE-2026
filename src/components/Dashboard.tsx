@@ -92,6 +92,12 @@ const Dashboard: React.FC<DashboardProps> = ({
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
   };
 
+  const getTodayFormattedIST = () => {
+    const todayStrInIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+    const [year, month, day] = todayStrInIST.split('-');
+    return `${day}.${month}.${year}`;
+  };
+
   const getLocalDatePart = (dateString: string) => {
     if (!dateString) return '';
     try {
@@ -293,19 +299,30 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
             <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100">
-              <span className="text-blue-700 font-bold text-xs">Today: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              <span className="text-blue-700 font-bold text-xs">Today: {getTodayFormattedIST()}</span>
             </div>
           </div>
           
           <button 
             onClick={handleShareDailyCard}
-            className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
           >
             <Share2 size={13} className="animate-pulse" />
             <span>Share Daily Report</span>
           </button>
         </div>
       </header>
+
+      {/* Mobile-only Share Daily Report button placed right after the today sale toolbar */}
+      <div className="block md:hidden">
+        <button 
+          onClick={handleShareDailyCard}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+        >
+          <Share2 size={14} className="animate-pulse" />
+          <span>Share Daily Report</span>
+        </button>
+      </div>
 
       {/* Quick Actions (Requested by user) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">

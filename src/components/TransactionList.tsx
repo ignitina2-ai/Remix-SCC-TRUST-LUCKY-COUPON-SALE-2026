@@ -419,6 +419,14 @@ const TransactionList: React.FC<TransactionListProps> = ({
             </button>
           )}
           <button 
+            onClick={exportCSV}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-[10px] md:text-xs cursor-pointer"
+            title="Export CSV"
+          >
+            <TableIcon size={14} className="text-emerald-600 md:w-4 md:h-4" />
+            CSV
+          </button>
+          <button 
             onClick={() => window.print()}
             className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-[10px] md:text-xs cursor-pointer"
             title="Print List"
