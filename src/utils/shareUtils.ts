@@ -65,74 +65,74 @@ export async function shareDailySalesCard(options: {
 
   container.innerHTML = `
     <!-- Header with royal slate/neon layout -->
-    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 20px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1e293b; padding-bottom: 20px;">
       <div style="display: flex; flex-direction: column; gap: 4px;">
-        <span style="font-size: 11px; font-weight: 900; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.15em;">Daily Ledger Share</span>
-        <h2 style="font-size: 20px; font-weight: 900; letter-spacing: -0.025em; text-transform: uppercase; margin: 0; color: #ffffff;">Coupon Sales Summary</h2>
-        <p style="font-size: 12px; font-weight: 600; color: #94a3b8; margin: 0;">കൂപ്പൺ വില്പന റിപ്പോർട്ട്</p>
+        <span style="font-size: 11px; font-weight: 900; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.15em;">Daily Ledger Share</span>
+        <h2 style="font-size: 22px; font-weight: 900; letter-spacing: -0.025em; text-transform: uppercase; margin: 0; color: #ffffff;">Coupon Sales Summary</h2>
+        <p style="font-size: 13px; font-weight: 700; color: #a5b4fc; margin: 0;">കൂപ്പൺ വില്പന റിപ്പോർട്ട് (Daily Report)</p>
       </div>
-      <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 8px 16px; border-radius: 12px; text-align: right;">
-        <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block; opacity: 0.7;">Report Date</span>
-        <span style="font-size: 13px; font-weight: 700; font-family: monospace;">${date || 'Overall'}</span>
-      </div>
-    </div>
-
-    <!-- Main Metrics Grid -->
-    <div style="display: grid; grid-template-cols: 1fr 1fr; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
-      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
-        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Total Sales (ആകെ വില്പന)</span>
-        <span style="font-size: 22px; font-weight: 900; color: #60a5fa;">₹${totalSales.toLocaleString('en-IN')}</span>
-      </div>
-      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
-        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Total Credits (ബാക്കി പത്രം)</span>
-        <span style="font-size: 22px; font-weight: 900; color: #f59e0b;">₹${totalCredit.toLocaleString('en-IN')}</span>
-      </div>
-      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
-        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Cash Collections (ക്യാഷ്)</span>
-        <span style="font-size: 22px; font-weight: 900; color: #10b981;">₹${totalCashSale.toLocaleString('en-IN')}</span>
-      </div>
-      <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px;">
-        <span style="color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">UPI Receipts (ആകെ യു.പി.ഐ)</span>
-        <span style="font-size: 22px; font-weight: 900; color: #818cf8;">₹${totalUPI.toLocaleString('en-IN')}</span>
+      <div style="background-color: rgba(59, 130, 246, 0.15); border: 2px solid #3b82f6; color: #60a5fa; padding: 10px 18px; border-radius: 12px; text-align: right;">
+        <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block; color: #94a3b8; margin-bottom: 2px;">Report Date</span>
+        <span style="font-size: 14px; font-weight: 800; font-family: monospace; color: #ffffff;">${date || 'Overall'}</span>
       </div>
     </div>
 
-    <!-- Handover Sub-card -->
+    <!-- Main Metrics Grid with ultra high contrast -->
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+      <div style="background-color: rgba(59, 130, 246, 0.08); border: 2px solid #3b82f6; padding: 18px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="color: #cbd5e1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Total Sales (ആകെ വില്പന)</span>
+        <span style="font-size: 26px; font-weight: 900; color: #60a5fa; font-family: monospace;">₹${totalSales.toLocaleString('en-IN')}</span>
+      </div>
+      <div style="background-color: rgba(245, 158, 11, 0.08); border: 2px solid #f59e0b; padding: 18px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="color: #cbd5e1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Total Credits (ബാക്കി പത്രം)</span>
+        <span style="font-size: 26px; font-weight: 900; color: #fbbf24; font-family: monospace;">₹${totalCredit.toLocaleString('en-IN')}</span>
+      </div>
+      <div style="background-color: rgba(16, 185, 129, 0.08); border: 2px solid #10b981; padding: 18px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="color: #cbd5e1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Cash Collections (ക്യാഷ്)</span>
+        <span style="font-size: 26px; font-weight: 900; color: #34d399; font-family: monospace;">₹${totalCashSale.toLocaleString('en-IN')}</span>
+      </div>
+      <div style="background-color: rgba(129, 140, 248, 0.08); border: 2px solid #818cf8; padding: 18px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="color: #cbd5e1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">UPI Receipts (യു.പി.ഐ)</span>
+        <span style="font-size: 26px; font-weight: 900; color: #a5b4fc; font-family: monospace;">₹${totalUPI.toLocaleString('en-IN')}</span>
+      </div>
+    </div>
+
+    <!-- Handover Sub-card with secure design parameters -->
     ${totalHandover > 0 ? `
-    <div style="background-color: rgba(20, 184, 166, 0.05); border: 1px solid rgba(20, 184, 166, 0.15); padding: 16px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="background-color: rgba(20, 184, 166, 0.08); border: 2px solid #14b8a6; padding: 18px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between;">
       <div>
-        <span style="color: #2dd4bf; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block;">Secretary Handover</span>
-        <span style="font-size: 12px; color: #cbd5e1; font-weight: 600; margin-top: 2px; display: block;">ട്രഷറർക്ക് കൈമാറിയ തുക</span>
+        <span style="color: #2dd4bf; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: block;">Secretary Handover</span>
+        <span style="font-size: 13px; color: #cbd5e1; font-weight: 700; margin-top: 4px; display: block;">ട്രഷറർക്ക് കൈമാറിയ തുക (Handover)</span>
       </div>
-      <span style="font-size: 20px; font-weight: 900; color: #2dd4bf;">₹${totalHandover.toLocaleString('en-IN')}</span>
+      <span style="font-size: 24px; font-weight: 950; color: #2dd4bf; font-family: monospace;">₹${totalHandover.toLocaleString('en-IN')}</span>
     </div>
     ` : ''}
 
-    <!-- Each UPI Receipts Breakdown -->
-    <div style="background-color: rgba(30, 41, 59, 0.2); border: 1px solid rgba(30, 41, 59, 0.8); padding: 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 12px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
-        <span style="font-size: 12px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Each UPI Receipts Breakdown</span>
-        <span style="font-size: 10px; font-weight: 700; color: #64748b;">(യു.പി.ഐ വിവരങ്ങൾ)</span>
+    <!-- Each UPI Receipts Breakdown with clean grid blocks -->
+    <div style="background-color: rgba(30, 41, 59, 0.5); border: 2px solid #334155; padding: 22px; border-radius: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1e293b; padding-bottom: 10px;">
+        <span style="font-size: 13px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.05em;">UPI Account Breakdown</span>
+        <span style="font-size: 11px; font-weight: 800; color: #94a3b8;">യു.പി.ഐ വിവരങ്ങൾ</span>
       </div>
       <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
         ${upiBreakdown.length === 0 ? `
-          <div style="grid-column: span 2; text-align: center; padding: 12px; color: #475569; font-size: 12px; font-weight: 700;">No UPI Transactions Recorded</div>
+          <div style="grid-column: span 2; text-align: center; padding: 12px; color: #64748b; font-size: 13px; font-weight: 800;">No UPI Receipts Tracked Today</div>
         ` : upiBreakdown.map(u => `
-          <div style="display: flex; justify-content: space-between; align-items: center; background-color: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 12px; border: 1px solid rgba(30, 41, 59, 0.6);">
-            <span style="font-size: 12px; font-weight: 700; color: #cbd5e1;">${u.label}</span>
-            <span style="font-size: 12px; font-family: monospace; font-weight: 900; color: #ffffff;">₹${u.amount.toLocaleString('en-IN')}</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; background-color: #0f172a; padding: 12px; border-radius: 12px; border: 2px solid #1e293b;">
+            <span style="font-size: 13px; font-weight: 800; color: #e2e8f0;">${u.label}</span>
+            <span style="font-size: 13px; font-family: monospace; font-weight: 900; color: #38bdf8;">₹${u.amount.toLocaleString('en-IN')}</span>
           </div>
         `).join('')}
       </div>
     </div>
 
-    <!-- Card Brand Tag -->
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 16px; border-top: 1px solid #1e293b; color: #64748b;">
-      <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">© ${new Date().getFullYear()} Coupon Sale Tracker App • Verified Digital Signature</p>
-      <div style="display: flex; gap: 4px;">
-        <span style="height: 6px; width: 6px; border-radius: 50%; background-color: #3b82f6; display: inline-block;"></span>
-        <span style="height: 6px; width: 6px; border-radius: 50%; background-color: #14b8a6; display: inline-block;"></span>
-        <span style="height: 6px; width: 6px; border-radius: 50%; background-color: #10b981; display: inline-block;"></span>
+    <!-- Card Brand Tag and Signature -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 18px; border-top: 2px solid #1e293b; color: #94a3b8;">
+      <p style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">© ${new Date().getFullYear()} Coupon Sale Tracker app • Digital Verified Report</p>
+      <div style="display: flex; gap: 5px;">
+        <span style="height: 8px; width: 8px; border-radius: 50%; background-color: #3b82f6; display: inline-block;"></span>
+        <span style="height: 8px; width: 8px; border-radius: 50%; background-color: #14b8a6; display: inline-block;"></span>
+        <span style="height: 8px; width: 8px; border-radius: 50%; background-color: #10b981; display: inline-block;"></span>
       </div>
     </div>
   `;

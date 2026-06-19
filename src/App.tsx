@@ -409,9 +409,29 @@ export default function App() {
     setShowNotificationPrompt(false);
   };
 
+  const generateSafeId = (): string => {
+    if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+      try {
+        return window.crypto.randomUUID();
+      } catch (e) {
+        // fallback
+      }
+    }
+    // High-entropy unique ID fallback
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+      if (i === 8 || i === 12 || i === 16 || i === 20) {
+        result += '-';
+      }
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
   // 100% Secure cloud synchronised operations writing to multi-tab cache
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
-    const transactionId = crypto.randomUUID();
+    const transactionId = generateSafeId();
     const docData: Transaction = {
       ...transaction,
       id: transactionId,
@@ -466,7 +486,7 @@ export default function App() {
   };
 
   const addSponsor = async (sponsor: Omit<Sponsor, 'id'>) => {
-    const sponsorId = crypto.randomUUID();
+    const sponsorId = generateSafeId();
     const docData: Sponsor = {
       ...sponsor,
       id: sponsorId,
@@ -509,7 +529,7 @@ export default function App() {
   };
 
   const addIncomeExpense = async (entry: Omit<IncomeExpense, 'id'>) => {
-    const entryId = crypto.randomUUID();
+    const entryId = generateSafeId();
     const docData: IncomeExpense = {
       ...entry,
       id: entryId,
@@ -547,7 +567,7 @@ export default function App() {
   };
 
   const addSecretaryHandover = async (handover: Omit<SecretaryHandover, 'id'>) => {
-    const handoverId = crypto.randomUUID();
+    const handoverId = generateSafeId();
     const docData: SecretaryHandover = {
       ...handover,
       id: handoverId,

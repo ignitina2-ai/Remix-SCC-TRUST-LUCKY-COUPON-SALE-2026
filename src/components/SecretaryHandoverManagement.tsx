@@ -63,7 +63,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
   };
 
   const [formData, setFormData] = useState({
-    name: '',
+    name: 'TITUS JAMES',
     description: '',
     amount: '',
     date: getTodayISTStr()
@@ -173,7 +173,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     }
 
     setFormData({
-      name: '',
+      name: 'TITUS JAMES',
       description: '',
       amount: '',
       date: getTodayISTStr()
