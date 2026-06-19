@@ -30,85 +30,121 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
     ? (appData.logoMobile || '') 
     : (appData.logoDesktop || appData.logo || '');
 
+  // Helper inside component to compress/resize logo before upload/save
+  const compressImage = (file: File, maxW = 320, maxH = 320): Promise<{ blob: Blob; base64: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxW || height > maxH) {
+            if (width / height > maxW / maxH) {
+              height = Math.round((height * maxW) / width);
+              width = maxW;
+            } else {
+              width = Math.round((width * maxH) / height);
+              height = maxH;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Canvas context not available'));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Export base64
+          const base64 = canvas.toDataURL('image/png');
+          
+          // Convert to Blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve({ blob, base64 });
+            } else {
+              reject(new Error('Failed to create blob'));
+            }
+          }, 'image/png');
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+    });
+  };
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("Image file size should be less than 5MB to ensure optimal cloud scaling.");
-      return;
-    }
-
     setIsUploading(true);
     setUploadError(null);
 
-    // If connected to Cloud, upload to Firebase Cloud Storage!
-    if (user && !user.isLocal) {
-      try {
-        const fileExtension = file.name.split('.').pop() || 'png';
-        const storagePath = `logos/${isMobileLogo ? 'mobile' : 'desktop'}_${Date.now()}.${fileExtension}`;
-        const downloadUrl = await uploadFile(file, storagePath);
-        
-        // Clean up previous logo if it was a storage URL
-        if (currentLogo && currentLogo.includes('firebasestorage')) {
-          try {
-            await deleteFileFromStorage(currentLogo);
-          } catch (delErr) {
-            console.warn("Could not delete old storage file, ignoring:", delErr);
-          }
-        }
+    try {
+      // 1. Instantly compress/resize client-side to maximum of 320x320 pixels 
+      const { blob, base64 } = await compressImage(file);
 
+      // If connected to Cloud, upload compressed Blob to Firebase Cloud Storage!
+      if (user && !user.isLocal) {
+        try {
+          const fileExtension = 'png';
+          const storagePath = `logos/${isMobileLogo ? 'mobile' : 'desktop'}_${Date.now()}.${fileExtension}`;
+          
+          // Convert blob back to File object for upload compatibility
+          const compressedFile = new File([blob], `logo.${fileExtension}`, { type: 'image/png' });
+          const downloadUrl = await uploadFile(compressedFile, storagePath);
+          
+          // Clean up previous logo if it was a storage URL
+          if (currentLogo && currentLogo.includes('firebasestorage')) {
+            try {
+              await deleteFileFromStorage(currentLogo);
+            } catch (delErr) {
+              console.warn("Could not delete old storage file, ignoring:", delErr);
+            }
+          }
+
+          if (isMobileLogo) {
+            onUpdateLogoMobile?.(downloadUrl);
+          } else {
+            onUpdateLogoDesktop?.(downloadUrl);
+            onUpdateLogo(downloadUrl);
+          }
+          setIsUploading(false);
+        } catch (err: any) {
+          console.warn("Cloud storage upload failed, falling back to compressed local base64 inside Firestore setting:", err);
+          // Fall back to direct local compressed base64 which is extremely lightweight and 100% reliable inside Firestore
+          if (isMobileLogo) {
+            onUpdateLogoMobile?.(base64);
+          } else {
+            onUpdateLogoDesktop?.(base64);
+            onUpdateLogo(base64);
+          }
+          setUploadError("Saved successfully as compressed lightweight base64 content inside Google Firestore database settings.");
+          setIsUploading(false);
+        }
+      } else {
+        // Fallback local reader
         if (isMobileLogo) {
-          onUpdateLogoMobile?.(downloadUrl);
+          onUpdateLogoMobile?.(base64);
         } else {
-          onUpdateLogoDesktop?.(downloadUrl);
-          onUpdateLogo(downloadUrl);
+          onUpdateLogoDesktop?.(base64);
+          onUpdateLogo(base64);
         }
         setIsUploading(false);
-      } catch (err: any) {
-        console.warn("Cloud storage upload failed, falling back to direct safe base64 encoding inside Firestore:", err);
-        // Fall back to direct local base64 reader but save into cloud settings
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          if (isMobileLogo) {
-            onUpdateLogoMobile?.(result);
-          } else {
-            onUpdateLogoDesktop?.(result);
-            onUpdateLogo(result);
-          }
-          setUploadError("Cloud storage bucket unavailable. Logo successfully saved as offline database text in Google Firestore settings instead!");
-          setIsUploading(false);
-        };
-        reader.onerror = () => {
-          setUploadError("Underlying upload and base64 fallback conversion failed.");
-          setIsUploading(false);
-        };
-        reader.readAsDataURL(file);
       }
-    } else {
-      // Fallback local reader
-      readAndSetLocal(file, isMobileLogo);
+    } catch (err: any) {
+      console.error("Compression / upload error:", err);
+      setUploadError("Image conversion and upload failed: " + (err.message || err));
+      setIsUploading(false);
     }
-  };
-
-  const readAndSetLocal = (file: File, forMobile: boolean) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      if (forMobile) {
-        onUpdateLogoMobile?.(result);
-      } else {
-        onUpdateLogoDesktop?.(result);
-        onUpdateLogo(result);
-      }
-      setIsUploading(false);
-    };
-    reader.onerror = () => {
-      setUploadError("Failed to convert image to local offline format.");
-      setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleDeleteLogo = async () => {

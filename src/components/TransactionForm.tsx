@@ -59,8 +59,8 @@ const AREAS = [
   'Thillery'
 ];
 
-const InputField = ({ label, icon: Icon, ...props }: any) => (
-  <div className="space-y-1 md:space-y-1.5">
+const InputField = ({ label, icon: Icon, bgClass = "bg-slate-50", ...props }: any) => (
+  <div className="space-y-1 md:space-y-1.5 w-full">
     <label className="text-[10px] md:text-xs font-bold text-slate-600 ml-1 uppercase tracking-wider">{label}</label>
     <div className="relative">
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -68,7 +68,10 @@ const InputField = ({ label, icon: Icon, ...props }: any) => (
       </div>
       <input 
         {...props}
-        className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-900 font-medium text-xs md:text-sm"
+        className={cn(
+          "w-full pl-8 pr-3 py-2.5 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-900 font-medium text-xs md:text-sm",
+          bgClass
+        )}
       />
     </div>
   </div>
@@ -117,6 +120,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     books: 0,
     coupons: 0,
     bookNumber: '',
+    couponNumber: '',
     paymentMethod: 'CASH' as PaymentMethod,
     paidAmount: 0,
     date: getTodayISTStr(),
@@ -131,6 +135,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         books: editingTransaction.books,
         coupons: editingTransaction.coupons,
         bookNumber: editingTransaction.bookNumber || '',
+        couponNumber: editingTransaction.couponNumber || '',
         paymentMethod: editingTransaction.paymentMethod,
         paidAmount: editingTransaction.paidAmount,
         date: editingTransaction.date ? editingTransaction.date.split('T')[0] : getTodayISTStr(),
@@ -185,6 +190,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         books: Number(formData.books),
         coupons: Number(formData.coupons),
         bookNumber: formData.bookNumber,
+        couponNumber: formData.couponNumber,
         totalAmount,
         paidAmount: finalPaidAmount,
         creditAmount: finalCreditAmount,
@@ -200,6 +206,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         books: Number(formData.books),
         coupons: Number(formData.coupons),
         bookNumber: formData.bookNumber,
+        couponNumber: formData.couponNumber,
         totalAmount,
         paidAmount: finalPaidAmount,
         creditAmount: finalCreditAmount,
@@ -217,6 +224,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       books: 0,
       coupons: 0,
       bookNumber: '',
+      couponNumber: '',
       paymentMethod: 'CASH',
       paidAmount: 0,
       date: new Date().toISOString().split('T')[0],
@@ -382,6 +390,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           />
 
           <InputField 
+            label="Mobile Number (Optional)" 
+            icon={Phone} 
+            placeholder="e.g. 9876543210" 
+            value={formData.phone}
+            onChange={(e: any) => setFormData({ ...formData, phone: e.target.value })}
+          />
+
+          <InputField 
             label="Sale Date" 
             icon={Calendar} 
             type="date" 
@@ -411,16 +427,30 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               </datalist>
             </div>
           </div>
-          <InputField 
-            label="Books (25 coupons each)" 
-            icon={BookOpen} 
-            type="number" 
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min="0"
-            value={formData.books}
-            onChange={(e: any) => setFormData({ ...formData, books: parseInt(e.target.value) || 0 })}
-          />
+
+          {/* Books (25 coupons each) and Book Number (Optional) column styled as single line, light blue bg */}
+          <div className="col-span-1 md:col-span-2 bg-blue-50/80 border border-blue-100 p-3 rounded-2xl grid grid-cols-2 gap-2.5">
+            <InputField 
+              label="Books (25 coupons each)" 
+              icon={BookOpen} 
+              type="number" 
+              inputMode="numeric"
+              pattern="[0-9]*"
+              min="0"
+              value={formData.books}
+              onChange={(e: any) => setFormData({ ...formData, books: parseInt(e.target.value) || 0 })}
+              bgClass="bg-white border-blue-800 text-blue-900"
+            />
+            <InputField 
+              label="Book Number (Optional)" 
+              icon={BookOpen} 
+              placeholder="e.g. 101-105" 
+              value={formData.bookNumber}
+              onChange={(e: any) => setFormData({ ...formData, bookNumber: e.target.value })}
+              bgClass="bg-white border-blue-800 text-blue-900 placeholder:text-blue-300"
+            />
+          </div>
+
           <InputField 
             label="Individual Coupons" 
             icon={Ticket} 
@@ -431,12 +461,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             value={formData.coupons}
             onChange={(e: any) => setFormData({ ...formData, coupons: parseInt(e.target.value) || 0 })}
           />
+
           <InputField 
-            label="Book Number (Optional)" 
-            icon={BookOpen} 
-            placeholder="e.g. 101-105" 
-            value={formData.bookNumber}
-            onChange={(e: any) => setFormData({ ...formData, bookNumber: e.target.value })}
+            label="Coupon Number (Optional)" 
+            icon={Ticket} 
+            placeholder="e.g. 1-10=10 coupons" 
+            value={formData.couponNumber}
+            onChange={(e: any) => setFormData({ ...formData, couponNumber: e.target.value })}
           />
         </div>
 

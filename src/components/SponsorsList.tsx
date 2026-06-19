@@ -183,32 +183,38 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
     // 1. Draw elegant top branding & title banner
     // Left raw accent color bar
     doc.setFillColor(15, 23, 42); // slate-900
-    doc.rect(14, 10, 4, 14, 'F');
+    doc.rect(14, 10, 4, 18, 'F');
 
     // Title
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(15, 23, 42);
-    doc.text('PRIZE SPONSORS REGISTRY REPORT', 22, 16);
+    doc.text('ST. CASIMIR CHARITABLE TRUST', 22, 14);
+
+    // Subheading
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.text('SCC TRUST LUCKY COUPON SALE 2026', 22, 19);
 
     // Subtitle
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139); // slate-500
     const filterText = statusFilter === 'ALL' ? 'All Contributors' : `Status Filter: ${statusFilter}`;
-    doc.text(`Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: ${filterText} (${filteredSponsors.length} Record${filteredSponsors.length === 1 ? '' : 's'})`, 22, 22);
+    doc.text(`PRIZE SPONSORS REGISTRY REPORT  |  Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: ${filterText} (${filteredSponsors.length} Record${filteredSponsors.length === 1 ? '' : 's'})`, 22, 24);
 
     // Horizontal line separator
     doc.setDrawColor(226, 232, 240); // slate-200
     doc.setLineWidth(0.5);
-    doc.line(14, 26, 196, 26);
+    doc.line(14, 28, 196, 28);
 
     // 2. Draw 4 modern horizontal metric summary cards
     // Layout geometry: 182mm available width. Let's do 4 cards of 42.5mm width and 4mm spacing
     const cardWidth = 42.5;
     const cardHeight = 20;
     const cardGap = 4;
-    const startY = 32;
+    const startY = 34;
 
     const drawSummaryCard = (
       x: number, 

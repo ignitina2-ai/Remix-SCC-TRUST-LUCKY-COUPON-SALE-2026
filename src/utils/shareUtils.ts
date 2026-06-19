@@ -362,6 +362,13 @@ export async function shareTransactionReceiptCard(transaction: Transaction, paym
         <span style="font-family: monospace; color: #cbd5e1; text-align: right; font-weight: 900;">${transaction.bookNumber || 'N/A'}</span>
       </div>
 
+      ${transaction.couponNumber ? `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Coupon Number (കൂപ്പൺ നമ്പർ)</span>
+        <span style="font-family: monospace; color: #cbd5e1; text-align: right; font-weight: 900;">${transaction.couponNumber}</span>
+      </div>
+      ` : ''}
+
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(30, 41, 59, 0.6);">
         <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Books Delivered (ബുക്കുകൾ)</span>
         <span style="font-family: monospace; color: #cbd5e1; text-align: right; font-weight: 900;">${transaction.books} Books (${transaction.coupons} Coupons)</span>

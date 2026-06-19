@@ -125,27 +125,32 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
 
     // 1. Draw top branding & registry title banner
     doc.setFillColor(15, 23, 42); // slate-900
-    doc.rect(14, 10, 4, 14, 'F');
+    doc.rect(14, 10, 4, 18, 'F');
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(15, 23, 42);
-    doc.text('CREDIT REGISTRY & RECOVERY LEDGER', 22, 16);
+    doc.text('ST. CASIMIR CHARITABLE TRUST', 22, 14);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.text('SCC TRUST LUCKY COUPON SALE 2026', 22, 19);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139); // slate-500
-    doc.text(`Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: Outstanding Credit Cases (${casesCount} Record${casesCount === 1 ? '' : 's'})`, 22, 22);
+    doc.text(`CREDIT REGISTRY & RECOVERY LEDGER  |  Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: Outstanding Credit Cases (${casesCount} Record${casesCount === 1 ? '' : 's'})`, 22, 24);
 
     doc.setDrawColor(226, 232, 240); // slate-200
     doc.setLineWidth(0.5);
-    doc.line(14, 26, 196, 26);
+    doc.line(14, 28, 196, 28);
 
     // 2. Draw 4 modern horizontal metric summary cards
     const cardWidth = 42.5;
     const cardHeight = 20;
     const cardGap = 4;
-    const startY = 32;
+    const startY = 34;
 
     const drawSummaryCard = (
       x: number, 
@@ -241,25 +246,29 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
       ...filteredCredits.map(t => [
         format(new Date(t.date), 'dd.MM.yyyy'),
         t.name,
+        t.phone || '-',
         t.area && t.area !== 'N/A' ? t.area : '-',
         `Rs. ${t.totalAmount.toLocaleString('en-IN')}`,
         `Rs. ${t.paidAmount.toLocaleString('en-IN')}`,
         `Rs. ${t.creditAmount.toLocaleString('en-IN')}`,
-        t.bookNumber || '-'
+        t.bookNumber || '-',
+        t.couponNumber || '-'
       ]),
       [
         'TOTAL SUMMARY',
         '',
         '',
+        '',
         `Rs. ${totalAmountSum.toLocaleString('en-IN')}`,
         `Rs. ${paidAmountSum.toLocaleString('en-IN')}`,
         `Rs. ${creditAmountSum.toLocaleString('en-IN')}`,
+        '',
         ''
       ]
     ];
 
     autoTable(doc, {
-      head: [['Sale Date', 'Customer Name', 'Location', 'Committed', 'Collected', 'Credit Due', 'Book No']],
+      head: [['Sale Date', 'Customer Name', 'Mobile', 'Location', 'Committed', 'Collected', 'Credit Due', 'Book No', 'Coupon No']],
       body: tableData,
       startY: startY + cardHeight + 8,
       theme: 'grid',
@@ -267,20 +276,22 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
       headStyles: {
         fillColor: [15, 23, 42], // deep slate
         textColor: [255, 255, 255],
-        fontSize: 8,
+        fontSize: 7.5,
         fontStyle: 'bold',
         halign: 'left',
         valign: 'middle',
       },
       columnStyles: {
-        0: { cellWidth: 20, halign: 'center' }, // Sale Date
-        1: { cellWidth: 35, fontStyle: 'bold' }, // Customer Name
-        2: { cellWidth: 25 }, // Location / Area
-        3: { cellWidth: 24, halign: 'right' }, // Committed
-        4: { cellWidth: 24, halign: 'right' }, // Collected
-        5: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }, // Credit Balance
-        6: { cellWidth: 24, halign: 'center' }, // Book No
-      }, // Sum of column widths = 20 + 35 + 25 + 24 + 24 + 30 + 24 = 182mm (Perfect fit for A4 width: 210mm - 28mm margins = 182mm)
+        0: { cellWidth: 18, halign: 'center' }, // Sale Date
+        1: { cellWidth: 24, fontStyle: 'bold' }, // Customer Name
+        2: { cellWidth: 18, halign: 'center' }, // Mobile (phone)
+        3: { cellWidth: 18 }, // Location / Area
+        4: { cellWidth: 20, halign: 'right' }, // Committed
+        5: { cellWidth: 20, halign: 'right' }, // Collected
+        6: { cellWidth: 24, halign: 'right', fontStyle: 'bold' }, // Credit Balance
+        7: { cellWidth: 20, halign: 'center' }, // Book No
+        8: { cellWidth: 20, halign: 'center' }, // Coupon No
+      }, // Sum of column widths = 18 + 24 + 18 + 18 + 20 + 20 + 24 + 20 + 20 = 182mm (Perfect fit for A4 width: 210mm - 28mm margins = 182mm)
       styles: {
         fontSize: 7.5,
         cellPadding: 2.5,
@@ -302,7 +313,7 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
 
         if (data.section === 'body' && !isLastRow) {
           // Highlight credit due column with soft red styling
-          if (data.column.index === 5) {
+          if (data.column.index === 6) {
             data.cell.styles.fillColor = [252, 232, 230]; // Light red (#fce8e6)
             data.cell.styles.textColor = [185, 28, 28]; // Dark red
             data.cell.styles.fontStyle = 'bold';
@@ -337,11 +348,13 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
     const csvData = filteredCredits.map(t => ({
       Date: format(new Date(t.date), 'dd.MM.yyyy'),
       Name: t.name,
+      Mobile: t.phone || '',
       Area: t.area,
       TotalAmount: t.totalAmount,
       PaidAmount: t.paidAmount,
       CreditAmount: t.creditAmount,
-      BookNumber: t.bookNumber || ''
+      BookNumber: t.bookNumber || '',
+      CouponNumber: t.couponNumber || ''
     }));
 
     const csv = Papa.unparse(csvData);
@@ -527,6 +540,30 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
                         </div>
                       </div>
                     )}
+
+                    <div className="flex flex-wrap gap-2 text-[9px] md:text-[10px] font-semibold text-slate-500 pt-1.5">
+                      <div className="bg-slate-50 px-1.5 py-0.5 rounded-md">
+                        Books: <span className="text-slate-900 font-bold">{t.books}</span>
+                      </div>
+                      <div className="bg-slate-50 px-1.5 py-0.5 rounded-md">
+                        Coupons: <span className="text-slate-900 font-bold">{t.coupons}</span>
+                      </div>
+                      {t.bookNumber && (
+                        <div className="bg-slate-50 px-1.5 py-0.5 rounded-md">
+                          Book No: <span className="text-slate-900 font-bold">{t.bookNumber}</span>
+                        </div>
+                      )}
+                      {t.phone && (
+                        <div className="bg-slate-50 px-1.5 py-0.5 rounded-md">
+                          Mobile: <span className="text-slate-900 font-bold">{t.phone}</span>
+                        </div>
+                      )}
+                      {t.couponNumber && (
+                        <div className="bg-slate-50 px-1.5 py-0.5 rounded-md">
+                          Coupon No: <span className="text-slate-900 font-bold">{t.couponNumber}</span>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Action buttons inside expanded card */}
                     <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100">

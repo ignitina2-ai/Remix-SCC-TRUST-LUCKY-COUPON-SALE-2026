@@ -277,27 +277,32 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
 
     // 1. Draw top branding & registry title banner
     doc.setFillColor(15, 23, 42); // slate-900
-    doc.rect(14, 10, 4, 14, 'F');
+    doc.rect(14, 10, 4, 18, 'F');
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(15, 23, 42);
-    doc.text('INCOME & EXPENDITURE CASH LEDGER', 22, 16);
+    doc.text('ST. CASIMIR CHARITABLE TRUST', 22, 14);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.text('SCC TRUST LUCKY COUPON SALE 2026', 22, 19);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139); // slate-500
-    doc.text(`Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: All Logged Cash Accounts (${ledgerCount} Record${ledgerCount === 1 ? '' : 's'})`, 22, 22);
+    doc.text(`INCOME & EXPENDITURE CASH LEDGER  |  Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: All Logged Cash Accounts (${ledgerCount} Record${ledgerCount === 1 ? '' : 's'})`, 22, 24);
 
     doc.setDrawColor(226, 232, 240); // slate-200
     doc.setLineWidth(0.5);
-    doc.line(14, 26, 196, 26);
+    doc.line(14, 28, 196, 28);
 
     // 2. Draw 4 modern horizontal metric summary cards
     const cardWidth = 42.5;
     const cardHeight = 20;
     const cardGap = 4;
-    const startY = 32;
+    const startY = 34;
 
     const drawSummaryCard = (
       x: number, 

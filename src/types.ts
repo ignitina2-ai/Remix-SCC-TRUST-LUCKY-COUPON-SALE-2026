@@ -25,6 +25,7 @@ export interface Transaction {
   books: number;
   coupons: number;
   bookNumber?: string;
+  couponNumber?: string;
   totalAmount: number;
   paidAmount: number;
   creditAmount: number;

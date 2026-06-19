@@ -112,27 +112,32 @@ const TransactionList: React.FC<TransactionListProps> = ({
 
     // 1. Draw top branding & registry title banner
     doc.setFillColor(15, 23, 42); // slate-900
-    doc.rect(14, 10, 4, 14, 'F');
+    doc.rect(14, 10, 4, 18, 'F');
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(15, 23, 42);
-    doc.text('COUPON SALES TRANSACTION HISTORY', 22, 16);
+    doc.text('ST. CASIMIR CHARITABLE TRUST', 22, 14);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.text('SCC TRUST LUCKY COUPON SALE 2026', 22, 19);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139); // slate-500
-    doc.text(`Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: All Coupon Transactions (${filteredTransactions.length} Record${filteredTransactions.length === 1 ? '' : 's'})`, 22, 22);
+    doc.text(`COUPON SALES TRANSACTION HISTORY  |  Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: ${filteredTransactions.length} Record${filteredTransactions.length === 1 ? '' : 's'}`, 22, 24);
 
     doc.setDrawColor(226, 232, 240); // slate-200
     doc.setLineWidth(0.5);
-    doc.line(14, 26, 196, 26);
+    doc.line(14, 28, 196, 28);
 
     // 2. Draw 4 modern horizontal metric summary cards
     const cardWidth = 42.5;
     const cardHeight = 20;
     const cardGap = 4;
-    const startY = 32;
+    const startY = 34;
 
     const drawSummaryCard = (
       x: number, 
@@ -230,10 +235,12 @@ const TransactionList: React.FC<TransactionListProps> = ({
         return [
           format(new Date(t.date), 'dd.MM.yyyy'),
           t.name,
+          t.phone || '-',
           t.area && t.area !== 'N/A' ? t.area : '-',
           t.books.toString(),
           t.coupons.toString(),
           t.bookNumber || '-',
+          t.couponNumber || '-',
           `Rs. ${t.totalAmount.toLocaleString('en-IN')}`,
           methodLabel,
           t.paidToTreasurer ? 'PAID' : 'PENDING'
@@ -243,8 +250,10 @@ const TransactionList: React.FC<TransactionListProps> = ({
         'TOTAL SUMMARY',
         '',
         '',
+        '',
         totalBooksSum.toString(),
         totalCouponsSum.toString(),
+        '',
         '',
         `Rs. ${totalAmountSum.toLocaleString('en-IN')}`,
         '',
@@ -253,7 +262,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
     ];
 
     autoTable(doc, {
-      head: [['Date', 'Sponsor / Buyer', 'Location', 'Books', 'Coupons', 'Book No', 'Amount', 'Payment Method', 'Treasurer']],
+      head: [['Date', 'Sponsor / Buyer', 'Mobile', 'Location', 'Books', 'Coupons', 'Book No', 'Coupon No', 'Amount', 'Payment Method', 'Treasurer']],
       body: tableData,
       startY: startY + cardHeight + 8,
       theme: 'grid',
@@ -261,25 +270,27 @@ const TransactionList: React.FC<TransactionListProps> = ({
       headStyles: {
         fillColor: [15, 23, 42], // slate-900
         textColor: [255, 255, 255],
-        fontSize: 7.5,
+        fontSize: 7.0,
         fontStyle: 'bold',
         halign: 'left',
         valign: 'middle',
       },
       columnStyles: {
-        0: { cellWidth: 18, halign: 'center' }, // Date
-        1: { cellWidth: 32, fontStyle: 'bold' }, // Buyer / Name
-        2: { cellWidth: 22 }, // Location
-        3: { cellWidth: 12, halign: 'center' }, // Books
-        4: { cellWidth: 14, halign: 'center' }, // Coupons
-        5: { cellWidth: 15, halign: 'center' }, // Book No
-        6: { cellWidth: 21, halign: 'right' }, // Amount
-        7: { cellWidth: 24, halign: 'left' }, // Payment Method
-        8: { cellWidth: 24, halign: 'center' }, // Treasurer
-      }, // Sum of column widths = 18 + 32 + 22 + 12 + 14 + 15 + 21 + 24 + 24 = 182mm (Perfect fit for A4 width: 210mm - 28mm margins = 182mm)
+        0: { cellWidth: 15, halign: 'center' }, // Date
+        1: { cellWidth: 24, fontStyle: 'bold' }, // Buyer / Name
+        2: { cellWidth: 18, halign: 'center' }, // Mobile (phone)
+        3: { cellWidth: 18 }, // Location
+        4: { cellWidth: 10, halign: 'center' }, // Books
+        5: { cellWidth: 10, halign: 'center' }, // Coupons
+        6: { cellWidth: 12, halign: 'center' }, // Book No
+        7: { cellWidth: 15, halign: 'center' }, // Coupon No
+        8: { cellWidth: 18, halign: 'right' }, // Amount
+        9: { cellWidth: 22, halign: 'left' }, // Payment Method
+        10: { cellWidth: 20, halign: 'center' }, // Treasurer
+      }, // Sum of column widths = 15 + 24 + 18 + 18 + 10 + 10 + 12 + 15 + 18 + 22 + 20 = 182mm (Perfect fit for A4 width: 210mm - 28mm margins = 182mm)
       styles: {
-        fontSize: 7.2,
-        cellPadding: 2.2,
+        fontSize: 6.8,
+        cellPadding: 2.0,
         textColor: [51, 65, 85], // slate-700
         lineColor: [226, 232, 240], // slate-200
       },
@@ -293,13 +304,13 @@ const TransactionList: React.FC<TransactionListProps> = ({
           data.cell.styles.fillColor = [241, 245, 249]; // slate-100
           data.cell.styles.textColor = [15, 23, 42]; // slate-900
           data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fontSize = 7.8;
+          data.cell.styles.fontSize = 7.4;
         }
 
         if (data.section === 'body' && !isLastRow) {
           // Highlight Treasurer status cell
-          if (data.column.index === 8) {
-            const trStatus = data.row.raw[8];
+          if (data.column.index === 10) {
+            const trStatus = data.row.raw[10];
             if (trStatus === 'PAID') {
               data.cell.styles.fillColor = [230, 244, 234]; // Light Green
               data.cell.styles.textColor = [16, 124, 65]; // Green text
@@ -311,7 +322,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
             }
           }
           // Make column prices stand out
-          if (data.column.index === 6) {
+          if (data.column.index === 8) {
             data.cell.styles.fontStyle = 'bold';
             data.cell.styles.textColor = [15, 23, 42];
           }
@@ -342,10 +353,12 @@ const TransactionList: React.FC<TransactionListProps> = ({
     const csvData = filteredTransactions.map(t => ({
       Date: format(new Date(t.date), 'dd.MM.yyyy'),
       Name: t.name,
+      Mobile: t.phone || '',
       Area: t.area,
       Books: t.books,
       Coupons: t.coupons,
       BookNumber: t.bookNumber || '',
+      CouponNumber: t.couponNumber || '',
       TotalAmount: t.totalAmount,
       PaidAmount: t.paidAmount,
       CreditAmount: t.creditAmount,
@@ -578,6 +591,16 @@ const TransactionList: React.FC<TransactionListProps> = ({
                   {t.bookNumber && (
                     <div className="bg-slate-50 px-1.5 py-0.5 rounded-md">
                       Book No: <span className="text-slate-900 font-bold">{t.bookNumber}</span>
+                    </div>
+                  )}
+                  {t.phone && (
+                    <div className="bg-slate-50 px-1.5 py-0.5 rounded-md text-slate-600">
+                      Mobile: <span className="text-slate-900 font-bold">{t.phone}</span>
+                    </div>
+                  )}
+                  {t.couponNumber && (
+                    <div className="bg-slate-50 px-1.5 py-0.5 rounded-md text-slate-600">
+                      Coupon No: <span className="text-slate-900 font-bold">{t.couponNumber}</span>
                     </div>
                   )}
                   {t.creditAmount > 0 && (
