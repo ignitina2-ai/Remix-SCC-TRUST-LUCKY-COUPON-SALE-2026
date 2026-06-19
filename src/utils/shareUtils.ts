@@ -56,9 +56,9 @@ export async function shareDailySalesCard(options: {
   // Create temporary container placed inside viewport bounds but layered completely behind to force browser layout paint
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '-9999px';
+  container.style.left = '0px';
   container.style.top = '0px';
-  container.style.zIndex = '99999';
+  container.style.zIndex = '-99999';
   container.style.pointerEvents = 'none';
   container.style.opacity = '1';
   container.style.width = '550px';
@@ -154,7 +154,9 @@ export async function shareDailySalesCard(options: {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   try {
-    const dataUrl = await toPng(container, { cacheBust: true, width: 550 });
+    // Warm up/resolve rendering, call twice for Safari/iOS support
+    await toPng(container, { cacheBust: true, pixelRatio: 2 });
+    const dataUrl = await toPng(container, { cacheBust: true, pixelRatio: 2 });
     document.body.removeChild(container);
     await shareOrDownloadImage(dataUrl, `daily_coupon_sales_${date.replace(/[^a-zA-Z0-9]/g, '_')}`, `Coupon Sales Report (${date})`);
   } catch (e) {
@@ -188,9 +190,9 @@ export async function shareUPIReceiptCard(options: {
 
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '-9999px';
+  container.style.left = '0px';
   container.style.top = '0px';
-  container.style.zIndex = '99999';
+  container.style.zIndex = '-99999';
   container.style.pointerEvents = 'none';
   container.style.opacity = '1';
   container.style.width = '480px';
@@ -260,7 +262,7 @@ export async function shareUPIReceiptCard(options: {
       </div>
       <div>
         <h4 style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #34d399; letter-spacing: 0.05em; margin: 0;">Verified UPI Deposit Ledger</h4>
-        <p style="font-size: 9px; color: #94a3b8; line-height: 1.4; margin: 4px 0 0 0;">ഈ തുക ബാങ്ക് ഡെപ്പോസിറ്റുമായി ക്രോസ് വെരിഫിക്കേഷൻ ചെയ്തിട്ടുള്ളതാണ്.</p>
+        <p style="font-size: 9px; color: #94a3b8; line-height: 1.4; margin: 4px 0 0 0;"></p>
       </div>
     </div>
 
@@ -277,7 +279,9 @@ export async function shareUPIReceiptCard(options: {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   try {
-    const dataUrl = await toPng(container, { cacheBust: true, width: 480 });
+    // Warm up/resolve rendering, call twice for Safari/iOS support
+    await toPng(container, { cacheBust: true, pixelRatio: 2 });
+    const dataUrl = await toPng(container, { cacheBust: true, pixelRatio: 2 });
     document.body.removeChild(container);
     await shareOrDownloadImage(dataUrl, `upi_receipt_${paymentMethodId.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, `${methodLabel} Total Report`);
   } catch (e) {
@@ -293,9 +297,9 @@ export async function shareUPIReceiptCard(options: {
 export async function shareTransactionReceiptCard(transaction: Transaction, paymentLabel: string) {
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '-9999px';
+  container.style.left = '0px';
   container.style.top = '0px';
-  container.style.zIndex = '99999';
+  container.style.zIndex = '-99999';
   container.style.pointerEvents = 'none';
   container.style.opacity = '1';
   container.style.width = '450px';
@@ -426,7 +430,9 @@ export async function shareTransactionReceiptCard(transaction: Transaction, paym
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   try {
-    const dataUrl = await toPng(container, { cacheBust: true, width: 450 });
+    // Warm up/resolve rendering, call twice for Safari/iOS support
+    await toPng(container, { cacheBust: true, pixelRatio: 2 });
+    const dataUrl = await toPng(container, { cacheBust: true, pixelRatio: 2 });
     document.body.removeChild(container);
     await shareOrDownloadImage(dataUrl, `receipt_${transaction.name.replace(/[^a-zA-Z0-9]/g, '_')}_${transaction.id.substring(0, 5)}`, `Receipt of ${transaction.name}`);
   } catch (e) {

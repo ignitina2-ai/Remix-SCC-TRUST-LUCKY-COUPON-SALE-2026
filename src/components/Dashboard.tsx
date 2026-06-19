@@ -311,13 +311,13 @@ const Dashboard: React.FC<DashboardProps> = ({
           <h2 className="text-xl font-black text-slate-800 tracking-tight uppercase">Overview</h2>
           
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 w-full md:w-auto">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 bg-slate-100 p-0.5 md:p-1 rounded-xl md:rounded-2xl border border-slate-200 shadow-inner">
+        <div className="flex items-center justify-between gap-1.5 w-full md:w-auto">
+          <div className="flex items-center justify-between md:justify-start gap-1.5 w-full md:w-auto">
+            <div className="flex items-center gap-0.5 md:gap-1 bg-slate-100 p-0.5 md:p-1 rounded-xl md:rounded-2xl border border-slate-200 shadow-inner shrink-0">
               <button
                 onClick={() => setTimeframe('overall')}
                 className={cn(
-                  "px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
+                  "px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
                   timeframe === 'overall'
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-800"
@@ -328,7 +328,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <button
                 onClick={() => setTimeframe('today')}
                 className={cn(
-                  "px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
+                  "px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-wider",
                   timeframe === 'today'
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-800"
@@ -337,8 +337,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 Today's Sale
               </button>
             </div>
-            <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100">
-              <span className="text-blue-700 font-bold text-xs font-mono"> {currentTimeStr || getTodayFormattedIST()}</span>
+            <div className="bg-blue-50 px-2 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100 shrink-0">
+              <span className="text-blue-700 font-extrabold text-[10px] md:text-xs font-mono whitespace-nowrap"> {currentTimeStr || getTodayFormattedIST()}</span>
             </div>
           </div>
           
@@ -347,7 +347,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
           >
             <Share2 size={13} className="animate-pulse" />
-            <span>Share Daily Report</span>
+            <span>Share Report</span>
           </button>
         </div>
       </header>
@@ -487,7 +487,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
         >
           <Share2 size={14} className="animate-pulse" />
-          <span>Share Daily Report</span>
+          <span>Share Report</span>
         </button>
       </div>
 
@@ -526,10 +526,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl md:rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl border border-slate-100 transform scale-100 animate-in zoom-in duration-300">
             <div className="text-center mb-6">
-              <div className="mx-auto w-12 h-12 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+              <h2 className="mx-auto w-12 h-12 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
                 <Share2 size={24} />
-              </div>
-              <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Share Daily Report</h3>
+              </h2>
+              <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Share Report</h3>
               <p className="text-slate-500 text-xs mt-1 font-bold">ഏത് റിപ്പോർട്ടാണ് ലഭിക്കേണ്ടത്?</p>
               <p className="text-slate-400 text-[10px] mt-0.5">Choose report timeframe to download & share</p>
             </div>
