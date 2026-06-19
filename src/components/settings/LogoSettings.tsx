@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle, Laptop, Smartphone, Settings } from 'lucide-react';
+import { Image as ImageIcon, Upload, Trash2, Loader2, AlertCircle, CheckCircle2, Laptop, Smartphone, Settings } from 'lucide-react';
 import { AppData } from '@/types';
 import { cn } from '@/lib/utils';
 import { uploadFile, deleteFileFromStorage } from '@/lib/storage';
@@ -23,7 +23,8 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
   const [activeTab, setActiveTab ] = useState<'desktop' | 'mobile'>('desktop');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const isMobileLogo = activeTab === 'mobile';
   const currentLogo = isMobileLogo 
@@ -87,6 +88,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
 
     setIsUploading(true);
     setUploadError(null);
+    setUploadSuccess(null);
 
     try {
       // 1. Instantly compress/resize client-side to maximum of 320x320 pixels 
@@ -117,6 +119,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
             onUpdateLogoDesktop?.(downloadUrl);
             onUpdateLogo(downloadUrl);
           }
+          setUploadSuccess("Logo uploaded to Firebase Cloud Storage successfully!");
           setIsUploading(false);
         } catch (err: any) {
           console.warn("Cloud storage upload failed, falling back to compressed local base64 inside Firestore setting:", err);
@@ -127,7 +130,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
             onUpdateLogoDesktop?.(base64);
             onUpdateLogo(base64);
           }
-          setUploadError("Saved successfully as compressed lightweight base64 content inside Google Firestore database settings.");
+          setUploadSuccess("Logo saved successfully inside Google Firestore database settings!");
           setIsUploading(false);
         }
       } else {
@@ -138,6 +141,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
           onUpdateLogoDesktop?.(base64);
           onUpdateLogo(base64);
         }
+        setUploadSuccess("Logo loaded and saved successfully!");
         setIsUploading(false);
       }
     } catch (err: any) {
@@ -156,6 +160,9 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
         console.warn("Could not delete from storage bucket:", e);
       }
     }
+
+    setUploadError(null);
+    setUploadSuccess(null);
 
     if (isMobileLogo) {
       onUpdateLogoMobile?.('');
@@ -336,6 +343,13 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
               <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 animate-slide-in">
                 <AlertCircle size={12} />
                 <span>{uploadError}</span>
+              </div>
+            )}
+
+            {uploadSuccess && (
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-full border border-emerald-100 animate-slide-in">
+                <CheckCircle2 size={12} />
+                <span>{uploadSuccess}</span>
               </div>
             )}
           </div>
