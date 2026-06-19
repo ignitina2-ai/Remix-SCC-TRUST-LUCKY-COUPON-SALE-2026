@@ -3,7 +3,8 @@
   "appId": "1:66495620877:web:6c13685f5dd33481607244",
   "apiKey": "AIzaSyDZYylWygmGVaO4-zznkpvNnT30NydvMz4",
   "authDomain": "promising-reference-qpp0d.firebaseapp.com",
-  "firestoreDatabaseId": "remixed-firestore-database-id",
+  "databaseURL": "https://coupon-sale-tracker-2026-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  "firestoreDatabaseId": "(default)",
   "storageBucket": "promising-reference-qpp0d.firebasestorage.app",
   "messagingSenderId": "66495620877",
   "measurementId": ""

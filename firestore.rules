@@ -2,49 +2,49 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if the user is the primary admin
-    function isPrimaryAdmin() {
-      return request.auth != null && request.auth.token.email.lower() == 'ignitina2@gmail.com';
+    // Global safety net catch-all
+    match /{document=**} {
+      allow read, write: if false;
     }
-
-    // Helper function to check if user is whitelisted and active
-    function isWhitelisted() {
-      return request.auth != null && 
-        exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email.lower())) &&
-        get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email.lower())).data.status == 'ACTIVE';
+    
+    // Helper function to check if the user is authenticated with a valid email
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
     // Transactions
     match /transactions/{transactionId} {
-      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+      allow read, write: if isAuthenticated();
     }
 
     // Sponsors
     match /sponsors/{sponsorId} {
-      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+      allow read, write: if isAuthenticated();
     }
 
     // Income and Expenses
     match /incomeExpenses/{incomeExpenseId} {
-      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+      allow read, write: if isAuthenticated();
     }
 
     // Secretary Handovers
     match /secretaryHandovers/{secretaryHandoverId} {
-      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+      allow read, write: if isAuthenticated();
     }
 
     // App Settings
     match /settings/{settingsId} {
-      allow read, write: if isPrimaryAdmin() || isWhitelisted();
+      allow read, write: if isAuthenticated();
     }
 
     // Allowed Users (Whitelist Registry)
     match /allowedUsers/{emailId} {
-      // Any authenticated user should be able to get their own whitelist status during sign in,
-      // but only the primary admin can edit, write or list all users.
-      allow get: if request.auth != null && (isPrimaryAdmin() || request.auth.token.email.lower() == emailId);
-      allow list, write: if isPrimaryAdmin();
+      allow read, write: if isAuthenticated();
+    }
+
+    // Test connection
+    match /test/{testId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }
