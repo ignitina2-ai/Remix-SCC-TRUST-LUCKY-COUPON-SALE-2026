@@ -299,7 +299,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
             <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100">
-              <span className="text-blue-700 font-bold text-xs">Today: {getTodayFormattedIST()}</span>
+              <span className="text-blue-700 font-bold text-xs"> {getTodayFormattedIST()}</span>
             </div>
           </div>
           
