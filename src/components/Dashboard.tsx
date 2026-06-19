@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   IndianRupee, 
   CreditCard, 
@@ -67,22 +67,67 @@ const Dashboard: React.FC<DashboardProps> = ({
   permissions
 }) => {
   const [timeframe, setTimeframe] = useState<'overall' | 'today'>('overall');
+  const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
 
-  // Helper to share modern daily sales overview report card
-  const handleShareDailyCard = async () => {
-    const todayStr = timeframe === 'today' ? getTodayISTStr() : 'Overall';
+  const getTodayFormattedIST = (dateObj: Date = new Date()) => {
+    const datePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(dateObj);
+    const [year, month, day] = datePart.split('-');
+    
+    const timePart = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(dateObj);
+
+    return `${day}.${month}.${year}, ${timePart}`;
+  };
+
+  useEffect(() => {
+    setCurrentTimeStr(getTodayFormattedIST());
+    const interval = setInterval(() => {
+      setCurrentTimeStr(getTodayFormattedIST());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper to share modern daily sales overview report card by specific timeframe
+  const shareDailyCardByTimeframe = async (selectedTimeframe: 'today' | 'overall') => {
+    const todayIST = getTodayISTStr();
+    
+    // Filter transactions list based on chosen timeframe
+    const txList = selectedTimeframe === 'today' 
+      ? transactions.filter(t => getLocalDatePart(t.date) === todayIST)
+      : transactions;
+
+    const salesSum = (txList || []).reduce((acc, t) => acc + t.totalAmount, 0);
+    const creditSum = (txList || []).reduce((acc, t) => acc + t.creditAmount, 0);
+    const cashSum = getAmountByMethod('CASH', selectedTimeframe);
+    
+    const methods = paymentMethodsList && paymentMethodsList.length > 0
+      ? paymentMethodsList
+      : getDefaultPaymentMethodsList(customPaymentLabels);
+
+    const nonCashCreditMethods = methods.filter(m => m.id !== 'CASH' && m.id !== 'CREDIT');
+    const upiSum = nonCashCreditMethods.reduce((sum, m) => sum + getAmountByMethod(m.id, selectedTimeframe), 0);
+
+    const handoverSum = selectedTimeframe === 'today'
+      ? (secretaryHandovers || []).filter(h => getLocalDatePart(h.date) === todayIST).reduce((acc, h) => acc + h.amount, 0)
+      : (secretaryHandovers || []).reduce((acc, h) => acc + h.amount, 0);
+
     const upiBreakdown = nonCashCreditMethods.map(m => ({
       label: m.label,
-      amount: getAmountByMethod(m.id, timeframe),
+      amount: getAmountByMethod(m.id, selectedTimeframe),
     })).filter(item => item.amount > 0);
 
     await shareDailySalesCard({
-      date: todayStr,
-      totalSales,
-      totalCredit,
-      totalCashSale,
-      totalUPI,
-      totalHandover,
+      date: selectedTimeframe === 'today' ? todayIST : 'Overall',
+      totalSales: salesSum,
+      totalCredit: creditSum,
+      totalCashSale: cashSum,
+      totalUPI: upiSum,
+      totalHandover: handoverSum,
       upiBreakdown,
     });
   };
@@ -90,12 +135,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Unified string-based date helpers for consistent calculation across timezones to match Asia/Kolkata perfectly
   const getTodayISTStr = () => {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
-  };
-
-  const getTodayFormattedIST = () => {
-    const todayStrInIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
-    const [year, month, day] = todayStrInIST.split('-');
-    return `${day}.${month}.${year}`;
   };
 
   const getLocalDatePart = (dateString: string) => {
@@ -299,12 +338,12 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
             <div className="bg-blue-50 px-2.5 py-1 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-blue-100">
-              <span className="text-blue-700 font-bold text-xs"> {getTodayFormattedIST()}</span>
+              <span className="text-blue-700 font-bold text-xs font-mono"> {currentTimeStr || getTodayFormattedIST()}</span>
             </div>
           </div>
           
           <button 
-            onClick={handleShareDailyCard}
+            onClick={() => setIsShareModalOpen(true)}
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
           >
             <Share2 size={13} className="animate-pulse" />
@@ -313,16 +352,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </header>
 
-      {/* Mobile-only Share Daily Report button placed right after the today sale toolbar */}
-      <div className="block md:hidden">
-        <button 
-          onClick={handleShareDailyCard}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
-        >
-          <Share2 size={14} className="animate-pulse" />
-          <span>Share Daily Report</span>
-        </button>
-      </div>
+      {/* Mobile-only Share Daily Report button moved to between Each UPI Receipts and Add New Sale */}
 
       {/* Quick Actions (Requested by user) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
@@ -435,26 +465,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                   }).length;
 
                   return (
-                    <div key={method.id} className="relative group/upi">
+                    <div key={method.id}>
                       <StatCard 
                         title={method.label} 
                         value={amount} 
                         icon={IconComponent} 
                         color={cardColor} 
                       />
-                      <button 
-                        onClick={() => shareUPIReceiptCard({
-                          methodLabel: method.label,
-                          totalReceived: amount,
-                          date: timeframe === 'today' ? getTodayISTStr() : 'Overall',
-                          transactionsCount: methodTxnsCount,
-                          paymentMethodId: method.id
-                        })}
-                        className="absolute right-2.5 top-2.5 p-1 bg-slate-900/60 hover:bg-slate-950/80 active:scale-90 text-white hover:text-indigo-300 rounded-lg transition-all cursor-pointer shadow-sm md:opacity-0 group-hover/upi:opacity-100 flex items-center justify-center"
-                        title={`Share ${method.label} Card`}
-                      >
-                        <Share2 size={11} />
-                      </button>
                     </div>
                   );
                 })}
@@ -462,6 +479,17 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
       </section>
+
+      {/* Mobile-only Share Daily Report button placed between Each UPI Receipts and Add New Sale */}
+      <div className="block md:hidden pb-4 md:py-0 px-0.5">
+        <button 
+          onClick={() => setIsShareModalOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+        >
+          <Share2 size={14} className="animate-pulse" />
+          <span>Share Daily Report</span>
+        </button>
+      </div>
 
       {/* Add New Sale / Edit Sale Section */}
       <div id="dashboard-add-sale-form-container" className="scroll-mt-6 border-y border-slate-100 py-6 md:py-8">
@@ -493,6 +521,52 @@ const Dashboard: React.FC<DashboardProps> = ({
           customPaymentLabels={customPaymentLabels}
         />
       </div>
+
+      {isShareModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl md:rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl border border-slate-100 transform scale-100 animate-in zoom-in duration-300">
+            <div className="text-center mb-6">
+              <div className="mx-auto w-12 h-12 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+                <Share2 size={24} />
+              </div>
+              <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Share Daily Report</h3>
+              <p className="text-slate-500 text-xs mt-1 font-bold">ഏത് റിപ്പോർട്ടാണ് ലഭിക്കേണ്ടത്?</p>
+              <p className="text-slate-400 text-[10px] mt-0.5">Choose report timeframe to download & share</p>
+            </div>
+            
+            <div className="space-y-2.5">
+              <button
+                onClick={async () => {
+                  setIsShareModalOpen(false);
+                  await shareDailyCardByTimeframe('today');
+                }}
+                className="w-full flex flex-col items-center justify-center gap-0.5 p-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold text-white rounded-xl active:scale-[0.98] transition-all shadow-md cursor-pointer"
+              >
+                <span className="text-xs font-black uppercase tracking-wider">Today's Report</span>
+                <span className="text-[10px] opacity-90 font-medium">ഇന്നത്തെ റിപ്പോർട്ട്</span>
+              </button>
+              
+              <button
+                onClick={async () => {
+                  setIsShareModalOpen(false);
+                  await shareDailyCardByTimeframe('overall');
+                }}
+                className="w-full flex flex-col items-center justify-center gap-0.5 p-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold active:scale-[0.98] transition-all shadow-sm cursor-pointer"
+              >
+                <span className="text-xs font-black uppercase tracking-wider">Overall Report</span>
+                <span className="text-[10px] text-slate-500 font-semibold">ആകെ റിപ്പോർട്ട്</span>
+              </button>
+              
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider active:scale-[0.98] transition-all cursor-pointer mt-2"
+              >
+                Cancel / റദ്ദാക്കുക
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
