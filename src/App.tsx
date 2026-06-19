@@ -74,6 +74,7 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<AllowedUser[]>([]);
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
 
   const [userPermissions, setUserPermissions] = useState({
     canAdd: true,
@@ -186,6 +187,11 @@ export default function App() {
 
     // Setup real-time listeners across multi-tabs
     function setupDbSyncs(isAdmin: boolean) {
+      // Helper to clear error when sync is success
+      const clearErrorOnSuccess = () => {
+        setFirestoreError(null);
+      };
+
       // 1. Transactions Listener
       const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snap) => {
         const list: Transaction[] = [];
@@ -193,8 +199,10 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, transactions: list }));
+        clearErrorOnSuccess();
       }, (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'transactions');
+        console.error("Transactions sync error:", err);
+        setFirestoreError(`Transactions: ${err.message || String(err)}`);
       });
       activeSubscriptions.push(unsubTransactions);
 
@@ -205,8 +213,10 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, sponsors: list }));
+        clearErrorOnSuccess();
       }, (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'sponsors');
+        console.error("Sponsors sync error:", err);
+        setFirestoreError(`Sponsors: ${err.message || String(err)}`);
       });
       activeSubscriptions.push(unsubSponsors);
 
@@ -217,8 +227,10 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, incomeExpenses: list }));
+        clearErrorOnSuccess();
       }, (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'incomeExpenses');
+        console.error("IncomeExpenses sync error:", err);
+        setFirestoreError(`Income/Expenses: ${err.message || String(err)}`);
       });
       activeSubscriptions.push(unsubIncomeExpenses);
 
@@ -229,8 +241,10 @@ export default function App() {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
         setAppData(prev => ({ ...prev, secretaryHandovers: list }));
+        clearErrorOnSuccess();
       }, (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'secretaryHandovers');
+        console.error("SecretaryHandovers sync error:", err);
+        setFirestoreError(`Handovers: ${err.message || String(err)}`);
       });
       activeSubscriptions.push(unsubHandovers);
 
@@ -241,8 +255,10 @@ export default function App() {
           list.push({ email: doc.id, ...doc.data() } as any);
         });
         setAllowedUsers(list);
+        clearErrorOnSuccess();
       }, (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'allowedUsers');
+        console.error("AllowedUsers sync error:", err);
+        setFirestoreError(`Allowed Users: ${err.message || String(err)}`);
       });
       activeSubscriptions.push(unsubAllowedUsers);
 
@@ -261,8 +277,10 @@ export default function App() {
             paymentMethodsList: d.paymentMethodsList || prev.paymentMethodsList
           }));
         }
+        clearErrorOnSuccess();
       }, (err) => {
-        handleFirestoreError(err, OperationType.GET, 'settings/global');
+        console.error("Settings sync error:", err);
+        setFirestoreError(`Global Settings: ${err.message || String(err)}`);
       });
       activeSubscriptions.push(unsubSettings);
     }
@@ -1010,6 +1028,44 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          {firestoreError && (
+            <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-6 text-slate-800 shadow-lg shadow-amber-500/5 flex flex-col md:flex-row items-start justify-between gap-6 animate-in slide-in-from-top-4 duration-500">
+              <div className="flex gap-4 items-start">
+                <div className="p-3 bg-white border border-amber-200 rounded-2xl text-amber-600 shrink-0 shadow-sm">
+                  <AlertCircle size={22} className="animate-bounce" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-sm font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                    Firebase Sync Issue <span className="text-[10px] text-amber-700 font-bold lowercase tracking-normal bg-amber-100 px-2 py-0.5 rounded-full">(ഡാറ്റ സിങ്ക് ചെയ്യുന്നില്ല)</span>
+                  </h3>
+                  <div className="text-xs font-semibold leading-relaxed text-slate-700 space-y-2">
+                    <p>
+                      The app is currently having trouble talking to the cloud database. We have successfully provisioned your Firestore Database for project <strong className="text-slate-900 font-black">coupon-sale-tracker-2026</strong> and deployed the security rules.
+                    </p>
+                    <p className="text-amber-800 font-bold">
+                      ഇത് പരിഹരിക്കാൻ: 1) ഫയർബേസ് കൺസോളിൽ ഫയർസ്റ്റോർ പൂർണ്ണമായി എനേബിൾ ആണെന്ന് ഉറപ്പാക്കുക. 2) താഴെയുള്ള "Reload Connections" ബട്ടൺ ക്ലിക്ക് ചെയ്യുക.
+                    </p>
+                    <div className="mt-2 bg-white/70 border border-amber-100 rounded-xl p-3">
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Detailed Technical Error Code:</span>
+                      <code className="text-[10px] font-mono text-rose-700 break-all">{firestoreError}</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 w-full md:w-auto shrink-0 md:self-center">
+                <button 
+                  onClick={() => {
+                    setFirestoreError(null);
+                    window.location.reload();
+                  }}
+                  className="w-full md:w-auto px-5 py-3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-amber-600/20 cursor-pointer"
+                >
+                  Reload Connections
+                </button>
+              </div>
+            </div>
+          )}
 
           {showNotificationPrompt && (
             <div className="mb-6 bg-blue-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-600/20 flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500">

@@ -1,10 +1,9 @@
 {
   "projectId": "coupon-sale-tracker-2026",
-  "appId": "1:812000983987:web:6c853eeba42a512339e9c6",
-  "apiKey": "AIzaSyCgS3AUCoxZ70nUZag_AkEplDHCXs0YOn8",
+  "appId": "1:812000983987:web:d89472f323dc47fc39e9c6",
+  "apiKey": "AIzaSyA2s4594fQH8dA_gemyIZ1IBS4z-xZJ7AQ",
   "authDomain": "coupon-sale-tracker-2026.firebaseapp.com",
-  "databaseURL": "https://coupon-sale-tracker-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
-  "firestoreDatabaseId": "(default)",
+  "firestoreDatabaseId": "ai-studio-dfea9a9b-0b0d-4e72-96f5-ba3821d75bbb",
   "storageBucket": "coupon-sale-tracker-2026.firebasestorage.app",
   "messagingSenderId": "812000983987",
   "measurementId": ""
