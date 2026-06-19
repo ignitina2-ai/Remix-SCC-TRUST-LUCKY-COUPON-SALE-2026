@@ -59,9 +59,9 @@ const AREAS = [
   'Thillery'
 ];
 
-const InputField = ({ label, icon: Icon, bgClass = "bg-slate-50", ...props }: any) => (
+const InputField = ({ label, icon: Icon, bgClass = "bg-slate-50", labelClass = "text-slate-600", ...props }: any) => (
   <div className="space-y-1 md:space-y-1.5 w-full">
-    <label className="text-[10px] md:text-xs font-bold text-slate-600 ml-1 uppercase tracking-wider">{label}</label>
+    <label className={cn("text-[10px] md:text-xs font-bold ml-1 uppercase tracking-wider", labelClass)}>{label}</label>
     <div className="relative">
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
         <Icon size={14} className="md:w-4 md:h-4" />
@@ -69,7 +69,7 @@ const InputField = ({ label, icon: Icon, bgClass = "bg-slate-50", ...props }: an
       <input 
         {...props}
         className={cn(
-          "w-full pl-8 pr-3 py-2.5 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-900 font-medium text-xs md:text-sm",
+          "w-full pl-8 pr-3 py-2.5 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-900 font-semibold text-xs md:text-sm",
           bgClass
         )}
       />
@@ -99,12 +99,54 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
   const getColorClassesForMethod = (id: string) => {
     switch(id) {
-      case 'CASH': return { color: 'text-emerald-600', bg: 'bg-emerald-50' };
-      case 'CREDIT': return { color: 'text-amber-600', bg: 'bg-amber-50' };
-      case 'TRUST GPAY': return { color: 'text-blue-600', bg: 'bg-blue-50' };
-      case 'SOFIA GPAY': return { color: 'text-indigo-600', bg: 'bg-indigo-50' };
-      case 'JOHNY GPAY': return { color: 'text-sky-600', bg: 'bg-sky-50' };
-      default: return { color: 'text-violet-600', bg: 'bg-violet-50' };
+      case 'CASH': 
+        return { 
+          color: 'text-green-600', 
+          bg: 'bg-green-50/70', 
+          border: 'border-green-500', 
+          text: 'text-green-800', 
+          ring: 'ring-green-100' 
+        };
+      case 'CREDIT': 
+        return { 
+          color: 'text-red-600', 
+          bg: 'bg-red-50/70', 
+          border: 'border-red-500', 
+          text: 'text-red-800', 
+          ring: 'ring-red-100' 
+        };
+      case 'TRUST GPAY': 
+        return { 
+          color: 'text-blue-600', 
+          bg: 'bg-blue-50/70', 
+          border: 'border-blue-500', 
+          text: 'text-blue-800', 
+          ring: 'ring-blue-100' 
+        };
+      case 'SOFIA GPAY': 
+        return { 
+          color: 'text-orange-600', 
+          bg: 'bg-orange-50/70', 
+          border: 'border-orange-500', 
+          text: 'text-orange-850', 
+          ring: 'ring-orange-100' 
+        };
+      case 'JOHNY GPAY': 
+        return { 
+          color: 'text-violet-600', 
+          bg: 'bg-violet-50/70', 
+          border: 'border-violet-500', 
+          text: 'text-violet-850', 
+          ring: 'ring-violet-100' 
+        };
+      default: 
+        return { 
+          color: 'text-slate-600', 
+          bg: 'bg-slate-50/70', 
+          border: 'border-slate-500', 
+          text: 'text-slate-800', 
+          ring: 'ring-slate-100' 
+        };
     }
   };
 
@@ -380,6 +422,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
       <form onSubmit={handleSubmit} className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 space-y-4 md:space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          {/* Row 1: Customer Name & Sale Date */}
           <InputField 
             label="Customer Name" 
             icon={User} 
@@ -390,14 +433,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           />
 
           <InputField 
-            label="Mobile Number (Optional)" 
-            icon={Phone} 
-            placeholder="e.g. 9876543210" 
-            value={formData.phone}
-            onChange={(e: any) => setFormData({ ...formData, phone: e.target.value })}
-          />
-
-          <InputField 
             label="Sale Date" 
             icon={Calendar} 
             type="date" 
@@ -405,8 +440,17 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             onChange={(e: any) => setFormData({ ...formData, date: e.target.value })}
             required
           />
-          
-          <div className="space-y-1 md:space-y-1.5">
+
+          {/* Row 2: Mobile Number & Area / Location */}
+          <InputField 
+            label="Mobile Number (Optional)" 
+            icon={Phone} 
+            placeholder="e.g. 9876543210" 
+            value={formData.phone}
+            onChange={(e: any) => setFormData({ ...formData, phone: e.target.value })}
+          />
+
+          <div className="space-y-1 md:space-y-1.5 w-full">
             <label className="text-[10px] md:text-xs font-bold text-slate-600 ml-1 uppercase tracking-wider">Area / Location</label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -415,7 +459,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               <input 
                 value={formData.area}
                 onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-900 font-medium text-xs md:text-sm"
+                className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-900 font-semibold text-xs md:text-sm"
                 required
                 list="areas-list"
                 placeholder="Select or type area"
@@ -428,8 +472,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
           </div>
 
-          {/* Books (25 coupons each) and Book Number (Optional) column styled as single line, light blue bg */}
-          <div className="col-span-1 md:col-span-2 bg-blue-50/80 border border-blue-100 p-3 rounded-2xl grid grid-cols-2 gap-2.5">
+          {/* Row 3: Books (25 coupons each) and Book Number (Optional) column styled as single line, light blue bg 50% opacity style */}
+          <div className="col-span-1 md:col-span-2 bg-blue-100/90 border-2 border-blue-300 p-3.5 rounded-2xl grid grid-cols-2 gap-3 shadow-sm shadow-blue-50">
             <InputField 
               label="Books (25 coupons each)" 
               icon={BookOpen} 
@@ -439,7 +483,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               min="0"
               value={formData.books}
               onChange={(e: any) => setFormData({ ...formData, books: parseInt(e.target.value) || 0 })}
-              bgClass="bg-white border-blue-800 text-blue-900"
+              bgClass="bg-white border-blue-400 text-blue-950 focus:ring-blue-600 focus:border-blue-600 font-bold"
+              labelClass="text-blue-950 font-black"
             />
             <InputField 
               label="Book Number (Optional)" 
@@ -447,10 +492,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               placeholder="e.g. 101-105" 
               value={formData.bookNumber}
               onChange={(e: any) => setFormData({ ...formData, bookNumber: e.target.value })}
-              bgClass="bg-white border-blue-800 text-blue-900 placeholder:text-blue-300"
+              bgClass="bg-white border-blue-400 text-blue-950 placeholder:text-blue-400 focus:ring-blue-600 focus:border-blue-600 font-bold"
+              labelClass="text-blue-950 font-black"
             />
           </div>
 
+          {/* Row 4: Individual Coupons and Coupon Number (Optional) */}
           <InputField 
             label="Individual Coupons" 
             icon={Ticket} 
@@ -499,12 +546,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                   className={cn(
                     "flex flex-col items-center justify-center p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all gap-0.5 md:gap-1 cursor-pointer",
                     formData.paymentMethod === method.id 
-                      ? cn("border-blue-600 ring-2 ring-blue-50", colorClasses.bg) 
+                      ? cn(colorClasses.border, "ring-2", colorClasses.ring, colorClasses.bg) 
                       : "border-slate-100 hover:border-slate-200 bg-white"
                   )}
                 >
                   <IconComp className={cn(formData.paymentMethod === method.id ? colorClasses.color : "text-slate-400")} size={16} />
-                  <span className={cn("text-[9px] md:text-[10px] font-bold uppercase tracking-tight", formData.paymentMethod === method.id ? "text-slate-900" : "text-slate-500")}>
+                  <span className={cn("text-[9px] md:text-[10px] font-black uppercase tracking-tight", formData.paymentMethod === method.id ? colorClasses.text : "text-slate-500")}>
                     {method.label}
                   </span>
                 </button>

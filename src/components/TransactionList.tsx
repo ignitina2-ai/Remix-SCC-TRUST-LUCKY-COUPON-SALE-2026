@@ -380,13 +380,12 @@ const TransactionList: React.FC<TransactionListProps> = ({
 
   const PaymentIcon = ({ method }: { method: PaymentMethod }) => {
     switch (method) {
-      case 'CASH': return <Wallet size={16} className="text-emerald-600" />;
-      case 'CREDIT': return <CreditCard size={16} className="text-amber-600" />;
-      case 'GOOGLE_PAY': return <Smartphone size={16} className="text-blue-600" />;
-      case 'PHONE_PAY': return <Smartphone size={16} className="text-indigo-600" />;
-      case 'PAYTM': return <Smartphone size={16} className="text-sky-600" />;
-      case 'OTHER_UPI': return <Smartphone size={16} className="text-violet-600" />;
-      default: return null;
+      case 'CASH': return <Wallet size={16} className="text-green-600 shrink-0" />;
+      case 'CREDIT': return <CreditCard size={16} className="text-red-600 shrink-0" />;
+      case 'TRUST GPAY': return <Smartphone size={16} className="text-blue-600 shrink-0" />;
+      case 'SOFIA GPAY': return <Smartphone size={16} className="text-orange-500 shrink-0" />;
+      case 'JOHNY GPAY': return <Smartphone size={16} className="text-violet-600 shrink-0" />;
+      default: return <Smartphone size={16} className="text-slate-500 shrink-0" />;
     }
   };
 

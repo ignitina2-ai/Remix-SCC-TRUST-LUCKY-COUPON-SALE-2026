@@ -212,16 +212,16 @@ export async function shareUPIReceiptCard(options: {
   let brandColorClass = 'text-indigo-400';
   let badgeText = 'UPI Receipt';
   if (paymentMethodId === 'TRUST GPAY') {
-    brandHex = '#0d9488'; // teal-600
-    brandColorClass = 'text-teal-400';
+    brandHex = '#2563eb'; // blue-600
+    brandColorClass = 'text-blue-400';
     badgeText = 'TRUST APPROVED';
   } else if (paymentMethodId === 'SOFIA GPAY') {
-    brandHex = '#7c3aed'; // violet-600
-    brandColorClass = 'text-violet-400';
+    brandHex = '#ea580c'; // orange-600
+    brandColorClass = 'text-orange-400';
     badgeText = 'SOFIA BRANDED';
   } else if (paymentMethodId === 'JOHNY GPAY') {
-    brandHex = '#0284c7'; // sky-600
-    brandColorClass = 'text-sky-400';
+    brandHex = '#7c3aed'; // violet-600
+    brandColorClass = 'text-violet-400';
     badgeText = 'JOHNY KEY';
   } else if (paymentMethodId === 'OTHER_UPI') {
     brandHex = '#e11d48'; // rose-600

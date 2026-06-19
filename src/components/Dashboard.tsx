@@ -414,13 +414,13 @@ const Dashboard: React.FC<DashboardProps> = ({
             title="Total Credits" 
             value={totalCredit} 
             icon={CreditCard} 
-            color="bg-amber-500" 
+            color="bg-red-600" 
           />
           <StatCard 
             title="Total Cash sales" 
             value={totalCashSale} 
             icon={Wallet} 
-            color="bg-emerald-600" 
+            color="bg-green-600" 
           />
           <StatCard 
             title="All UPI Receipts" 
@@ -449,9 +449,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                 .map(method => {
                   const IconComponent = method.id === 'TRUST GPAY' ? QrCode : Smartphone;
                   let cardColor = 'bg-indigo-600';
-                  if (method.id === 'TRUST GPAY') cardColor = 'bg-teal-600';
-                  else if (method.id === 'SOFIA GPAY') cardColor = 'bg-violet-600';
-                  else if (method.id === 'JOHNY GPAY') cardColor = 'bg-sky-600';
+                  if (method.id === 'TRUST GPAY') cardColor = 'bg-blue-600';
+                  else if (method.id === 'SOFIA GPAY') cardColor = 'bg-orange-500';
+                  else if (method.id === 'JOHNY GPAY') cardColor = 'bg-violet-600';
                   else if (method.id === 'OTHER_UPI') cardColor = 'bg-rose-500';
 
                   const amount = getAmountByMethod(method.id, timeframe);
