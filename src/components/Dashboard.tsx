@@ -25,6 +25,7 @@ import {
 import { Transaction, Sponsor, IncomeExpense, SecretaryHandover, PaymentMethod, DEFAULT_PAYMENT_LABELS, CustomPaymentMethod, getDefaultPaymentMethodsList } from '@/types';
 import { cn } from '@/lib/utils';
 import TransactionList from './TransactionList';
+import TransactionForm from './TransactionForm';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -36,6 +37,15 @@ interface DashboardProps {
   onDeleteTransaction: (ids: string[]) => void;
   onToggleTreasurer: (id: string) => void;
   onEditTransaction?: (transaction: Transaction) => void;
+  onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  editingTransaction?: Transaction | null;
+  onUpdateTransaction?: (id: string, updates: Partial<Transaction>) => void;
+  onCancelEdit?: () => void;
+  permissions?: {
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -47,7 +57,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   paymentMethodsList,
   onDeleteTransaction,
   onToggleTreasurer,
-  onEditTransaction
+  onEditTransaction,
+  onAddTransaction,
+  editingTransaction,
+  onUpdateTransaction,
+  onCancelEdit,
+  permissions
 }) => {
   const [timeframe, setTimeframe] = useState<'overall' | 'today'>('overall');
 
@@ -264,7 +279,12 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Quick Actions (Requested by user) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
         <button 
-          onClick={() => (window as any).setActiveTab?.('add-transaction')}
+          onClick={() => {
+            const el = document.getElementById('dashboard-add-sale-form-container');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth' });
+            }
+          }}
           className="flex flex-col items-center justify-center p-3 md:p-4 bg-blue-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-blue-700 transition-all active:scale-95 cursor-pointer text-center"
         >
           <PlusCircle className="mb-1.5 w-5 h-5" />
@@ -371,6 +391,25 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
       </section>
 
+      {/* Add New Sale / Edit Sale Section */}
+      <div id="dashboard-add-sale-form-container" className="scroll-mt-6 border-y border-slate-100 py-6 md:py-8">
+        <div className="max-w-2xl mx-auto">
+          <TransactionForm 
+            onAddTransaction={onAddTransaction}
+            editingTransaction={editingTransaction}
+            onUpdateTransaction={onUpdateTransaction}
+            onCancelEdit={onCancelEdit}
+            transactions={transactions}
+            onDelete={onDeleteTransaction}
+            onToggleTreasurer={onToggleTreasurer}
+            onEdit={onEditTransaction || (() => {})}
+            customPaymentLabels={customPaymentLabels}
+            paymentMethodsList={paymentMethodsList}
+            permissions={permissions}
+            hideList={true}
+          />
+        </div>
+      </div>
 
       {/* Transaction History Section */}
       <div id="transaction-history-section" className="scroll-mt-6 border-t border-slate-100 pt-6">

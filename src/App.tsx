@@ -64,7 +64,7 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
 
 export default function App() {
   const [activeTab, setActiveTab ] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : false));
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
@@ -729,36 +729,24 @@ export default function App() {
                  onToggleTreasurer={toggleTreasurer}
                  onEditTransaction={(t) => {
                    setEditingTransaction(t);
-                   setActiveTab('add-transaction');
+                   setTimeout(() => {
+                     const element = document.getElementById('dashboard-add-sale-form-container');
+                     if (element) {
+                       element.scrollIntoView({ behavior: 'smooth' });
+                     }
+                   }, 100);
                  }}
+                 onAddTransaction={addTransaction}
+                 editingTransaction={editingTransaction}
+                 onUpdateTransaction={(id, updates) => {
+                   updateTransaction(id, updates);
+                   setEditingTransaction(null);
+                 }}
+                 onCancelEdit={() => {
+                   setEditingTransaction(null);
+                 }}
+                 permissions={userPermissions}
                />;
-      case 'add-transaction':
-        return (
-          <TransactionForm 
-            onAddTransaction={addTransaction} 
-            editingTransaction={editingTransaction}
-            onUpdateTransaction={(id, updates) => {
-              updateTransaction(id, updates);
-              setEditingTransaction(null);
-              setActiveTab('dashboard');
-            }}
-            onCancelEdit={() => {
-              setEditingTransaction(null);
-              setActiveTab('dashboard');
-            }}
-            transactions={appData.transactions}
-            onDelete={deleteTransaction}
-            onToggleTreasurer={toggleTreasurer}
-            onEdit={(t) => {
-              setEditingTransaction(t);
-              setActiveTab('add-transaction');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            customPaymentLabels={labels}
-            paymentMethodsList={appData.paymentMethodsList}
-            permissions={userPermissions}
-          />
-        );
       case 'transactions':
         return (
           <TransactionList 
@@ -767,8 +755,13 @@ export default function App() {
             onToggleTreasurer={toggleTreasurer}
             onEdit={(t) => {
               setEditingTransaction(t);
-              setActiveTab('add-transaction');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setActiveTab('dashboard');
+              setTimeout(() => {
+                const element = document.getElementById('dashboard-add-sale-form-container');
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                }
+              }, 100);
             }}
             customPaymentLabels={labels}
             permissions={userPermissions}
@@ -781,7 +774,13 @@ export default function App() {
             onUpdateTransaction={updateTransaction}
             onEdit={(t) => {
               setEditingTransaction(t);
-              setActiveTab('add-transaction');
+              setActiveTab('dashboard');
+              setTimeout(() => {
+                const element = document.getElementById('dashboard-add-sale-form-container');
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                }
+              }, 100);
             }}
             onDelete={deleteTransaction}
             customPaymentLabels={labels}
@@ -858,8 +857,23 @@ export default function App() {
                  onToggleTreasurer={toggleTreasurer}
                  onEditTransaction={(t) => {
                    setEditingTransaction(t);
-                   setActiveTab('add-transaction');
+                   setTimeout(() => {
+                     const element = document.getElementById('dashboard-add-sale-form-container');
+                     if (element) {
+                       element.scrollIntoView({ behavior: 'smooth' });
+                     }
+                   }, 100);
                  }}
+                 onAddTransaction={addTransaction}
+                 editingTransaction={editingTransaction}
+                 onUpdateTransaction={(id, updates) => {
+                   updateTransaction(id, updates);
+                   setEditingTransaction(null);
+                 }}
+                 onCancelEdit={() => {
+                   setEditingTransaction(null);
+                 }}
+                 permissions={userPermissions}
                />;
     }
   };

@@ -38,6 +38,7 @@ interface TransactionFormProps {
     canEdit: boolean;
     canDelete: boolean;
   };
+  hideList?: boolean;
 }
 
 const AREAS = [
@@ -84,7 +85,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   onEdit,
   customPaymentLabels,
   paymentMethodsList,
-  permissions
+  permissions,
+  hideList = false
 }) => {
   const getIconForMethod = (id: string) => {
     if (id === 'CASH') return Wallet;
@@ -660,16 +662,18 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         </div>
       </form>
 
-      <div className="mt-12 pt-12 border-t border-slate-200">
-        <TransactionList 
-          transactions={transactions} 
-          onDelete={onDelete}
-          onToggleTreasurer={onToggleTreasurer}
-          onEdit={onEdit}
-          customPaymentLabels={customPaymentLabels}
-          permissions={permissions}
-        />
-      </div>
+      {!hideList && (
+        <div className="mt-12 pt-12 border-t border-slate-200">
+          <TransactionList 
+            transactions={transactions} 
+            onDelete={onDelete}
+            onToggleTreasurer={onToggleTreasurer}
+            onEdit={onEdit}
+            customPaymentLabels={customPaymentLabels}
+            permissions={permissions}
+          />
+        </div>
+      )}
     </div>
   );
 };

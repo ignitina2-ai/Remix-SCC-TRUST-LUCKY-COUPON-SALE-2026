@@ -29,7 +29,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, user, onLogout, isPrimaryAdmin = false }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'add-transaction', label: 'Add Sale', icon: PlusCircle },
     { id: 'transactions', label: 'Transaction History', icon: History },
     { id: 'credit', label: 'Credit Management', icon: CreditCard },
     { id: 'income-expense', label: 'Income & Expense', icon: Banknote },
