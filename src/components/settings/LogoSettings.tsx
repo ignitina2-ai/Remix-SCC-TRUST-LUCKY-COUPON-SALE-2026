@@ -20,16 +20,12 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
   user 
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab ] = useState<'desktop' | 'mobile'>('desktop');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const isMobileLogo = activeTab === 'mobile';
-  const currentLogo = isMobileLogo 
-    ? (appData.logoMobile || '') 
-    : (appData.logoDesktop || appData.logo || '');
+  const currentLogo = appData.logo || appData.logoDesktop || appData.logoMobile || '';
 
   // Helper inside component to compress/resize logo before upload/save
   const compressImage = (file: File, maxW = 320, maxH = 320): Promise<{ blob: Blob; base64: string }> => {
@@ -98,50 +94,47 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
       if (user && !user.isLocal) {
         try {
           const fileExtension = 'png';
-          const storagePath = `logos/${isMobileLogo ? 'mobile' : 'desktop'}_${Date.now()}.${fileExtension}`;
+          const storagePath = `logos/brand_logo_${Date.now()}.${fileExtension}`;
           
           // Convert blob back to File object for upload compatibility
           const compressedFile = new File([blob], `logo.${fileExtension}`, { type: 'image/png' });
           const downloadUrl = await uploadFile(compressedFile, storagePath);
           
-          // Clean up previous logo if it was a storage URL
-          if (currentLogo && currentLogo.includes('firebasestorage')) {
-            try {
-              await deleteFileFromStorage(currentLogo);
-            } catch (delErr) {
-              console.warn("Could not delete old storage file, ignoring:", delErr);
+          // Clean up previous logo(s) if they were storage URLs
+          const oldLogos = [appData.logo, appData.logoDesktop, appData.logoMobile].filter(Boolean);
+          for (const old of oldLogos) {
+            if (old && old.includes('firebasestorage')) {
+              try {
+                await deleteFileFromStorage(old);
+              } catch (delErr) {
+                console.warn("Could not delete old storage file, ignoring:", delErr);
+              }
             }
           }
 
-          if (isMobileLogo) {
-            onUpdateLogoMobile?.(downloadUrl);
-          } else {
-            onUpdateLogoDesktop?.(downloadUrl);
-            onUpdateLogo(downloadUrl);
-          }
-          setUploadSuccess("Logo uploaded to Firebase Cloud Storage successfully!");
+          onUpdateLogo(downloadUrl);
+          if (onUpdateLogoMobile) onUpdateLogoMobile(downloadUrl);
+          if (onUpdateLogoDesktop) (onUpdateLogoDesktop as any)(downloadUrl);
+
+          setUploadSuccess("Brand logo uploaded to Firebase Cloud Storage successfully!");
           setIsUploading(false);
         } catch (err: any) {
           console.warn("Cloud storage upload failed, falling back to compressed local base64 inside Firestore setting:", err);
           // Fall back to direct local compressed base64 which is extremely lightweight and 100% reliable inside Firestore
-          if (isMobileLogo) {
-            onUpdateLogoMobile?.(base64);
-          } else {
-            onUpdateLogoDesktop?.(base64);
-            onUpdateLogo(base64);
-          }
-          setUploadSuccess("Logo saved successfully inside Google Firestore database settings!");
+          onUpdateLogo(base64);
+          if (onUpdateLogoMobile) onUpdateLogoMobile(base64);
+          if (onUpdateLogoDesktop) (onUpdateLogoDesktop as any)(base64);
+
+          setUploadSuccess("Brand logo saved successfully inside Google Firestore database settings!");
           setIsUploading(false);
         }
       } else {
         // Fallback local reader
-        if (isMobileLogo) {
-          onUpdateLogoMobile?.(base64);
-        } else {
-          onUpdateLogoDesktop?.(base64);
-          onUpdateLogo(base64);
-        }
-        setUploadSuccess("Logo loaded and saved successfully!");
+        onUpdateLogo(base64);
+        if (onUpdateLogoMobile) onUpdateLogoMobile(base64);
+        if (onUpdateLogoDesktop) (onUpdateLogoDesktop as any)(base64);
+
+        setUploadSuccess("Brand logo loaded and saved successfully!");
         setIsUploading(false);
       }
     } catch (err: any) {
@@ -152,24 +145,24 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
   };
 
   const handleDeleteLogo = async () => {
-    // Delete from cloud storage if active
-    if (currentLogo && currentLogo.includes('firebasestorage')) {
-      try {
-        await deleteFileFromStorage(currentLogo);
-      } catch (e) {
-        console.warn("Could not delete from storage bucket:", e);
+    // Delete old logo files from cloud storage if active
+    const oldLogos = [appData.logo, appData.logoDesktop, appData.logoMobile].filter(Boolean);
+    for (const old of oldLogos) {
+      if (old && old.includes('firebasestorage')) {
+        try {
+          await deleteFileFromStorage(old);
+        } catch (e) {
+          console.warn("Could not delete from storage bucket:", e);
+        }
       }
     }
 
     setUploadError(null);
     setUploadSuccess(null);
 
-    if (isMobileLogo) {
-      onUpdateLogoMobile?.('');
-    } else {
-      onUpdateLogoDesktop?.('');
-      onUpdateLogo('');
-    }
+    onUpdateLogo('');
+    if (onUpdateLogoMobile) onUpdateLogoMobile('');
+    if (onUpdateLogoDesktop) (onUpdateLogoDesktop as any)('');
   };
 
   return (
@@ -180,8 +173,8 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
             <ImageIcon size={20} />
           </div>
           <div className="text-left font-sans">
-            <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">App Open Logos</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Customize splash & header icons</p>
+            <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">App Logo</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Customize splash & header icon</p>
           </div>
         </div>
 
@@ -211,47 +204,27 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
         /* Collapsed summary layout to save massive amount of space */
         <div className="p-4 bg-slate-50/75 hover:bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors animate-in fade-in duration-300 text-left font-sans">
           <div className="space-y-1.5 w-full sm:w-auto">
-            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Brand Logo Configuration</h4>
-            <div className="flex flex-wrap items-center gap-2.5 font-mono text-[9px] text-slate-500 font-bold">
+            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Brand Logo Status</h4>
+            <div className="font-mono text-[9px] text-slate-500 font-bold">
               <span className={cn(
-                "flex items-center gap-1.5 border px-2 py-0.5 rounded-lg",
-                (appData.logoDesktop || appData.logo) ? "bg-blue-50/50 text-blue-700 border-blue-100" : "bg-white text-slate-400 border-slate-200/50"
+                "inline-flex items-center gap-1.5 border px-2 py-0.5 rounded-lg",
+                currentLogo ? "bg-blue-50/50 text-blue-700 border-blue-100" : "bg-white text-slate-400 border-slate-200/50"
               )}>
-                <Laptop size={11} /> Desktop: {(appData.logoDesktop || appData.logo) ? "CUSTOM" : "SYSTEM DEFAULT"}
-              </span>
-              <span className={cn(
-                "flex items-center gap-1.5 border px-2 py-0.5 rounded-lg",
-                appData.logoMobile ? "bg-indigo-50/50 text-indigo-700 border-indigo-100" : "bg-white text-slate-400 border-slate-200/50"
-              )}>
-                <Smartphone size={11} /> Mobile: {appData.logoMobile ? "CUSTOM" : "SYSTEM DEFAULT"}
+                <Settings size={11} /> Logo Image: {currentLogo ? "CUSTOM ACTIVE" : "SYSTEM DEFAULT"}
               </span>
             </div>
           </div>
           
-          {(appData.logoDesktop || appData.logo || appData.logoMobile) ? (
+          {currentLogo ? (
             <div className="flex items-center gap-2 self-end sm:self-center bg-white border border-slate-200/60 p-1.5 rounded-xl">
-              {(appData.logoDesktop || appData.logo) && (
-                <div className="text-center">
-                  <img 
-                    src={appData.logoDesktop || appData.logo} 
-                    alt="Desktop" 
-                    className="w-10 h-10 object-contain mx-auto border border-slate-100 rounded bg-slate-50 p-0.5" 
-                    referrerPolicy="no-referrer"
-                  />
-                  <p className="text-[7px] text-slate-400 font-black tracking-widest uppercase mt-0.5">Desktop</p>
-                </div>
-              )}
-              {appData.logoMobile && (
-                <div className="text-center">
-                  <img 
-                    src={appData.logoMobile} 
-                    alt="Mobile" 
-                    className="w-10 h-10 object-contain mx-auto border border-slate-100 rounded bg-slate-50 p-0.5" 
-                    referrerPolicy="no-referrer"
-                  />
-                  <p className="text-[7px] text-slate-400 font-black tracking-widest uppercase mt-0.5">Mobile</p>
-                </div>
-              )}
+              <div className="text-center">
+                <img 
+                  src={currentLogo} 
+                  alt="App Brand Logo" 
+                  className="w-10 h-10 object-contain mx-auto border border-slate-100 rounded bg-slate-50 p-0.5" 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
             </div>
           ) : (
             <span className="self-end sm:self-center text-[9px] text-slate-500 font-black uppercase tracking-wider bg-slate-200/50 border border-slate-200/20 px-3 py-1.5 rounded-xl">
@@ -262,32 +235,6 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
       ) : (
         /* Fully expanded layout to modify details */
         <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-          {/* Tabs Selector */}
-          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/40">
-            <button
-              onClick={() => { setActiveTab('desktop'); setUploadError(null); }}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-4 transition-all cursor-pointer ${
-                activeTab === 'desktop'
-                  ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Laptop size={14} />
-              Desktop & default Layout
-            </button>
-            <button
-              onClick={() => { setActiveTab('mobile'); setUploadError(null); }}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-4 transition-all cursor-pointer ${
-                activeTab === 'mobile'
-                  ? 'bg-white text-blue-600 shadow-sm border border-slate-200/10'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Smartphone size={14} />
-              Mobile Phone Layout
-            </button>
-          </div>
-          
           <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 transition-all hover:bg-slate-100 relative">
             {isUploading ? (
               <div className="flex flex-col items-center justify-center space-y-4 p-8">
@@ -304,7 +251,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
                 <img src={currentLogo} alt="App Logo" className="w-32 h-32 object-contain rounded-xl shadow-md" referrerPolicy="no-referrer" />
                 <button 
                   onClick={handleDeleteLogo}
-                  className="absolute -top-2 -right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg opacity-100 group-hover:opacity-100 transition-all cursor-pointer"
+                  className="absolute -top-2 -right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg opacity-100 group-hover:opacity-100 transition-all cursor-pointer border-0"
                   title="Remove Logo File"
                 >
                   <Trash2 size={14} />
@@ -317,9 +264,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
                 </div>
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">No custom logo configured</p>
                 <p className="text-[10px] text-slate-400 font-bold max-w-xs mx-auto">
-                  {isMobileLogo 
-                    ? "If empty, mobile phones will display target file from `/splash/mobile.png` folder path or fall back to system defaults." 
-                    : "If empty, desktop devices will display target file from `/splash/desktop.png` folder path or the custom attached image settings."}
+                  If empty, devices will display default layouts or fallback to system launcher icons.
                 </p>
               </div>
             )}
@@ -332,6 +277,7 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
               disabled={isUploading}
             />
             <button 
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
               className="mt-6 bg-white border border-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all shadow-sm cursor-pointer disabled:opacity-50 uppercase tracking-widest"
@@ -340,14 +286,14 @@ export const LogoSettings: React.FC<LogoSettingsProps> = ({
             </button>
 
             {uploadError && (
-              <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 animate-slide-in">
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 animate-slide-in font-sans">
                 <AlertCircle size={12} />
                 <span>{uploadError}</span>
               </div>
             )}
 
             {uploadSuccess && (
-              <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-full border border-emerald-100 animate-slide-in">
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-full border border-emerald-100 animate-slide-in font-sans">
                 <CheckCircle2 size={12} />
                 <span>{uploadSuccess}</span>
               </div>

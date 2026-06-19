@@ -420,7 +420,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 space-y-4 md:space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-300 space-y-4 md:space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {/* Row 1: Customer Name & Sale Date */}
           <InputField 
