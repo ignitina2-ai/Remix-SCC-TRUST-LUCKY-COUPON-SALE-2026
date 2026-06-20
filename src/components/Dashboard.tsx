@@ -343,10 +343,16 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
           
           <button 
-            onClick={() => setIsShareModalOpen(true)}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
+            disabled={permissions?.canShareReport === false}
+            onClick={() => permissions?.canShareReport !== false && setIsShareModalOpen(true)}
+            className={cn(
+              "hidden md:flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all cursor-pointer shrink-0",
+              permissions?.canShareReport === false
+                ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-65"
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white shadow-md shadow-indigo-600/20"
+            )}
           >
-            <Share2 size={13} className="animate-pulse" />
+            <Share2 size={13} className={permissions?.canShareReport === false ? "" : "animate-pulse"} />
             <span>Share Report</span>
           </button>
         </div>
@@ -483,10 +489,16 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Mobile-only Share Daily Report button placed between Each UPI Receipts and Add New Sale */}
       <div className="block md:hidden pb-4 md:py-0 px-0.5">
         <button 
-          onClick={() => setIsShareModalOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+          disabled={permissions?.canShareReport === false}
+          onClick={() => permissions?.canShareReport !== false && setIsShareModalOpen(true)}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+            permissions?.canShareReport === false
+              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-65"
+              : "bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white shadow-md shadow-indigo-600/20"
+          )}
         >
-          <Share2 size={14} className="animate-pulse" />
+          <Share2 size={14} className={permissions?.canShareReport === false ? "" : "animate-pulse"} />
           <span>Share Report</span>
         </button>
       </div>

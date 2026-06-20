@@ -9,6 +9,7 @@ export interface AllowedUser {
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  canShareReport?: boolean;
   hideIncomeExpense?: boolean;
   hideSecretaryHandover?: boolean;
   addedAt: string;
@@ -20,7 +21,7 @@ interface AdminSettingsProps {
   allowedUsers: AllowedUser[];
   onAddAllowedUser: (email: string, role: AllowedUser['role'], perms: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) => Promise<void>;
   onToggleAllowedUserDisabled: (email: string, currentStatus: AllowedUser['status']) => Promise<void>;
-  onUpdateAllowedUserPermission: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete' | 'hideIncomeExpense' | 'hideSecretaryHandover', val: boolean) => Promise<void>;
+  onUpdateAllowedUserPermission: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete' | 'canShareReport' | 'hideIncomeExpense' | 'hideSecretaryHandover', val: boolean) => Promise<void>;
   setUserToRevoke: (email: string | null) => void;
   showNotification: (type: 'success' | 'error', text: string) => void;
 }
@@ -232,6 +233,7 @@ export function AdminSettings({
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">ADD</span>
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">EDIT</span>
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">DEL</span>
+                    <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">SHARE</span>
                   </div>
                 </td>
                 <td className="px-3 sm:px-4 py-3 text-center">
@@ -333,6 +335,20 @@ export function AdminSettings({
                           )}
                         >
                           DEL
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isPrimary || userObj.role === 'Super Admin'}
+                          onClick={() => onUpdateAllowedUserPermission(userObj.email, 'canShareReport', userObj.canShareReport !== false ? false : true)}
+                          className={cn(
+                            "text-[9px] font-black px-1.5 py-0.5 rounded-lg border cursor-pointer select-none transition-colors",
+                            userObj.canShareReport !== false 
+                              ? "bg-blue-50 text-blue-700 border-blue-100" 
+                              : "bg-slate-50 text-slate-400 border-slate-200"
+                          )}
+                          title={userObj.canShareReport !== false ? "Can download and share reports" : "Restricted from sharing reports"}
+                        >
+                          SHARE
                         </button>
                       </div>
                     </td>

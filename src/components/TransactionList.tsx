@@ -43,6 +43,9 @@ interface TransactionListProps {
     canAdd: boolean;
     canEdit: boolean;
     canDelete: boolean;
+    canShareReport?: boolean;
+    hideIncomeExpense?: boolean;
+    hideSecretaryHandover?: boolean;
   };
 }
 
@@ -611,12 +614,20 @@ const TransactionList: React.FC<TransactionListProps> = ({
                   {/* Action buttons in expanded mode */}
                   <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <button 
+                      disabled={permissions?.canShareReport === false}
                       onClick={() => {
-                        const paymentLabel = customPaymentLabels?.[t.paymentMethod] || DEFAULT_PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod;
-                        shareTransactionReceiptCard(t, paymentLabel);
+                        if (permissions?.canShareReport !== false) {
+                          const paymentLabel = customPaymentLabels?.[t.paymentMethod] || DEFAULT_PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod;
+                          shareTransactionReceiptCard(t, paymentLabel);
+                        }
                       }}
-                      className="flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-[9px] md:text-[10px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all cursor-pointer"
-                      title="Share Receipt Card"
+                      className={cn(
+                        "flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-[9px] md:text-[10px] transition-all",
+                        permissions?.canShareReport === false
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                          : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 cursor-pointer"
+                      )}
+                      title={permissions?.canShareReport === false ? "Restricted from sharing receipt cards" : "Share Receipt Card"}
                     >
                       <Share2 size={10} />
                       Share Card

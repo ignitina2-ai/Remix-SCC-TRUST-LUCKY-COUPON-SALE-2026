@@ -82,6 +82,7 @@ export default function App() {
     canAdd: true,
     canEdit: true,
     canDelete: true,
+    canShareReport: true,
     hideIncomeExpense: false,
     hideSecretaryHandover: false,
   });
@@ -170,6 +171,7 @@ export default function App() {
           canAdd: true,
           canEdit: true,
           canDelete: true,
+          canShareReport: true,
           hideIncomeExpense: false,
           hideSecretaryHandover: false,
         });
@@ -200,6 +202,7 @@ export default function App() {
             canAdd: schema.canAdd !== false,
             canEdit: schema.canEdit !== false,
             canDelete: schema.canDelete === true,
+            canShareReport: schema.canShareReport !== false,
             hideIncomeExpense: !!schema.hideIncomeExpense,
             hideSecretaryHandover: !!schema.hideSecretaryHandover,
           });
@@ -309,6 +312,7 @@ export default function App() {
                 canAdd: currentUserDoc.canAdd !== false,
                 canEdit: currentUserDoc.canEdit !== false,
                 canDelete: currentUserDoc.canDelete === true,
+                canShareReport: currentUserDoc.canShareReport !== false,
                 hideIncomeExpense: !!currentUserDoc.hideIncomeExpense,
                 hideSecretaryHandover: !!currentUserDoc.hideSecretaryHandover,
               });
@@ -452,7 +456,7 @@ export default function App() {
     }
   };
 
-  const handleUpdateAllowedUserPermission = async (email: string, field: 'canAdd' | 'canEdit' | 'canDelete' | 'hideIncomeExpense' | 'hideSecretaryHandover', value: boolean) => {
+  const handleUpdateAllowedUserPermission = async (email: string, field: 'canAdd' | 'canEdit' | 'canDelete' | 'canShareReport' | 'hideIncomeExpense' | 'hideSecretaryHandover', value: boolean) => {
     const emailId = email.toLowerCase().trim();
     try {
       await updateDoc(doc(db, 'allowedUsers', emailId), {
