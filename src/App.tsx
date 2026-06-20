@@ -117,6 +117,11 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const { resolvedLogo } = useActiveResponsiveLogo(appData);
 
+  const notificationsEnabledRef = React.useRef(appData.notificationsEnabled);
+  useEffect(() => {
+    notificationsEnabledRef.current = appData.notificationsEnabled;
+  }, [appData.notificationsEnabled]);
+
   // Synchronize browser favicon and PWA touch icons to the active resolved logo
   useEffect(() => {
     if (resolvedLogo) {
@@ -245,12 +250,35 @@ export default function App() {
         setFirestoreError(null);
       };
 
+      // Flags to avoid showing notifications for existing cache/server items on initial loading
+      let isInitialTransactions = true;
+      let isInitialSponsors = true;
+      let isInitialIncomeExpenses = true;
+      let isInitialHandovers = true;
+
       // 1. Transactions Listener
       const unsubTransactions = onSnapshot(collection(db, 'transactions'), (snap) => {
         const list: Transaction[] = [];
         snap.forEach(doc => {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
+
+        // Trigger remote-addition alerts for real-time multi-device notifications
+        if (!isInitialTransactions && notificationsEnabledRef.current) {
+          snap.docChanges().forEach(change => {
+            if (change.type === 'added') {
+              const docData = change.doc.data() as Transaction;
+              const hasPendingWrites = change.doc.metadata.hasPendingWrites;
+              if (!hasPendingWrites) {
+                sendNotification('New Transaction Added', {
+                  body: `${docData.name} - ₹${docData.totalAmount.toLocaleString('en-IN')}`,
+                });
+              }
+            }
+          });
+        }
+        isInitialTransactions = false;
+
         setAppData(prev => ({ ...prev, transactions: list }));
         clearErrorOnSuccess();
       }, (err) => {
@@ -265,6 +293,22 @@ export default function App() {
         snap.forEach(doc => {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
+
+        if (!isInitialSponsors && notificationsEnabledRef.current) {
+          snap.docChanges().forEach(change => {
+            if (change.type === 'added') {
+              const docData = change.doc.data() as Sponsor;
+              const hasPendingWrites = change.doc.metadata.hasPendingWrites;
+              if (!hasPendingWrites) {
+                sendNotification('New Sponsor Added', {
+                  body: `${docData.name} - ₹${docData.amount.toLocaleString('en-IN')}`,
+                });
+              }
+            }
+          });
+        }
+        isInitialSponsors = false;
+
         setAppData(prev => ({ ...prev, sponsors: list }));
         clearErrorOnSuccess();
       }, (err) => {
@@ -279,6 +323,24 @@ export default function App() {
         snap.forEach(doc => {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
+
+        if (!isInitialIncomeExpenses && notificationsEnabledRef.current) {
+          snap.docChanges().forEach(change => {
+            if (change.type === 'added') {
+              const docData = change.doc.data() as IncomeExpense;
+              const hasPendingWrites = change.doc.metadata.hasPendingWrites;
+              if (!hasPendingWrites) {
+                const typeStr = (docData.type || 'income').toLowerCase();
+                const typeProper = typeStr.charAt(0).toUpperCase() + typeStr.slice(1);
+                sendNotification(`New ${typeProper} Added`, {
+                  body: `${docData.description} - ₹${docData.amount.toLocaleString('en-IN')}`,
+                });
+              }
+            }
+          });
+        }
+        isInitialIncomeExpenses = false;
+
         setAppData(prev => ({ ...prev, incomeExpenses: list }));
         clearErrorOnSuccess();
       }, (err) => {
@@ -293,6 +355,22 @@ export default function App() {
         snap.forEach(doc => {
           list.push({ id: doc.id, ...doc.data() } as any);
         });
+
+        if (!isInitialHandovers && notificationsEnabledRef.current) {
+          snap.docChanges().forEach(change => {
+            if (change.type === 'added') {
+              const docData = change.doc.data() as SecretaryHandover;
+              const hasPendingWrites = change.doc.metadata.hasPendingWrites;
+              if (!hasPendingWrites) {
+                sendNotification('Cash Handed Over', {
+                  body: `${docData.name} - ₹${docData.amount.toLocaleString('en-IN')}`,
+                });
+              }
+            }
+          });
+        }
+        isInitialHandovers = false;
+
         setAppData(prev => ({ ...prev, secretaryHandovers: list }));
         clearErrorOnSuccess();
       }, (err) => {

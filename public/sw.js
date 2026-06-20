@@ -54,12 +54,65 @@ function sendBackgroundNotification(title, body) {
   });
 }
 
+const CACHE_NAME = 'coupon-sale-assets-v2';
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((name) => {
+          if (name !== CACHE_NAME) {
+            return caches.delete(name);
+          }
+        })
+      );
+    }).then(() => clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+
+  // Skip caching our internal APIs, firebase libraries, and Google API websocket pathways
+  if (
+    requestUrl.origin !== self.location.origin ||
+    requestUrl.pathname.startsWith('/api/') ||
+    event.request.url.includes('firestore.googleapis.com') ||
+    event.request.url.includes('googleapis.com')
+  ) {
+    return;
+  }
+
+  // Dynamic Network-First fallback to Cache to secure full offline browser refreshes
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Navigate fallback
+          if (event.request.mode === 'navigate') {
+            return caches.match('/');
+          }
+        });
+      })
+  );
 });
 
 self.addEventListener('push', (event) => {
