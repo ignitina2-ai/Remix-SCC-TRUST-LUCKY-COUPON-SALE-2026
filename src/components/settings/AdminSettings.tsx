@@ -76,40 +76,89 @@ export function AdminSettings({
     }
   };
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
-    <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div id="settings-card-admin" className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 text-left">
           <div className="bg-blue-50 p-2.5 rounded-2xl text-blue-600">
             <Shield size={20} />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-900 leading-tight">Trust Admin Team & Permissions</h3>
-            <p className="text-slate-500 text-xs font-semibold mt-0.5">Control other user emails allowed to log in and update the coupon database</p>
+            <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase leading-tight">Trust Admin Team & Permissions</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Control other user emails allowed to log in and update database</p>
           </div>
         </div>
 
-        {/* Informative info bubble */}
-        <div className="self-start sm:self-center">
-          <span className="text-[10px] font-black uppercase bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
-            Main Admin: ignitina2@gmail.com
+        {/* Toggle Switch */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">
+            {isExpanded ? "Setup open" : "Setup hidden"}
           </span>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={cn(
+              "w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out shrink-0 cursor-pointer shadow-inner",
+              isExpanded ? "bg-blue-600" : "bg-slate-300"
+            )}
+            title={isExpanded ? "Collapse Admin Settings" : "Expand Admin Settings"}
+          >
+            <div className={cn(
+              "w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-md",
+              isExpanded ? "translate-x-6" : "translate-x-0"
+            )} />
+          </button>
         </div>
       </div>
 
-      {isPrimary ? (
-        <form onSubmit={handleSubmit} className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end text-left">
-          <div className="md:col-span-4 space-y-1 col-span-1">
-            <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Email Address to Allow</label>
-            <input
-              type="email"
-              required
-              placeholder="e.g. couponhelper@gmail.com"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-sm transition-colors placeholder:text-slate-400"
-            />
+      {!isExpanded ? (
+        /* Collapsed summary layout to save massive amount of space */
+        <div className="p-4 bg-slate-50/75 hover:bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors animate-in fade-in duration-300 text-left font-sans">
+          <div className="space-y-1.5 w-full sm:w-auto">
+            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Authorized Team Status</h4>
+            <div className="font-mono text-[9px] text-slate-500 font-bold flex flex-wrap gap-1.5">
+              <span className="inline-flex items-center gap-1 bg-blue-50/50 text-blue-700 border border-blue-100/50 px-2.5 py-0.5 rounded-lg">
+                Super Admin: ignitina2@gmail.com (Primary)
+              </span>
+              <span className="inline-flex items-center gap-1 bg-slate-100/60 text-slate-700 border border-slate-200/40 px-2.5 py-0.5 rounded-lg">
+                Helpers listed: {allowedUsers.length}
+              </span>
+            </div>
           </div>
+          <span className="self-end sm:self-center text-[9px] text-slate-500 font-black uppercase tracking-wider bg-slate-200/50 border border-slate-200/20 px-3 py-1.5 rounded-xl">
+            Team Security Live
+          </span>
+        </div>
+      ) : (
+        /* Expanded layout */
+        <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-50 pb-4">
+            <p className="text-slate-500 text-xs font-semibold leading-relaxed text-left max-w-xl">
+              Strict control over which email addresses can log into the system and customize, view, or delete sales ledger documents.
+            </p>
+            {/* Informative info bubble */}
+            <div className="self-start sm:self-center">
+              <span className="text-[10px] font-black uppercase bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                Main Admin: ignitina2@gmail.com
+              </span>
+            </div>
+          </div>
+
+          {isPrimary ? (
+            <form onSubmit={handleSubmit} className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end text-left">
+              <div className="md:col-span-4 space-y-1 col-span-1">
+                <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Email Address to Allow</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. couponhelper@gmail.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-sm transition-colors placeholder:text-slate-400"
+                />
+              </div>
 
           <div className="md:col-span-3 space-y-1 col-span-1">
             <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Default Role</label>
@@ -407,5 +456,7 @@ export function AdminSettings({
         </div>
       </div>
     </div>
+    )}
+    </div>
   );
-}
+};

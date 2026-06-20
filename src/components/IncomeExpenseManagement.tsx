@@ -94,19 +94,36 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
         // If logged in, upload directly to Firebase Cloud Storage
         const fileExtension = file.name.split('.').pop() || 'png';
         const storagePath = `receipts/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExtension}`;
-        const downloadUrl = await uploadFile(file, storagePath);
+        
+        try {
+          const downloadUrl = await uploadFile(file, storagePath);
 
-        // Delete previous receipt image if it was a storage upload
-        if (formData.receiptUrl && formData.receiptUrl.includes('firebasestorage')) {
-          await deleteFileFromStorage(formData.receiptUrl);
+          // Delete previous receipt image if it was a storage upload
+          if (formData.receiptUrl && formData.receiptUrl.includes('firebasestorage')) {
+            await deleteFileFromStorage(formData.receiptUrl);
+          }
+
+          setFormData(prev => ({
+            ...prev,
+            receiptUrl: downloadUrl,
+            receiptName: file.name
+          }));
+          setIsUploadingReceipt(false);
+        } catch (err: any) {
+          console.warn("Cloud Storage receipt upload failed or timed out, falling back to local base64 representation:", err);
+          
+          // Fall back gracefully to direct local base64 reader so user is never blocked by storage bucket rules
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setFormData(prev => ({
+              ...prev,
+              receiptUrl: reader.result as string,
+              receiptName: file.name
+            }));
+            setIsUploadingReceipt(false);
+          };
+          reader.readAsDataURL(file);
         }
-
-        setFormData(prev => ({
-          ...prev,
-          receiptUrl: downloadUrl,
-          receiptName: file.name
-        }));
-        setIsUploadingReceipt(false);
       } else {
         // Local offline base64 fallback
         const reader = new FileReader();
@@ -117,7 +134,7 @@ const IncomeExpenseManagement: React.FC<IncomeExpenseManagementProps> = ({
             receiptName: file.name
           }));
           setIsUploadingReceipt(false);
-        };
+        }
         reader.readAsDataURL(file);
       }
     } catch (err: any) {

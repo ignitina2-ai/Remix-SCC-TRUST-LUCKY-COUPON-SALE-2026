@@ -5,13 +5,20 @@ import { storage } from './firebase';
  * Uploads a file to Firebase Cloud Storage and returns its public URL
  */
 export async function uploadFile(file: File, path: string): Promise<string> {
-  try {
+  const uploadPromise = (async () => {
     const fileRef = ref(storage, path);
     const snapshot = await uploadBytes(fileRef, file);
-    const downloadUrl = await getDownloadURL(snapshot.ref);
-    return downloadUrl;
+    return await getDownloadURL(snapshot.ref);
+  })();
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("Cloud Storage upload timed out after 4 seconds")), 4000)
+  );
+
+  try {
+    return await Promise.race([uploadPromise, timeoutPromise]);
   } catch (err) {
-    console.error("Storage upload failed for path:", path, err);
+    console.error("Storage upload failed or timed out for path:", path, err);
     throw err;
   }
 }

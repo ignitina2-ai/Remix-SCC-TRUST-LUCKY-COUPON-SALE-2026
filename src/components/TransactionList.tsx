@@ -418,16 +418,11 @@ const TransactionList: React.FC<TransactionListProps> = ({
           <p className="text-slate-500 font-semibold text-xs mt-0.5">View and manage all coupon sales</p>
         </div>
         <div className="flex items-center gap-1.5">
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && permissions?.canDelete !== false && (
             <button 
               disabled={permissions?.canDelete === false}
               onClick={() => permissions?.canDelete !== false && setDeleteIds(Array.from(selectedIds))}
-              className={cn(
-                "px-2.5 py-1.5 border rounded-lg md:rounded-xl transition-all font-bold text-[10px] md:text-xs flex items-center gap-1 shadow-sm",
-                permissions?.canDelete === false
-                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50"
-                  : "bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 cursor-pointer"
-              )}
+              className="px-2.5 py-1.5 border border-rose-250 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg md:rounded-xl transition-all font-bold text-[10px] md:text-xs flex items-center gap-1 shadow-sm cursor-pointer"
             >
               <Trash2 size={14} className="md:w-4 md:h-4" />
               <span>Delete ({selectedIds.size})</span>
@@ -521,14 +516,16 @@ const TransactionList: React.FC<TransactionListProps> = ({
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-start gap-2 flex-1">
-                  <div className="mt-1" onClick={(e) => e.stopPropagation()}>
-                    <input 
-                      type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
-                      checked={selectedIds.has(t.id)}
-                      onChange={() => toggleSelect(t.id)}
-                    />
-                  </div>
+                  {permissions?.canDelete !== false && (
+                    <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                      <input 
+                        type="checkbox"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                        checked={selectedIds.has(t.id)}
+                        onChange={() => toggleSelect(t.id)}
+                      />
+                    </div>
+                  )}
                   <div className="bg-blue-50 p-2 rounded-lg md:rounded-xl text-blue-600 ml-0.5 cursor-pointer select-none" onClick={() => toggleExpand(t.id)}>
                     <User size={16} className="md:w-5 md:h-5" />
                   </div>
@@ -647,19 +644,16 @@ const TransactionList: React.FC<TransactionListProps> = ({
                         Edit
                       </button>
                     )}
-                    <button 
-                      disabled={permissions?.canDelete === false}
-                      onClick={() => permissions?.canDelete !== false && setDeleteIds([t.id])}
-                      className={cn(
-                        "flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-[9px] md:text-[10px] transition-all",
-                        permissions?.canDelete === false
-                          ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
-                          : "bg-rose-50 text-rose-600 hover:bg-rose-100 cursor-pointer"
-                      )}
-                    >
-                      <Trash2 size={10} />
-                      Delete
-                    </button>
+                    {permissions?.canDelete !== false && (
+                      <button 
+                        disabled={permissions?.canDelete === false}
+                        onClick={() => permissions?.canDelete !== false && setDeleteIds([t.id])}
+                        className="flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-[9px] md:text-[10px] transition-all bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100/50 cursor-pointer"
+                      >
+                        <Trash2 size={10} />
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
