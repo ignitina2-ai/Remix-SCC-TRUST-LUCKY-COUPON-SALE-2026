@@ -519,6 +519,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           onToggleTreasurer={onToggleTreasurer}
           onEdit={onEditTransaction}
           customPaymentLabels={customPaymentLabels}
+          permissions={permissions}
         />
       </div>
 
