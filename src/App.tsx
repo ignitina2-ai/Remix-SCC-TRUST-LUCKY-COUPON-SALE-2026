@@ -75,6 +75,7 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<AllowedUser[]>([]);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const [firestoreError, setFirestoreError] = useState<string | null>(null);
 
   const [userPermissions, setUserPermissions] = useState({
@@ -113,6 +114,29 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const { resolvedLogo } = useActiveResponsiveLogo(appData);
 
+  // Helper to register active session in firestore
+  const registerActiveSession = async (firebaseUser: any, userEmail: string, userName: string) => {
+    try {
+      let tabSessionId = sessionStorage.getItem('app_session_id');
+      if (!tabSessionId) {
+        tabSessionId = `session_${firebaseUser.uid}_${Date.now()}`;
+        sessionStorage.setItem('app_session_id', tabSessionId);
+      }
+      await setDoc(doc(db, 'activeSessions', tabSessionId), {
+        id: tabSessionId,
+        uid: firebaseUser.uid,
+        email: userEmail,
+        displayName: userName,
+        photoURL: firebaseUser.photoURL || '',
+        lastActive: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Could not register active session:", err);
+    }
+  };
+
   // Authenticated state listener
   useEffect(() => {
     let activeSubscriptions: (() => void)[] = [];
@@ -132,10 +156,11 @@ export default function App() {
 
       // Direct access for the primary administrator
       if (email === 'ignitina2@gmail.com') {
+        const dName = firebaseUser.displayName || 'Primary Administrator';
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
-          displayName: firebaseUser.displayName || 'Primary Administrator',
+          displayName: dName,
           photoURL: firebaseUser.photoURL || '',
           isLocal: false,
         });
@@ -146,6 +171,7 @@ export default function App() {
         });
         setLoading(false);
         setupDbSyncs(true);
+        registerActiveSession(firebaseUser, email, dName);
         return;
       }
 
@@ -157,10 +183,11 @@ export default function App() {
 
         if (snapshot.exists() && snapshot.data()?.status === 'ACTIVE') {
           const schema = snapshot.data() as AllowedUser;
+          const dName = firebaseUser.displayName || schema.role || 'Authorized Helper';
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            displayName: firebaseUser.displayName || 'Authorized Helper',
+            displayName: dName,
             photoURL: firebaseUser.photoURL || '',
             isLocal: false,
             role: schema.role,
@@ -172,6 +199,7 @@ export default function App() {
           });
           setLoading(false);
           setupDbSyncs(false);
+          registerActiveSession(firebaseUser, email, dName);
         } else {
           setLoginError(`Google account ${email} is not listed in the authorized registry helpers list. Please contact ignitina2@gmail.com to request access.`);
           await signOut(auth);
@@ -264,6 +292,22 @@ export default function App() {
       });
       activeSubscriptions.push(unsubAllowedUsers);
 
+      // 5.5 Active Sessions Listener
+      const unsubActiveSessions = onSnapshot(collection(db, 'activeSessions'), (snap) => {
+        const list: any[] = [];
+        snap.forEach(doc => {
+          list.push({ id: doc.id, ...doc.data() });
+        });
+        // Sort sessions by latest active first
+        list.sort((a, b) => new Date(b.lastActive || 0).getTime() - new Date(a.lastActive || 0).getTime());
+        setActiveSessions(list);
+        clearErrorOnSuccess();
+      }, (err) => {
+        console.error("ActiveSessions sync error:", err);
+        setFirestoreError(`Active Sessions: ${err.message || String(err)}`);
+      });
+      activeSubscriptions.push(unsubActiveSessions);
+
       // 6. Global Branding Settings Listener
       const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snap) => {
         if (snap.exists()) {
@@ -312,6 +356,13 @@ export default function App() {
 
   const handleGoogleLogout = async () => {
     try {
+      const tabSessionId = sessionStorage.getItem('app_session_id');
+      if (tabSessionId) {
+        await deleteDoc(doc(db, 'activeSessions', tabSessionId)).catch(err => {
+          console.warn("Failed to delete active session on logout:", err);
+        });
+        sessionStorage.removeItem('app_session_id');
+      }
       await signOut(auth);
       setUser(null);
     } catch (err) {
@@ -878,9 +929,10 @@ export default function App() {
             onDeleteAllowedUser={handleDeleteAllowedUser}
             onToggleAllowedUserDisabled={handleToggleAllowedUserDisabled}
             onUpdateAllowedUserPermission={handleUpdateAllowedUserPermission}
-            onLogout={handleGoogleLogout}
-            onForceSyncLocalToCloud={handleForceSyncLocalToCloud}
-            activeSessions={[]}
+            onGoogleLogin={handleGoogleLogin}
+            onGoogleLogout={handleGoogleLogout}
+            onSyncLocalToCloud={handleForceSyncLocalToCloud}
+            activeSessions={activeSessions}
           />
         );
       default:

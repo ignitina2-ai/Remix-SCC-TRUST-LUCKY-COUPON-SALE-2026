@@ -95,6 +95,22 @@
         "addedBy": { "type": "string", "description": "User who added this account" }
       },
       "required": ["email"]
+    },
+    "ActiveSession": {
+      "title": "ActiveSession",
+      "description": "Information about a user login session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique session ID" },
+        "uid": { "type": "string", "description": "User account ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User profile name" },
+        "photoURL": { "type": "string", "description": "User avatar URL" },
+        "lastActive": { "type": "string", "description": "ISO timestamp of last activity" },
+        "userAgent": { "type": "string", "description": "Browser user agent" },
+        "device": { "type": "string", "description": "Mobile or Desktop" }
+      },
+      "required": ["id", "uid", "email", "lastActive"]
     }
   },
   "firestore": {
@@ -121,6 +137,10 @@
     "/settings/{settingsId}": {
       "schema": "AppSettings",
       "description": "App configuration"
+    },
+    "/activeSessions/{sessionId}": {
+      "schema": "ActiveSession",
+      "description": "Active user sessions currently logged in"
     }
   }
 }

@@ -42,6 +42,11 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // Active Sessions
+    match /activeSessions/{sessionId} {
+      allow read, write: if true;
+    }
+
     // Test connection
     match /test/{testId} {
       allow read, write: if isAuthenticated();

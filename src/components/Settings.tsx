@@ -16,6 +16,7 @@ import { LogoSettings } from './settings/LogoSettings';
 import { BackupSettings } from './settings/BackupSettings';
 import { PaymentSettings } from './settings/PaymentSettings';
 import { AdminSettings, AllowedUser } from './settings/AdminSettings';
+import { ActiveSessions } from './settings/ActiveSessions';
 import { DangerSettings } from './settings/DangerSettings';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -292,6 +293,15 @@ const Settings: React.FC<SettingsProps> = ({
             setUserToRevoke={setUserToRevoke}
             showNotification={showNotification}
           />
+
+          {/* Active Logged-in Sessions List */}
+          {user && !user.isLocal && (
+            <ActiveSessions 
+              activeSessions={activeSessions}
+              currentUser={user}
+              showNotification={showNotification}
+            />
+          )}
         </div>
       </div>
 
