@@ -117,6 +117,20 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const { resolvedLogo } = useActiveResponsiveLogo(appData);
 
+  // Synchronize browser favicon and PWA touch icons to the active resolved logo
+  useEffect(() => {
+    if (resolvedLogo) {
+      const iconLink = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
+      if (iconLink) {
+        iconLink.href = resolvedLogo;
+      }
+      const appleTouchLink = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement;
+      if (appleTouchLink) {
+        appleTouchLink.href = resolvedLogo;
+      }
+    }
+  }, [resolvedLogo]);
+
   // Helper to register active session in firestore
   const registerActiveSession = async (firebaseUser: any, userEmail: string, userName: string) => {
     try {

@@ -12,8 +12,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Coupon Sale Alert';
   const options = {
     body: data.body || 'You have a new notification!',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/splash/mobile.jpg',
+    badge: '/splash/mobile.jpg',
     ...data.options
   };
 
