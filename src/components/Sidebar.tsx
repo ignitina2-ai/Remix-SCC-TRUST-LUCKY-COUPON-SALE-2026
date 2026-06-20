@@ -24,9 +24,25 @@ interface SidebarProps {
   user?: any;
   onLogout?: () => void;
   isPrimaryAdmin?: boolean;
+  permissions?: {
+    canAdd: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    hideIncomeExpense?: boolean;
+    hideSecretaryHandover?: boolean;
+  };
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, user, onLogout, isPrimaryAdmin = false }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  activeTab, 
+  setActiveTab, 
+  isOpen, 
+  setIsOpen, 
+  user, 
+  onLogout, 
+  isPrimaryAdmin = false,
+  permissions,
+}) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', label: 'Transaction History', icon: History },
@@ -35,7 +51,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'secretary-handover', label: 'Handover to Secretary', icon: Users },
     { id: 'sponsors', label: 'Prize Sponsors', icon: Trophy },
     { id: 'settings', label: 'Settings & Backup', icon: SettingsIcon },
-  ];
+  ].filter((item) => {
+    if (item.id === 'income-expense' && permissions?.hideIncomeExpense) {
+      return false;
+    }
+    if (item.id === 'secretary-handover' && permissions?.hideSecretaryHandover) {
+      return false;
+    }
+    if (item.id === 'settings' && !isPrimaryAdmin) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <>

@@ -9,6 +9,8 @@ export interface AllowedUser {
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  hideIncomeExpense?: boolean;
+  hideSecretaryHandover?: boolean;
   addedAt: string;
   addedBy: string;
 }
@@ -18,7 +20,7 @@ interface AdminSettingsProps {
   allowedUsers: AllowedUser[];
   onAddAllowedUser: (email: string, role: AllowedUser['role'], perms: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) => Promise<void>;
   onToggleAllowedUserDisabled: (email: string, currentStatus: AllowedUser['status']) => Promise<void>;
-  onUpdateAllowedUserPermission: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', val: boolean) => Promise<void>;
+  onUpdateAllowedUserPermission: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete' | 'hideIncomeExpense' | 'hideSecretaryHandover', val: boolean) => Promise<void>;
   setUserToRevoke: (email: string | null) => void;
   showNotification: (type: 'success' | 'error', text: string) => void;
 }
@@ -37,8 +39,8 @@ export function AdminSettings({
   const [perms, setPerms] = useState({ canAdd: true, canEdit: true, canDelete: false });
   const [isAdding, setIsAdding] = useState(false);
 
-  // Since the admin setting page is now allowed for all active authorized users, we set isPrimary to true
-  const isPrimary = true;
+  // Strict check to ensure only the primary administrator has full edit and administrative controls over parish helpers
+  const isPrimary = user?.email?.toLowerCase().trim() === 'ignitina2@gmail.com';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,6 +203,7 @@ export function AdminSettings({
                 <th className="px-3 sm:px-4 py-3">Assigned Role</th>
                 <th className="px-3 sm:px-4 py-3">Login Status</th>
                 <th className="px-3 sm:px-4 py-3 text-center">Permitted Actions</th>
+                <th className="px-3 sm:px-4 py-3 text-center">Tab Visibility Controls</th>
                 {isPrimary && <th className="px-3 sm:px-4 py-3 text-center">Revoke Access</th>}
               </tr>
             </thead>
@@ -225,18 +228,23 @@ export function AdminSettings({
                   </span>
                 </td>
                 <td className="px-3 sm:px-4 py-3 text-center">
-                  <div className="inline-flex gap-1">
+                  <div className="inline-flex gap-1 justify-center">
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">ADD</span>
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">EDIT</span>
                     <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">DEL</span>
                   </div>
+                </td>
+                <td className="px-3 sm:px-4 py-3 text-center">
+                  <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md">
+                    ALL TABS ACTIVE
+                  </span>
                 </td>
                 {isPrimary && <td className="px-3 sm:px-4 py-3 text-center text-slate-400 font-bold text-[10px]">—</td>}
               </tr>
 
               {allowedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={isPrimary ? 5 : 4} className="px-3 sm:px-4 py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={isPrimary ? 6 : 5} className="px-3 sm:px-4 py-12 text-center text-slate-400 font-medium">
                     No secondary administrators are registered yet. All logged-in Google users besides the primary owner will be blocked until listed above!
                   </td>
                 </tr>
@@ -325,6 +333,41 @@ export function AdminSettings({
                           )}
                         >
                           DEL
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-3 sm:px-4 py-3 text-center">
+                      <div className="flex gap-1.5 justify-center items-center">
+                        <button
+                          type="button"
+                          disabled={!isPrimary}
+                          onClick={() => onUpdateAllowedUserPermission(userObj.email, 'hideIncomeExpense', !userObj.hideIncomeExpense)}
+                          className={cn(
+                            "text-[9px] font-black px-2 py-1 rounded-lg border cursor-pointer select-none transition-colors duration-150 flex items-center gap-1",
+                            userObj.hideIncomeExpense 
+                              ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" 
+                              : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                          )}
+                          title={userObj.hideIncomeExpense ? "Income & Expense tab is HIDDEN" : "Income & Expense tab is VISIBLE"}
+                        >
+                          <span className={cn("w-1 h-1 rounded-full", userObj.hideIncomeExpense ? "bg-rose-500" : "bg-emerald-500")} />
+                          {userObj.hideIncomeExpense ? "INC/EXP HIDDEN" : "INC/EXP VISIBLE"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!isPrimary}
+                          onClick={() => onUpdateAllowedUserPermission(userObj.email, 'hideSecretaryHandover', !userObj.hideSecretaryHandover)}
+                          className={cn(
+                            "text-[9px] font-black px-2 py-1 rounded-lg border cursor-pointer select-none transition-colors duration-150 flex items-center gap-1",
+                            userObj.hideSecretaryHandover 
+                              ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" 
+                              : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                          )}
+                          title={userObj.hideSecretaryHandover ? "Handover tab is HIDDEN" : "Handover tab is VISIBLE"}
+                        >
+                          <span className={cn("w-1 h-1 rounded-full", userObj.hideSecretaryHandover ? "bg-rose-500" : "bg-emerald-500")} />
+                          {userObj.hideSecretaryHandover ? "HANDOVER HIDDEN" : "HANDOVER VISIBLE"}
                         </button>
                       </div>
                     </td>

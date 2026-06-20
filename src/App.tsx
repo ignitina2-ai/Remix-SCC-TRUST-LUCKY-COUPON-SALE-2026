@@ -82,6 +82,8 @@ export default function App() {
     canAdd: true,
     canEdit: true,
     canDelete: true,
+    hideIncomeExpense: false,
+    hideSecretaryHandover: false,
   });
 
   const isPrimaryAdmin = user?.email?.toLowerCase() === 'ignitina2@gmail.com';
@@ -168,6 +170,8 @@ export default function App() {
           canAdd: true,
           canEdit: true,
           canDelete: true,
+          hideIncomeExpense: false,
+          hideSecretaryHandover: false,
         });
         setLoading(false);
         setupDbSyncs(true);
@@ -196,6 +200,8 @@ export default function App() {
             canAdd: schema.canAdd !== false,
             canEdit: schema.canEdit !== false,
             canDelete: schema.canDelete === true,
+            hideIncomeExpense: !!schema.hideIncomeExpense,
+            hideSecretaryHandover: !!schema.hideSecretaryHandover,
           });
           setLoading(false);
           setupDbSyncs(false);
@@ -281,10 +287,43 @@ export default function App() {
       // 5. Whitelisted Users Admin Listener
       const unsubAllowedUsers = onSnapshot(collection(db, 'allowedUsers'), (snap) => {
         const list: AllowedUser[] = [];
+        const curUserEmail = auth.currentUser ? auth.currentUser.email?.toLowerCase().trim() : '';
+        let currentUserFound = false;
+        let currentUserDoc: AllowedUser | null = null;
+
         snap.forEach(doc => {
-          list.push({ email: doc.id, ...doc.data() } as any);
+          const u = { email: doc.id, ...doc.data() } as any;
+          list.push(u);
+          if (u.email?.toLowerCase().trim() === curUserEmail) {
+            currentUserFound = true;
+            currentUserDoc = u;
+          }
         });
         setAllowedUsers(list);
+
+        // Dynamically update logged in helper sub-user permissions if modified in real-time
+        if (curUserEmail && curUserEmail !== 'ignitina2@gmail.com') {
+          if (currentUserFound && currentUserDoc) {
+            if (currentUserDoc.status === 'ACTIVE') {
+              setUserPermissions({
+                canAdd: currentUserDoc.canAdd !== false,
+                canEdit: currentUserDoc.canEdit !== false,
+                canDelete: currentUserDoc.canDelete === true,
+                hideIncomeExpense: !!currentUserDoc.hideIncomeExpense,
+                hideSecretaryHandover: !!currentUserDoc.hideSecretaryHandover,
+              });
+            } else {
+              setLoginError(`Your assistant account status has been changed to DISABLED. Please contact ignitina2@gmail.com to restore access.`);
+              signOut(auth);
+              setUser(null);
+            }
+          } else {
+            setLoginError(`Your account has been removed from the authorized whitelist registry. Please contact ignitina2@gmail.com.`);
+            signOut(auth);
+            setUser(null);
+          }
+        }
+
         clearErrorOnSuccess();
       }, (err) => {
         console.error("AllowedUsers sync error:", err);
@@ -413,7 +452,7 @@ export default function App() {
     }
   };
 
-  const handleUpdateAllowedUserPermission = async (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', value: boolean) => {
+  const handleUpdateAllowedUserPermission = async (email: string, field: 'canAdd' | 'canEdit' | 'canDelete' | 'hideIncomeExpense' | 'hideSecretaryHandover', value: boolean) => {
     const emailId = email.toLowerCase().trim();
     try {
       await updateDoc(doc(db, 'allowedUsers', emailId), {
@@ -500,6 +539,10 @@ export default function App() {
 
   // 100% Secure cloud synchronised operations writing to multi-tab cache
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ചേർക്കാൻ (Add) അനുവാദമില്ല! (You do not have permission to add transactions.)");
+      return;
+    }
     const transactionId = generateSafeId();
     const docData: Transaction = {
       ...transaction,
@@ -520,6 +563,10 @@ export default function App() {
   };
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    if (!userPermissions.canEdit) {
+      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല! (You do not have permission to edit transactions.)");
+      return;
+    }
     try {
       await updateDoc(doc(db, 'transactions', id), cleanUndefined(updates));
     } catch (err) {
@@ -528,6 +575,10 @@ export default function App() {
   };
 
   const deleteTransaction = async (ids: string[]) => {
+    if (!userPermissions.canDelete) {
+      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ഇല്ലാതാക്കാൻ (Delete) അനുവാദമില്ല! (You do not have permission to delete Transactions.)");
+      return;
+    }
     try {
       for (const id of ids) {
         await deleteDoc(doc(db, 'transactions', id));
@@ -538,6 +589,10 @@ export default function App() {
   };
 
   const toggleTreasurer = async (id: string) => {
+    if (!userPermissions.canEdit) {
+      setFirestoreError("നിങ്ങൾക്ക് ട്രഷറർ ഫീൽഡ് മാറ്റാൻ അനുവാദമില്ല! (You do not have permission to edit transactions.)");
+      return;
+    }
     const tx = appData.transactions.find(t => t.id === id);
     if (!tx) return;
 
@@ -555,6 +610,10 @@ export default function App() {
   };
 
   const addSponsor = async (sponsor: Omit<Sponsor, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      setFirestoreError("നിങ്ങൾക്ക് സ്പോൺസർ ചേർക്കാൻ അനുവാദമില്ല! (You do not have permission to add sponsors.)");
+      return;
+    }
     const sponsorId = generateSafeId();
     const docData: Sponsor = {
       ...sponsor,
@@ -575,6 +634,10 @@ export default function App() {
   };
 
   const updateSponsor = async (id: string, updates: Partial<Sponsor>) => {
+    if (!userPermissions.canEdit) {
+      setFirestoreError("നിങ്ങൾക്ക് സ്പോൺസർ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല! (You do not have permission to edit sponsors.)");
+      return;
+    }
     const oldSponsor = appData.sponsors.find(s => s.id === id);
     try {
       await updateDoc(doc(db, 'sponsors', id), cleanUndefined(updates));
@@ -590,6 +653,10 @@ export default function App() {
   };
 
   const deleteSponsor = async (id: string) => {
+    if (!userPermissions.canDelete) {
+      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ഇല്ലാതാക്കാൻ (Delete) അനുവാദമില്ല! (You do not have permission to delete Sponsors.)");
+      return;
+    }
     try {
       await deleteDoc(doc(db, 'sponsors', id));
     } catch (err) {
@@ -598,6 +665,10 @@ export default function App() {
   };
 
   const addIncomeExpense = async (entry: Omit<IncomeExpense, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      setFirestoreError("നിങ്ങൾക്ക് വരവ് ചിലവ് ചേർക്കാൻ അനുവാദമില്ല! (You do not have permission to add income/expense records.)");
+      return;
+    }
     const entryId = generateSafeId();
     const docData: IncomeExpense = {
       ...entry,
@@ -618,6 +689,10 @@ export default function App() {
   };
 
   const updateIncomeExpense = async (id: string, updates: Partial<IncomeExpense>) => {
+    if (!userPermissions.canEdit) {
+      setFirestoreError("നിങ്ങൾക്ക് വരവ് ചിലവ് എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല! (You do not have permission to edit income/expense records.)");
+      return;
+    }
     try {
       await updateDoc(doc(db, 'incomeExpenses', id), cleanUndefined(updates));
     } catch (err) {
@@ -626,6 +701,10 @@ export default function App() {
   };
 
   const deleteIncomeExpense = async (ids: string[]) => {
+    if (!userPermissions.canDelete) {
+      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ഇല്ലാതാക്കാൻ (Delete) അനുവാദമില്ല! (You do not have permission to delete Income/Expense records.)");
+      return;
+    }
     try {
       for (const id of ids) {
         await deleteDoc(doc(db, 'incomeExpenses', id));
@@ -636,6 +715,10 @@ export default function App() {
   };
 
   const addSecretaryHandover = async (handover: Omit<SecretaryHandover, 'id'>) => {
+    if (!userPermissions.canAdd) {
+      setFirestoreError("നിങ്ങൾക്ക് ഹാൻഡ്ഓവർ ചേർക്കാൻ അനുവാദമില്ല! (You do not have permission to add secretary handover records.)");
+      return;
+    }
     const handoverId = generateSafeId();
     const docData: SecretaryHandover = {
       ...handover,
@@ -656,6 +739,10 @@ export default function App() {
   };
 
   const updateSecretaryHandover = async (id: string, updates: Partial<SecretaryHandover>) => {
+    if (!userPermissions.canEdit) {
+      setFirestoreError("നിങ്ങൾക്ക് ഹാൻഡ്ഓവർ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല! (You do not have permission to edit secretary handover records.)");
+      return;
+    }
     try {
       await updateDoc(doc(db, 'secretaryHandovers', id), cleanUndefined(updates));
     } catch (err) {
@@ -664,6 +751,10 @@ export default function App() {
   };
 
   const deleteSecretaryHandover = async (ids: string[]) => {
+    if (!userPermissions.canDelete) {
+      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ഇല്ലാതാക്കാൻ (Delete) അനുവാദമില്ല! (You do not have permission to delete Secretary Handover records.)");
+      return;
+    }
     try {
       for (const id of ids) {
         await deleteDoc(doc(db, 'secretaryHandovers', id));
@@ -888,6 +979,22 @@ export default function App() {
           />
         );
       case 'income-expense':
+        if (userPermissions.hideIncomeExpense) {
+          return (
+            <div className="p-8 text-center max-w-sm mx-auto mt-20 bg-white border border-slate-150 rounded-3xl shadow-lg shadow-slate-100/50 space-y-4 animate-in fade-in-50 slide-in-from-bottom-5 duration-300">
+              <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                <AlertCircle size={22} className="animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight font-sans">ലോഗിൻ തടഞ്ഞിരിക്കുന്നു (Access Denied)</h2>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider leading-relaxed">
+                  ഈ പേജ് കാണാൻ നിങ്ങൾക്ക് അനുവാദമില്ല.
+                  <span className="block mt-1 font-semibold text-xs border border-rose-100 bg-rose-50/30 py-1.5 px-3 rounded-xl normal-case text-rose-700 font-sans">You do not have permission to view the Income & Expense tab. Only your main admin can allow this.</span>
+                </p>
+              </div>
+            </div>
+          );
+        }
         return (
           <IncomeExpenseManagement 
             entries={appData.incomeExpenses}
@@ -898,6 +1005,22 @@ export default function App() {
           />
         );
       case 'secretary-handover':
+        if (userPermissions.hideSecretaryHandover) {
+          return (
+            <div className="p-8 text-center max-w-sm mx-auto mt-20 bg-white border border-slate-150 rounded-3xl shadow-lg shadow-slate-100/50 space-y-4 animate-in fade-in-50 slide-in-from-bottom-5 duration-300">
+              <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                <AlertCircle size={22} className="animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight font-sans">ലോഗിൻ തടഞ്ഞിരിക്കുന്നു (Access Denied)</h2>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider leading-relaxed">
+                  ഈ പേജ് കാണാൻ നിങ്ങൾക്ക് അനുവാദമില്ല.
+                  <span className="block mt-1 font-semibold text-xs border border-rose-100 bg-rose-50/30 py-1.5 px-3 rounded-xl normal-case text-rose-700 font-sans">You do not have permission to view the Secretary Handover tab. Only your main admin can allow this.</span>
+                </p>
+              </div>
+            </div>
+          );
+        }
         return (
           <SecretaryHandoverManagement 
             handovers={appData.secretaryHandovers}
@@ -911,6 +1034,22 @@ export default function App() {
           />
         );
       case 'settings':
+        if (!isPrimaryAdmin) {
+          return (
+            <div className="p-8 text-center max-w-sm mx-auto mt-20 bg-white border border-slate-150 rounded-3xl shadow-lg shadow-slate-100/50 space-y-4 animate-in fade-in-50 slide-in-from-bottom-5 duration-300">
+              <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                <AlertCircle size={22} className="animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight font-sans">ലോഗിൻ തടഞ്ഞിരിക്കുന്നു (Access Denied)</h2>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider leading-relaxed">
+                  സെറ്റിംഗ്സ് കാണാൻ നിങ്ങൾക്ക് അനുവാദമില്ല.
+                  <span className="block mt-1 font-semibold text-xs border border-rose-100 bg-rose-50/30 py-1.5 px-3 rounded-xl normal-case text-rose-700 font-sans">Only the primary developer main administrator can access settings and backup controls.</span>
+                </p>
+              </div>
+            </div>
+          );
+        }
         return (
           <Settings 
             appData={appData}
@@ -1014,6 +1153,7 @@ export default function App() {
         setIsOpen={setIsSidebarOpen} 
         user={user}
         isPrimaryAdmin={isPrimaryAdmin}
+        permissions={userPermissions}
         onLogout={handleGoogleLogout}
       />
 

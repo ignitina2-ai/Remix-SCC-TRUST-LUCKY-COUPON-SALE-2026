@@ -36,7 +36,7 @@ interface SettingsProps {
   onAddAllowedUser?: (email: string, role: AllowedUser['role'], perms: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) => Promise<void>;
   onDeleteAllowedUser?: (email: string) => Promise<void>;
   onToggleAllowedUserDisabled?: (email: string, currentStatus: AllowedUser['status']) => Promise<void>;
-  onUpdateAllowedUserPermission?: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete', value: boolean) => Promise<void>;
+  onUpdateAllowedUserPermission?: (email: string, field: 'canAdd' | 'canEdit' | 'canDelete' | 'hideIncomeExpense' | 'hideSecretaryHandover', value: boolean) => Promise<void>;
   activeSessions?: any[];
   onGoogleLogin?: () => Promise<void>;
   onGoogleLogout?: () => Promise<void>;

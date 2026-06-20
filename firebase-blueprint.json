@@ -91,6 +91,13 @@
       "type": "object",
       "properties": {
         "email": { "type": "string", "description": "Email address of the allowed user" },
+        "role": { "type": "string", "description": "User role: Super Admin, Helper Admin, Secretary" },
+        "status": { "type": "string", "description": "User status: ACTIVE or DISABLED" },
+        "canAdd": { "type": "boolean", "description": "Whether the user can add database records" },
+        "canEdit": { "type": "boolean", "description": "Whether the user can edit database records" },
+        "canDelete": { "type": "boolean", "description": "Whether the user can delete database records" },
+        "hideIncomeExpense": { "type": "boolean", "description": "Whether the Income & Expense tab is entirely hidden for this user" },
+        "hideSecretaryHandover": { "type": "boolean", "description": "Whether the Secretary Handover tab is entirely hidden for this user" },
         "addedAt": { "type": "string", "description": "ISO timestamp when added" },
         "addedBy": { "type": "string", "description": "User who added this account" }
       },
