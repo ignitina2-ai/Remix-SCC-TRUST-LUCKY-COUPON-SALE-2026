@@ -99,9 +99,10 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn("Firestore status: Local-only buffering active (offline cache enabled).");
+    if (error instanceof Error && (error.message.includes('offline') || error.message.includes('unavailable'))) {
+      console.warn("Firestore status: Local-only buffering active (offline cache enabled) or server temporarily unreachable.");
     }
   }
 }
-testConnection();
+// Delay slightly to let the background connection establish before forcing server-side validation
+setTimeout(testConnection, 2000);
