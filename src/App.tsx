@@ -1029,13 +1029,14 @@ export default function App() {
             transactions={appData.transactions} 
             onDelete={deleteTransaction}
             onToggleTreasurer={toggleTreasurer}
+            onAddTransaction={addTransaction}
             onEdit={(t) => {
               setEditingTransaction(t);
               setActiveTab('dashboard');
               setTimeout(() => {
                 const element = document.getElementById('dashboard-add-sale-form-container');
                 if (element) {
-                  element.scrollIntoView({ behavior: 'smooth' });
+                   element.scrollIntoView({ behavior: 'smooth' });
                 }
               }, 100);
             }}

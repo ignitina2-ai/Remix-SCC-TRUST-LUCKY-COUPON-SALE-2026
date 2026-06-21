@@ -319,30 +319,44 @@ export function AdminSettings({
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-3">
-                      {isPrimary ? (
-                        <button
-                          type="button"
-                          onClick={() => onToggleAllowedUserDisabled(userObj.email, userObj.status)}
-                          className={cn(
-                            "cursor-pointer select-none text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center gap-1.5 transition-colors",
-                            userObj.status === 'ACTIVE'
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-100"
-                              : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-100"
-                          )}
-                          title="Click to toggle status"
-                        >
-                          <span className={cn("w-1.5 h-1.5 rounded-full", userObj.status === 'ACTIVE' ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
-                          {userObj.status}
-                        </button>
-                      ) : (
+                      <div className="flex items-center gap-2 select-none">
+                        {isPrimary ? (
+                          <button
+                            type="button"
+                            onClick={() => onToggleAllowedUserDisabled(userObj.email, userObj.status)}
+                            className={cn(
+                              "w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out shrink-0 cursor-pointer shadow-inner relative flex items-center",
+                              userObj.status === 'ACTIVE' ? "bg-emerald-500" : "bg-rose-500"
+                            )}
+                            title={userObj.status === 'ACTIVE' ? "Deactivate helper email id login access" : "Activate helper email id login access"}
+                          >
+                            <div className={cn(
+                              "w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-sm transform",
+                              userObj.status === 'ACTIVE' ? "translate-x-5" : "translate-x-0"
+                            )} />
+                          </button>
+                        ) : (
+                          <div
+                            className={cn(
+                              "w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out shrink-0 shadow-inner relative flex items-center opacity-50",
+                              userObj.status === 'ACTIVE' ? "bg-emerald-500" : "bg-rose-500"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-sm transform",
+                              userObj.status === 'ACTIVE' ? "translate-x-5" : "translate-x-0"
+                            )} />
+                          </div>
+                        )}
                         <span className={cn(
-                          "inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                          userObj.status === 'ACTIVE' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-100 text-slate-500 border-slate-200"
+                          "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                          userObj.status === 'ACTIVE'
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-150"
+                            : "bg-rose-50 text-rose-700 border-rose-150"
                         )}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full", userObj.status === 'ACTIVE' ? "bg-emerald-500" : "bg-slate-400")} />
-                          {userObj.status}
+                          {userObj.status === 'ACTIVE' ? "ENABLED" : "DISABLED"}
                         </span>
-                      )}
+                      </div>
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center items-center">

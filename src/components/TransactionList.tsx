@@ -22,7 +22,10 @@ import {
   Eye,
   EyeOff,
   Share2,
-  Printer
+  Printer,
+  Upload,
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { shareTransactionReceiptCard } from '../utils/shareUtils';
 import { Transaction, PaymentMethod, DEFAULT_PAYMENT_LABELS } from '@/types';
@@ -38,6 +41,7 @@ interface TransactionListProps {
   onDelete: (ids: string[]) => void;
   onToggleTreasurer: (id: string) => void;
   onEdit?: (transaction: Transaction) => void;
+  onAddTransaction?: (transaction: Omit<Transaction, 'id'>) => Promise<void> | void;
   customPaymentLabels?: Record<PaymentMethod, string>;
   permissions?: {
     canAdd: boolean;
@@ -54,6 +58,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
   onDelete, 
   onToggleTreasurer,
   onEdit,
+  onAddTransaction,
   customPaymentLabels,
   permissions
 }) => {
@@ -65,6 +70,16 @@ const TransactionList: React.FC<TransactionListProps> = ({
   const [isCollapsedMode, setIsCollapsedMode] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  // CSV Import States
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [parsedTransactions, setParsedTransactions] = useState<Omit<Transaction, 'id'>[]>([]);
+  const [parsingErrors, setParsingErrors] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const toggleExpand = (id: string) => {
     const newSet = new Set(expandedIds);
     if (newSet.has(id)) {
@@ -73,6 +88,271 @@ const TransactionList: React.FC<TransactionListProps> = ({
       newSet.add(id);
     }
     setExpandedIds(newSet);
+  };
+
+  const downloadSampleTemplate = () => {
+    const headers = [
+      'Date',
+      'Sponsor / Buyer',
+      'Mobile',
+      'Location',
+      'Books',
+      'Coupons',
+      'Book No',
+      'Coupon No',
+      'Amount',
+      'Payment Method',
+      'Treasurer'
+    ];
+    const sampleRow = [
+      format(new Date(), 'dd.MM.yyyy'),
+      'Mathew Joseph',
+      '9876543210',
+      'Kadavanthra',
+      '1',
+      '0',
+      'B-108',
+      '',
+      '2500',
+      'CASH',
+      'NO'
+    ];
+    const sampleRow2 = [
+      format(new Date(), 'dd.MM.yyyy'),
+      'Anjali Nair',
+      '9447123456',
+      'Vyttila',
+      '0',
+      '5',
+      '',
+      '1520-1524',
+      '500',
+      'CREDIT',
+      'NO'
+    ];
+    const csvContent = Papa.unparse({
+      fields: headers,
+      data: [sampleRow, sampleRow2]
+    });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'scc_trust_transactions_import_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const mapHeadersAndParse = (row: Record<string, any>, index: number): Omit<Transaction, 'id'> | null => {
+    // Normalize row keys (lowercase, trim, remove spaces/underscores)
+    const normalizedRow: Record<string, any> = {};
+    for (const key of Object.keys(row)) {
+      const normKey = key.toLowerCase().replace(/[\s\-_]/g, '');
+      normalizedRow[normKey] = row[key];
+    }
+
+    // Find Name field
+    const name = normalizedRow['name'] || normalizedRow['sponsors/buyer'] || normalizedRow['buyer'] || normalizedRow['sponsor'] || normalizedRow['sponsor/buyer'] || row['Sponsor / Buyer'] || row['Name'] || '';
+    if (!name || String(name).trim() === '') {
+      return null; // Skip invalid row (missing name)
+    }
+
+    // Date
+    let dateVal = normalizedRow['date'] || normalizedRow['datetime'] || row['Date'] || '';
+    let dateStr = '';
+    if (dateVal) {
+      const rawStr = String(dateVal).trim();
+      const dotDmyMatch = rawStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      const slashDmyMatch = rawStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (dotDmyMatch) {
+        const [_, d, m, y] = dotDmyMatch;
+        dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      } else if (slashDmyMatch) {
+        const [_, d, m, y] = slashDmyMatch;
+        dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      } else {
+        try {
+          const parsedDate = new Date(rawStr);
+          if (!isNaN(parsedDate.getTime())) {
+            dateStr = parsedDate.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          // ignore parsing error, will fall back
+        }
+      }
+    }
+    if (!dateStr) {
+      dateStr = format(new Date(), 'yyyy-MM-dd');
+    }
+
+    // Location/Area
+    const area = normalizedRow['area'] || normalizedRow['location'] || normalizedRow['place'] || row['Location'] || row['Area'] || 'N/A';
+
+    // Mobile/Phone
+    const phone = normalizedRow['phone'] || normalizedRow['mobile'] || normalizedRow['mobilenumber'] || normalizedRow['phonenumber'] || row['Mobile'] || row['Phone'] || '';
+
+    // Books / Coupons
+    const books = parseInt(normalizedRow['books'] || normalizedRow['bookscount'] || row['Books'] || '0', 10) || 0;
+    const coupons = parseInt(normalizedRow['coupons'] || normalizedRow['couponscount'] || row['Coupons'] || '0', 10) || 0;
+
+    // Book & Coupon numbers
+    const bookNumber = normalizedRow['booknumber'] || normalizedRow['bookno'] || normalizedRow['book_number'] || row['Book No'] || row['BookNumber'] || '';
+    const couponNumber = normalizedRow['couponnumber'] || normalizedRow['couponno'] || normalizedRow['coupon_number'] || row['Coupon No'] || row['CouponNumber'] || '';
+
+    // Payment Method
+    let paymentMethod = String(normalizedRow['paymentmethod'] || normalizedRow['payment_method'] || normalizedRow['method'] || row['Payment Method'] || row['PaymentMethod'] || 'CASH').toUpperCase().trim();
+    if (paymentMethod.includes('CASH')) {
+      paymentMethod = 'CASH';
+    } else if (paymentMethod.includes('CREDIT')) {
+      paymentMethod = 'CREDIT';
+    } else if (paymentMethod.includes('SOFIA')) {
+      paymentMethod = 'SOFIA GPAY';
+    } else if (paymentMethod.includes('JOHNY')) {
+      paymentMethod = 'JOHNY GPAY';
+    } else if (paymentMethod.includes('TRUST')) {
+      paymentMethod = 'TRUST GPAY';
+    } else if (paymentMethod.includes('GPAY') || paymentMethod.includes('UPI')) {
+      paymentMethod = 'OTHER_UPI';
+    } else {
+      paymentMethod = 'CASH';
+    }
+
+    // PaidToTreasurer
+    const paidToTrStr = String(normalizedRow['paidtotreasurer'] || normalizedRow['paid_to_treasurer'] || normalizedRow['treasurer'] || normalizedRow['handedover'] || row['Treasurer'] || row['PaidToTreasurer'] || 'NO').toUpperCase().trim();
+    const paidToTreasurer = ['YES', 'TRUE', '1', 'PAID'].includes(paidToTrStr);
+
+    // Total Amount
+    let totalAmount = parseInt(normalizedRow['totalamount'] || normalizedRow['amount'] || normalizedRow['value'] || row['Amount'] || row['TotalAmount'] || '', 10);
+    if (isNaN(totalAmount)) {
+      totalAmount = (books * 25 + coupons) * 100;
+    }
+
+    // Paid, Credit calculation
+    let paidAmount = parseInt(normalizedRow['paidamount'] || normalizedRow['paid'] || row['PaidAmount'] || '', 10);
+    let creditAmount = parseInt(normalizedRow['creditamount'] || normalizedRow['credit'] || normalizedRow['balance'] || row['CreditAmount'] || '', 10);
+
+    if (paymentMethod === 'CREDIT') {
+      if (isNaN(paidAmount)) paidAmount = 0;
+      if (isNaN(creditAmount)) creditAmount = totalAmount - paidAmount;
+    } else {
+      if (isNaN(paidAmount)) paidAmount = totalAmount;
+      if (isNaN(creditAmount)) creditAmount = 0;
+    }
+
+    return {
+      date: dateStr,
+      name: String(name).trim(),
+      phone: String(phone).trim() ? String(phone).trim() : undefined,
+      area: String(area).trim(),
+      books,
+      coupons,
+      bookNumber: String(bookNumber).trim() ? String(bookNumber).trim() : undefined,
+      couponNumber: String(couponNumber).trim() ? String(couponNumber).trim() : undefined,
+      totalAmount,
+      paidAmount,
+      creditAmount,
+      paymentMethod,
+      paidToTreasurer,
+      paymentHistory: paymentMethod === 'CREDIT' ? [] : [{
+        id: Math.random().toString(36).substr(2, 9),
+        amount: paidAmount,
+        date: dateStr,
+        paymentMethod
+      }]
+    };
+  };
+
+  const handleCSVFile = (file: File) => {
+    if (!file) return;
+    setImportFile(file);
+    setParsingErrors([]);
+    setParsedTransactions([]);
+    setSuccessMessage(null);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const parsedList: Omit<Transaction, 'id'>[] = [];
+        const errorsList: string[] = [];
+
+        results.data.forEach((row: any, i: number) => {
+          const parsed = mapHeadersAndParse(row, i);
+          if (parsed) {
+            parsedList.push(parsed);
+          } else {
+            const nameCandidate = row['Sponsor / Buyer'] || row['Name'] || row['buyer'] || '';
+            if (!nameCandidate || String(nameCandidate).trim() === '') {
+              errorsList.push(`Row ${i + 1}: Skipped row due to empty or missing Name.`);
+            } else {
+              errorsList.push(`Row ${i + 1}: Failed to parse Row.`);
+            }
+          }
+        });
+
+        setParsedTransactions(parsedList);
+        setParsingErrors(errorsList);
+      },
+      error: (err) => {
+        setParsingErrors([`Failed to read file: ${err.message}`]);
+      }
+    });
+  };
+
+  const executeImport = async () => {
+    if (!onAddTransaction || parsedTransactions.length === 0) return;
+    setIsImporting(true);
+    setImportProgress(0);
+
+    let progressCount = 0;
+    const total = parsedTransactions.length;
+
+    for (const txn of parsedTransactions) {
+      try {
+        await onAddTransaction(txn);
+      } catch (e) {
+        console.error('Failed to import transaction', txn, e);
+      }
+      progressCount++;
+      setImportProgress(Math.round((progressCount / total) * 100));
+    }
+
+    setIsImporting(false);
+    setSuccessMessage(`Successfully imported ${total} transactions!`);
+    setParsedTransactions([]);
+    setImportFile(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (file.name.endsWith('.csv')) {
+        handleCSVFile(file);
+      } else {
+        setParsingErrors(['Please drop a valid .csv files only.']);
+      }
+    }
+  };
+
+  const resetImportState = () => {
+    setIsImportModalOpen(false);
+    setImportFile(null);
+    setParsedTransactions([]);
+    setParsingErrors([]);
+    setSuccessMessage(null);
+    setImportProgress(0);
+    setIsImporting(false);
   };
 
   const filteredTransactions = (transactions || [])
@@ -428,6 +708,16 @@ const TransactionList: React.FC<TransactionListProps> = ({
               <span>Delete ({selectedIds.size})</span>
             </button>
           )}
+          {permissions?.canAdd !== false && onAddTransaction && (
+            <button 
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 font-bold rounded-lg md:rounded-xl transition-all shadow-sm text-[10px] md:text-xs cursor-pointer animate-pulse"
+              title="Import CSV"
+            >
+              <Upload size={14} className="md:w-4 md:h-4" />
+              <span>Import</span>
+            </button>
+          )}
           <button 
             onClick={exportCSV}
             className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg md:rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm text-[10px] md:text-xs cursor-pointer"
@@ -678,6 +968,228 @@ const TransactionList: React.FC<TransactionListProps> = ({
         confirmText="Delete"
         variant="danger"
       />
+
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-slate-900 leading-tight">Import Transactions from CSV</h3>
+                <p className="text-slate-500 text-xs mt-0.5 font-semibold">Add multiple transactions securely into the registry</p>
+              </div>
+              <button 
+                onClick={resetImportState}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all cursor-pointer"
+                disabled={isImporting}
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              {/* Success Message Banner */}
+              {successMessage ? (
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-850 p-4 rounded-2xl flex items-start gap-3">
+                  <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+                    <Check size={18} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm">Import Completed Successfully</h4>
+                    <p className="text-xs text-emerald-700 font-medium mt-0.5">{successMessage}</p>
+                    <button
+                      onClick={resetImportState}
+                      className="mt-3 px-4 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition-all select-none cursor-pointer"
+                    >
+                      Done & Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Instructions and download template */}
+                  <div className="bg-blue-50/50 border border-blue-150/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-xs text-blue-900 flex items-center gap-1">
+                        <AlertCircle size={14} className="text-blue-500 shrink-0" />
+                        CSV Layout and Format Rules
+                      </h4>
+                      <p className="text-blue-750 text-[11px] font-semibold leading-relaxed max-w-md">
+                        Ensure columns like <code className="bg-blue-100 px-1 py-0.5 rounded text-blue-800 font-mono text-[10px]">Date</code>, <code className="bg-blue-150/30 px-1 py-0.5 rounded text-blue-800 font-mono text-[10px]">Sponsor / Buyer</code>, and <code className="bg-blue-150/30 px-1 py-0.5 rounded text-blue-800 font-mono text-[10px]">Amount</code> are mapped appropriately. Missing amounts will be automatically calculated.
+                      </p>
+                    </div>
+                    <button
+                      onClick={downloadSampleTemplate}
+                      className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 font-semibold text-[11px] rounded-xl hover:bg-blue-50 transition-all shadow-sm shrink-0 whitespace-nowrap cursor-pointer"
+                    >
+                      Get Sample CSV
+                    </button>
+                  </div>
+
+                  {/* Drag and Drop Zone */}
+                  {!importFile ? (
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={cn(
+                        "border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center min-h-[160px] select-none",
+                        isDragging 
+                          ? "border-blue-500 bg-blue-50" 
+                          : "border-slate-250 bg-slate-50 hover:bg-slate-100 hover:border-slate-350"
+                      )}
+                      onClick={() => document.getElementById('csvFileInput')?.click()}
+                    >
+                      <input 
+                        type="file"
+                        id="csvFileInput"
+                        accept=".csv"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            handleCSVFile(e.target.files[0]);
+                          }
+                        }}
+                      />
+                      <Upload size={32} className={cn("mb-2 text-slate-400", isDragging && "text-blue-500 animate-bounce")} />
+                      <p className="font-bold text-sm text-slate-800">Drag and drop your CSV file here</p>
+                      <p className="text-xs text-slate-500 mt-0.5 font-semibold">or click to browse from computer</p>
+                    </div>
+                  ) : (
+                    /* Selected File Status */
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
+                          <TableIcon size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-xs text-slate-800 truncate">{importFile.name}</p>
+                          <p className="text-[10px] text-slate-500 font-bold mt-0.5">{(importFile.size / 1024).toFixed(1)} KB • {parsedTransactions.length} records parsed</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setImportFile(null);
+                          setParsedTransactions([]);
+                          setParsingErrors([]);
+                        }}
+                        disabled={isImporting}
+                        className="px-2.5 py-1 text-rose-600 bg-rose-50 border border-rose-100 font-bold text-xs rounded-lg hover:bg-rose-100 transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Errors & Skip Warnings */}
+                  {parsingErrors.length > 0 && (
+                    <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-3.5 space-y-1.5">
+                      <h5 className="font-bold text-[11px] text-rose-800 flex items-center gap-1">
+                        <AlertCircle size={12} />
+                        Import Parsing Notifications ({parsingErrors.length})
+                      </h5>
+                      <ul className="text-[10px] text-rose-700 space-y-0.5 list-disc pl-4 font-bold max-h-[80px] overflow-y-auto">
+                        {parsingErrors.map((err, i) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Columns Preview Card */}
+                  {parsedTransactions.length > 0 && (
+                    <div className="space-y-1.5">
+                      <h4 className="font-bold text-xs text-slate-900 px-0.5">Preview of Parsed Transactions (Up to 5 rows)</h4>
+                      <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-[10px] text-slate-600 min-w-[500px]">
+                            <thead className="bg-slate-50 text-[9px] font-black uppercase text-slate-500 tracking-wider">
+                              <tr>
+                                <th className="px-3 py-2">Date</th>
+                                <th className="px-3 py-2">Name</th>
+                                <th className="px-3 py-2">Location</th>
+                                <th className="px-3 py-2">Books/Coupons</th>
+                                <th className="px-3 py-2 text-right">Amount</th>
+                                <th className="px-3 py-2">Method</th>
+                                <th className="px-3 py-2">Treasurer</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-bold bg-white">
+                              {parsedTransactions.slice(0, 5).map((row, i) => (
+                                <tr key={i}>
+                                  <td className="px-3 py-2 whitespace-nowrap">{row.date}</td>
+                                  <td className="px-3 py-2 font-black text-slate-900 truncate max-w-[120px]">{row.name}</td>
+                                  <td className="px-3 py-2">{row.area}</td>
+                                  <td className="px-3 py-2">{row.books}B / {row.coupons}C</td>
+                                  <td className="px-3 py-2 text-right font-black text-slate-800">₹{row.totalAmount.toLocaleString('en-IN')}</td>
+                                  <td className="px-3 py-2">{row.paymentMethod}</td>
+                                  <td className="px-3 py-2 text-[9px] font-black">
+                                    <span className={cn(
+                                      "px-1 py-0.5 rounded",
+                                      row.paidToTreasurer ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"
+                                    )}>
+                                      {row.paidToTreasurer ? "Paid" : "Pending"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {parsedTransactions.length > 5 && (
+                          <div className="bg-slate-50 px-3 py-1 text-center text-[9px] text-slate-400 font-extrabold border-t border-slate-150">
+                            And {parsedTransactions.length - 5} more records...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Import Live Progress Spinner */}
+                  {isImporting && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-blue-900">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                          Importing transactions to safe cloud registry...
+                        </span>
+                        <span>{importProgress}%</span>
+                      </div>
+                      <div className="w-full bg-blue-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-blue-600 h-full transition-all duration-200" 
+                          style={{ width: `${importProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer Buttons */}
+            {!successMessage && (
+              <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0 justify-end">
+                <button
+                  onClick={resetImportState}
+                  disabled={isImporting}
+                  className="px-4 py-2 border border-slate-200 bg-white text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={parsedTransactions.length === 0 || isImporting}
+                  onClick={executeImport}
+                  className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition-all flex items-center gap-1 hover:shadow-lg hover:shadow-blue-200 active:scale-95 border border-blue-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                >
+                  {isImporting ? "Importing..." : `Import ${parsedTransactions.length} Records`}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
