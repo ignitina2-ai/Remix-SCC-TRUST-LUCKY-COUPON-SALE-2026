@@ -48,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'transactions', label: 'Transaction History', icon: History },
     { id: 'credit', label: 'Credit Management', icon: CreditCard },
     { id: 'income-expense', label: 'Income & Expense', icon: Banknote },
-    { id: 'secretary-handover', label: 'Handover to Secretary', icon: Users },
+    { id: 'secretary-handover', label: 'Treasury Handover', icon: Users },
     { id: 'sponsors', label: 'Prize Sponsors', icon: Trophy },
     { id: 'settings', label: 'Settings & Backup', icon: SettingsIcon },
   ].filter((item) => {

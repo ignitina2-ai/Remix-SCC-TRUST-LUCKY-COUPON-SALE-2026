@@ -28,7 +28,7 @@ import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import ConfirmationModal from './ConfirmationModal';
 
-interface SecretaryHandoverManagementProps {
+interface TreasuryHandoverManagementProps {
   handovers: SecretaryHandover[];
   onAddHandover: (handover: Omit<SecretaryHandover, 'id'>) => void;
   onUpdateHandover?: (id: string, updates: Partial<SecretaryHandover>) => void;
@@ -43,7 +43,7 @@ interface SecretaryHandoverManagementProps {
   };
 }
 
-const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = ({ 
+const TreasuryHandoverManagement: React.FC<TreasuryHandoverManagementProps> = ({ 
   handovers = [], 
   onAddHandover, 
   onUpdateHandover,
@@ -134,8 +134,8 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
 
   const filteredHandovers = (handovers || [])
     .filter(h => {
-      const matchesSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            h.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (h.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (h.description || '').toLowerCase().includes(searchTerm.toLowerCase());
       
       const entryDate = new Date(h.date).getTime();
       const matchesStartDate = !startDate || entryDate >= new Date(startDate).getTime();
@@ -211,7 +211,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     });
     
     const totalHandoverSum = filteredHandovers.reduce((acc, h) => acc + h.amount, 0);
-    const distinctSecretaries = Array.from(new Set(filteredHandovers.map(h => h.name.trim()).filter(Boolean)));
+    const distinctSecretaries = Array.from(new Set(filteredHandovers.map(h => (h.name || '').trim()).filter(Boolean)));
     const secretaryCount = distinctSecretaries.length;
     const handoverCount = filteredHandovers.length;
     const averageTransfer = handoverCount > 0 ? Math.round(totalHandoverSum / handoverCount) : 0;
@@ -233,7 +233,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139); // slate-500
-    doc.text(`SECRETARY TREASURY HANDOVER LEDGER  |  Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: Secretary Cash Clearances (${handoverCount} Record${handoverCount === 1 ? '' : 's'})`, 22, 24);
+    doc.text(`TREASURY HANDOVER LEDGER  |  Generated on ${format(new Date(), 'dd MMMM yyyy, hh:mm a')}   |   Scope: Treasury Cash Clearances (${handoverCount} Record${handoverCount === 1 ? '' : 's'})`, 22, 24);
 
     doc.setDrawColor(226, 232, 240); // slate-200
     doc.setLineWidth(0.5);
@@ -301,7 +301,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
       [248, 250, 252], 
       [203, 213, 225], 
       "RECEIVING OFFICERS", 
-      `${secretaryCount} Secretary${secretaryCount === 1 ? '' : 's'}`, 
+      `${secretaryCount} Treasurer${secretaryCount === 1 ? '' : 's'}`, 
       [100, 116, 139], 
       [15, 23, 42]
     );
@@ -351,7 +351,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     ];
 
     autoTable(doc, {
-      head: [['Clearance Date', 'Receiver / Secretary Name', 'Particulars / Description', 'Handed Over Amount']],
+      head: [['Clearance Date', 'Receiver / Treasurer Name', 'Particulars / Description', 'Handed Over Amount']],
       body: tableData,
       startY: startY + cardHeight + 8,
       theme: 'grid',
@@ -366,7 +366,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
       },
       columnStyles: {
         0: { cellWidth: 25, halign: 'center' }, // Clearance Date
-        1: { cellWidth: 45, fontStyle: 'bold' }, // Receiver / Secretary Name
+        1: { cellWidth: 45, fontStyle: 'bold' }, // Receiver / Treasurer Name
         2: { cellWidth: 72 }, // Particulars / Description
         3: { cellWidth: 40, halign: 'right' }, // Handed Over Amount
       }, // Sum of column widths = 25 + 45 + 72 + 40 = 182mm (Perfect fit for A4 width: 210mm - 28mm margins = 182mm)
@@ -411,14 +411,14 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
         doc.setLineWidth(0.5);
         doc.line(14, 278, 196, 278);
         
-        doc.text(`Official Secretary Cash Handover Audit Ledger • 2026`, 14, 283);
+        doc.text(`Official Treasury Cash Handover Audit Ledger • 2026`, 14, 283);
         
         const pageText = `Page ${data.pageNumber} of ${pageCount}`;
         doc.text(pageText, 196 - doc.getTextWidth(pageText), 283);
       }
     });
 
-    doc.save(`secretary_handovers_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`);
+    doc.save(`treasury_handovers_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`);
   };
 
   const exportCSV = () => {
@@ -434,7 +434,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `secretary_handovers_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.setAttribute('download', `treasury_handovers_${format(new Date(), 'yyyy-MM-dd')}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -459,8 +459,8 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
 
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Handover to Secretary</h1>
-          <p className="text-slate-500 mt-0.5 font-semibold text-xs">Record cash handed over to the secretary</p>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Treasury Handover</h1>
+          <p className="text-slate-500 mt-0.5 font-semibold text-xs">Record cash handed over to the treasury</p>
         </div>
         <div className="flex items-center gap-1.5">
           <button
@@ -522,7 +522,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
             <IndianRupee className="text-white w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1 text-left">
-            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Handover to Secretary </span>
+            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block truncate">Treasury Handover </span>
             <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight">₹{totalHandover.toLocaleString('en-IN')}</h3>
             <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
               
@@ -542,7 +542,7 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold text-slate-900"
-                  placeholder="e.g., Secretary Name"
+                  placeholder="e.g., Treasurer Name"
                   required
                 />
               </div>
@@ -770,4 +770,4 @@ const SecretaryHandoverManagement: React.FC<SecretaryHandoverManagementProps> = 
   );
 };
 
-export default SecretaryHandoverManagement;
+export default TreasuryHandoverManagement;

@@ -400,7 +400,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           className="hidden sm:flex flex-col items-center justify-center p-3 md:p-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 cursor-pointer text-center col-span-2 sm:col-span-1"
         >
           <Users className="mb-1.5 w-5 h-5" />
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Sec Handover</span>
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Tre Handover</span>
         </button>
       </div>
 
@@ -435,7 +435,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             color="bg-indigo-600" 
           />
           <StatCard 
-            title="Sec Handover" 
+            title="Tre Handover" 
             value={totalHandover} 
             icon={Users} 
             color="bg-teal-600" 

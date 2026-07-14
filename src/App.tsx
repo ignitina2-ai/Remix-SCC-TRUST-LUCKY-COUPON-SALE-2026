@@ -12,7 +12,7 @@ import TransactionList from './components/TransactionList';
 import CreditManagement from './components/CreditManagement';
 import SponsorsList from './components/SponsorsList';
 import IncomeExpenseManagement from './components/IncomeExpenseManagement';
-import SecretaryHandoverManagement from './components/SecretaryHandoverManagement';
+import TreasuryHandoverManagement from './components/TreasuryHandoverManagement';
 import Settings from './components/Settings';
 import LoginPage from './components/LoginPage';
 import { SplashComponent } from './components/SplashComponent';
@@ -848,7 +848,7 @@ export default function App() {
 
   const deleteSecretaryHandover = async (ids: string[]) => {
     if (!userPermissions.canDelete) {
-      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ഇല്ലാതാക്കാൻ (Delete) അനുവാദമില്ല! (You do not have permission to delete Secretary Handover records.)");
+      setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ഇല്ലാതാക്കാൻ (Delete) അനുവാദമില്ല! (You do not have permission to delete Treasury Handover records.)");
       return;
     }
     try {
@@ -1112,14 +1112,14 @@ export default function App() {
                 <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight font-sans">ലോഗിൻ തടഞ്ഞിരിക്കുന്നു (Access Denied)</h2>
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider leading-relaxed">
                   ഈ പേജ് കാണാൻ നിങ്ങൾക്ക് അനുവാദമില്ല.
-                  <span className="block mt-1 font-semibold text-xs border border-rose-100 bg-rose-50/30 py-1.5 px-3 rounded-xl normal-case text-rose-700 font-sans">You do not have permission to view the Secretary Handover tab. Only your main admin can allow this.</span>
+                  <span className="block mt-1 font-semibold text-xs border border-rose-100 bg-rose-50/30 py-1.5 px-3 rounded-xl normal-case text-rose-700 font-sans">You do not have permission to view the Treasury Handover tab. Only your main admin can allow this.</span>
                 </p>
               </div>
             </div>
           );
         }
         return (
-          <SecretaryHandoverManagement 
+          <TreasuryHandoverManagement 
             handovers={appData.secretaryHandovers}
             onAddHandover={addSecretaryHandover}
             onUpdateHandover={updateSecretaryHandover}

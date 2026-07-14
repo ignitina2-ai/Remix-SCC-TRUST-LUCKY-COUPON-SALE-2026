@@ -249,7 +249,7 @@ export function ActiveSessions({
                           <button
                             onClick={() => handleTerminateSession(session.id, session.email)}
                             disabled={terminatingId === session.id}
-                            className="text-[10px] font-black uppercase tracking-wide bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-150 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 active:scale-95 disabled:opacity-50 cursor-pointer self-end shrink-0"
+                            className="text-[10px] font-black uppercase tracking-wide bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 active:scale-95 disabled:opacity-50 cursor-pointer self-end shrink-0"
                             title="ലോഗൗട്ട് ചെയ്യിക്കുക"
                           >
                             {terminatingId === session.id ? (

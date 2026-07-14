@@ -630,7 +630,7 @@ const SponsorsList: React.FC<SponsorsListProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {duplicateError && (
-                <div className="p-3 bg-red-50 text-red-650 rounded-xl border border-red-150 flex items-start gap-2 text-xs font-bold">
+                <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 flex items-start gap-2 text-xs font-bold">
                   <AlertCircle size={16} className="shrink-0 text-red-600 mt-0.5" />
                   <span>{duplicateError}</span>
                 </div>

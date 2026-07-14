@@ -351,8 +351,8 @@ export function AdminSettings({
                         <span className={cn(
                           "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border",
                           userObj.status === 'ACTIVE'
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-150"
-                            : "bg-rose-50 text-rose-700 border-rose-150"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-rose-50 text-rose-700 border-rose-200"
                         )}>
                           {userObj.status === 'ACTIVE' ? "ENABLED" : "DISABLED"}
                         </span>
@@ -443,10 +443,10 @@ export function AdminSettings({
                               ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" 
                               : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
                           )}
-                          title={userObj.hideSecretaryHandover ? "Handover tab is HIDDEN" : "Handover tab is VISIBLE"}
+                          title={userObj.hideSecretaryHandover ? "Treasury tab is HIDDEN" : "Treasury tab is VISIBLE"}
                         >
                           <span className={cn("w-1 h-1 rounded-full", userObj.hideSecretaryHandover ? "bg-rose-500" : "bg-emerald-500")} />
-                          {userObj.hideSecretaryHandover ? "HANDOVER HIDDEN" : "HANDOVER VISIBLE"}
+                          {userObj.hideSecretaryHandover ? "TREASURY HIDDEN" : "TREASURY VISIBLE"}
                         </button>
                       </div>
                     </td>
