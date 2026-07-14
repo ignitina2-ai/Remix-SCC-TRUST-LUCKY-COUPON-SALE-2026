@@ -72,7 +72,7 @@ export default function LoginPage({
         {/* Decorative Badge */}
         <div className="inline-flex items-center gap-1.5 bg-slate-800/60 border border-slate-700/50 px-3 py-1 rounded-full text-[10px] font-black uppercase text-blue-400 tracking-wider">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-          2026 TRUST REGISTRY
+          2026 TRUST COUPON SALE REGISTRY
         </div>
 
         {/* Title */}
