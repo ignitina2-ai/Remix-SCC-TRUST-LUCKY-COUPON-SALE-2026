@@ -214,7 +214,7 @@ export default function LoginPage({
             St. Casimir Charitable Trust Registry v1.0
           </p>
           <p className="text-[9px] text-slate-600 font-bold mt-1">
-            Registered Head Office: Goa, India • Secure Firestore Connection Enabled
+            Design & Devoloped By Ignatious Joshuva • Secure Firestore Connection Enabled
           </p>
         </div>
       </div>
