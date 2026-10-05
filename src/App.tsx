@@ -595,7 +595,7 @@ export default function App() {
           err.message.includes('developer-approved testers')
         ))
       ) {
-        setLoginError("Google Error 403 (access_denied): The app is in Testing mode. In Google Cloud Console (Project gen-lang-client-0728385363), go to OAuth consent screen > Test users > add stcasimircharitabletrust@gmail.com and save.");
+        setLoginError("Google Error 403 (access_denied): The app is in Testing mode. In Google Cloud Console (Project gen-lang-client-0728385363), go to OAuth consent screen > Test users > add ignitina2@gmail.com and save.");
       } else if (err.code !== 'auth/popup-closed-by-user') {
         setLoginError(err.message || 'Failed to connect Google Drive.');
       }
@@ -773,13 +773,14 @@ export default function App() {
     tx: Transaction,
     currentAppData: AppData
   ) => {
-    if (!isDriveAutoSyncEnabled && !driveSyncConfig.autoSyncEnabled) {
+    if (!isDriveAutoSyncEnabled && driveSyncConfig.autoSyncEnabled === false) {
       return;
     }
 
-    // 1. Webhook sync if configured (Google Apps Script - 24/7 zero token expiration)
-    if (driveSyncConfig.webhookUrl) {
-      syncViaWebhook(driveSyncConfig.webhookUrl, {
+    // 1. Webhook sync (Google Apps Script - 24/7 zero token expiration for ignitina2@gmail.com)
+    const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
+    if (webhookUrl) {
+      syncViaWebhook(webhookUrl, {
         action,
         transaction: tx,
         transactions: currentAppData.transactions,
@@ -790,7 +791,7 @@ export default function App() {
             lastSyncedAt: new Date().toISOString(),
             lastSyncedBy: user?.email || 'Authorized Team Member',
             lastSyncStatus: 'success',
-            lastSyncMessage: `Transaction ${tx.id || ''} synced via Webhook`,
+            lastSyncMessage: `Transaction ${tx.id || ''} saved to Sheet & Drive JSON Backup`,
           }, { merge: true }).catch(console.warn);
         }
       }).catch(console.warn);
@@ -900,10 +901,19 @@ export default function App() {
     const treasurerPaidDate = paidToTreasurer ? new Date().toISOString() : null;
 
     try {
+      const updatedTx: Transaction = {
+        ...tx,
+        paidToTreasurer,
+        treasurerPaidDate
+      };
       await updateDoc(doc(db, 'transactions', id), cleanUndefined({
         paidToTreasurer,
         treasurerPaidDate
       }));
+
+      // Automated Sync to Google Drive & Google Sheet on treasurer update
+      const updatedList = appData.transactions.map(t => t.id === id ? updatedTx : t);
+      syncTransactionToDriveAndSheet('update', updatedTx, { ...appData, transactions: updatedList });
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
     }

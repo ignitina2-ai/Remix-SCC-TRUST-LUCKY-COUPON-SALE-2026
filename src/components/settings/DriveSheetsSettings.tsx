@@ -224,7 +224,7 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
             Trust Admin Team Multi-User Sync Active
           </h4>
           <p className="text-xs text-indigo-800 leading-relaxed">
-            Trust Admin Team വഴി അനുവാദം ലഭിച്ച ഏതൊരു ID വഴി ലോഗിൻ ചെയ്ത് ആര് പുതിയ transaction ചേർത്താലും അല്ലെങ്കിൽ മാറ്റം വരുത്തിയാലും, അത് തനിയെ <strong>stcasimircharitabletrust@gmail.com</strong> ഡ്രൈവിലെ <strong>{SHEET_NAME}</strong> ഗൂഗിൾ ഷീറ്റിലും <strong>{FOLDER_NAME}</strong> ഫോൾഡറിലെ JSON ബാക്കപ്പിലും ഉടൻ തന്നെ സേവ് ആകും!
+            Trust Admin Team വഴി അനുവാദം ലഭിച്ച ഏതൊരു ID വഴി ലോഗിൻ ചെയ്ത് ആര് പുതിയ transaction ചേർത്താലും അല്ലെങ്കിൽ മാറ്റം വരുത്തിയാലും, അത് തനിയെ <strong>ignitina2@gmail.com</strong> ഡ്രൈവിലെ <strong>{SHEET_NAME}</strong> ഗൂഗിൾ ഷീറ്റിലും <strong>{FOLDER_NAME}</strong> ഫോൾഡറിലെ JSON ബാക്കപ്പിലും ഒരേസമയം തത്സമയം സേവ് ആകും!
           </p>
         </div>
       </div>
@@ -243,51 +243,6 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
               title="Copy Email"
             >
               {copiedEmail ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Error 403 (access_denied) Resolution Card */}
-        <div className="bg-amber-50/80 border border-amber-200/80 p-4 rounded-2xl text-xs space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 font-extrabold text-amber-950">
-              <AlertCircle size={16} className="text-amber-600 shrink-0" />
-              <span>Google Error 403 (access_denied) എങ്ങനെ മാറ്റാം?</span>
-            </div>
-            <span className="text-[10px] font-bold bg-amber-200/60 text-amber-900 px-2 py-0.5 rounded-full">
-              Testing Mode Fix
-            </span>
-          </div>
-          <p className="text-amber-900 text-xs leading-relaxed">
-            ഗൂഗിൾ ക്ലൗഡ് പ്രോജക്റ്റ് (<strong>gen-lang-client-0728385363</strong>) നിലവിൽ Testing മോഡിലായതിനാലാണ് <em>&quot;has not completed Google verification process&quot;</em> കാണിക്കുന്നത്. ഇത് 1 മിനിറ്റിൽ മാറ്റാം:
-          </p>
-          <ol className="list-decimal list-inside space-y-1 text-amber-900 font-medium pl-1 text-[11px]">
-            <li>
-              താഴെയുള്ള ബട്ടൺ വഴി Google Cloud Console തുറക്കുക.
-            </li>
-            <li>
-              <strong>OAuth consent screen</strong>-ൽ താഴേക്ക് സ്ക്രോൾ ചെയ്ത് <strong>Test users</strong> കാണുക.
-            </li>
-            <li>
-              <strong>+ ADD USERS</strong> ക്ലിക്ക് ചെയ്ത് <strong>{TARGET_DRIVE_EMAIL}</strong> ടൈപ്പ് ചെയ്ത് Save ചെയ്യുക!
-            </li>
-          </ol>
-          <div className="pt-1 flex flex-wrap items-center gap-2.5">
-            <a
-              href="https://console.cloud.google.com/apis/credentials/consent?project=gen-lang-client-0728385363"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-            >
-              <span>Add Test User in Google Cloud Console</span>
-              <ExternalLink size={12} />
-            </a>
-            <button
-              onClick={handleCopyEmail}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-amber-300 text-amber-800 rounded-xl text-xs font-semibold hover:bg-amber-100/50 cursor-pointer"
-            >
-              {copiedEmail ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-              <span>Copy Email</span>
             </button>
           </div>
         </div>
@@ -469,7 +424,7 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Google Apps Script Code</h3>
-                <p className="text-[11px] text-slate-500">For stcasimircharitabletrust@gmail.com Google Sheet</p>
+                <p className="text-[11px] text-slate-500">For ignitina2@gmail.com Google Sheet</p>
               </div>
               <button
                 onClick={() => setShowScriptModal(false)}

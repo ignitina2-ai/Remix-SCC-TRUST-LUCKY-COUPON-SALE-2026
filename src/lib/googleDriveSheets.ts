@@ -5,7 +5,7 @@ export const WORKSPACE_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
 ];
 
-export const TARGET_DRIVE_EMAIL = 'stcasimircharitabletrust@gmail.com';
+export const TARGET_DRIVE_EMAIL = 'ignitina2@gmail.com';
 export const FOLDER_NAME = 'LUCKY COUPON SALE 2026';
 export const SHEET_NAME = 'COUPON SALE 2026';
 export const BACKUP_FILE_NAME = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
@@ -566,19 +566,19 @@ export async function syncViaWebhook(
 }
 
 /**
- * Ready-to-copy Google Apps Script code for stcasimircharitabletrust@gmail.com
+ * Ready-to-copy Google Apps Script code for ignitina2@gmail.com
  */
 export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * SCC TRUST - LUCKY COUPON SALE 2026
  * Automated Real-Time Google Sheet & Google Drive Sync Webhook
  * 
  * SETUP INSTRUCTIONS:
- * 1. Open Google Sheet "COUPON SALE 2026"
+ * 1. Open Google Sheet "COUPON SALE 2026" in ignitina2@gmail.com
  * 2. Click "Extensions" > "Apps Script"
  * 3. Replace all code in the script editor with this exact code and Save.
  * 4. Click "Deploy" > "New deployment"
  * 5. Select type: "Web app"
- * 6. Set "Execute as": "Me (stcasimircharitabletrust@gmail.com)"
+ * 6. Set "Execute as": "Me (ignitina2@gmail.com)"
  * 7. Set "Who has access": "Anyone" (allows applet to send live transaction updates)
  * 8. Click "Deploy", copy the Web App URL, and paste it into the App Settings.
  */
@@ -630,10 +630,33 @@ function doPost(e) {
       if (rowIndex > 1) {
         sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
       } else {
+        if (data.length === 0 || (data.length === 1 && !data[0][0])) {
+          var headers = [
+            'Sl No', 'Transaction ID', 'Date & Time', 'Name', 'Area', 'Phone',
+            'Books', 'Book Number', 'Coupons', 'Coupon Number',
+            'Total Amount (₹)', 'Paid Amount (₹)', 'Balance / Credit (₹)',
+            'Payment Mode', 'Paid to Treasurer', 'System Sync Timestamp'
+          ];
+          sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+          row[0] = 1;
+        }
         sheet.appendRow(row);
       }
     } 
-    // 2. Full Bulk Sync
+    // 2. Process Delete Transaction
+    else if (payload.action === 'delete') {
+      var txId = (payload.transaction && payload.transaction.id) ? payload.transaction.id : (payload.transactionId || '');
+      if (txId) {
+        var data = sheet.getDataRange().getValues();
+        for (var i = 1; i < data.length; i++) {
+          if (data[i] && String(data[i][1]) === String(txId)) {
+            sheet.deleteRow(i + 1);
+            break;
+          }
+        }
+      }
+    }
+    // 3. Full Bulk Sync
     else if (payload.action === 'syncAll' && payload.transactions) {
       sheet.clear();
       var headers = [
@@ -666,18 +689,41 @@ function doPost(e) {
       sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
     }
 
-    // 3. Save / Update Full Backup JSON in "LUCKY COUPON SALE 2026" Drive Folder
+    // 4. Save / Update Full Backup JSON in "LUCKY COUPON SALE 2026" Drive Folder
     if (payload.fullBackup) {
       var folderName = 'LUCKY COUPON SALE 2026';
+      var targetFolder = null;
       var folders = DriveApp.getFoldersByName(folderName);
-      var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+      if (folders.hasNext()) {
+        targetFolder = folders.next();
+      } else {
+        targetFolder = DriveApp.createFolder(folderName);
+      }
+
+      // Ensure the sheet itself is inside 'LUCKY COUPON SALE 2026' folder
+      try {
+        var sheetFile = DriveApp.getFileById(ss.getId());
+        var parents = sheetFile.getParents();
+        var alreadyInFolder = false;
+        while (parents.hasNext()) {
+          var p = parents.next();
+          if (p.getId() === targetFolder.getId()) {
+            alreadyInFolder = true;
+            break;
+          }
+        }
+        if (!alreadyInFolder) {
+          targetFolder.addFile(sheetFile);
+        }
+      } catch (fErr) {}
+
       var fileName = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
-      var files = folder.getFilesByName(fileName);
+      var files = targetFolder.getFilesByName(fileName);
       var content = JSON.stringify(payload.fullBackup, null, 2);
       if (files.hasNext()) {
         files.next().setContent(content);
       } else {
-        folder.createFile(fileName, content, MimeType.PLAIN_TEXT);
+        targetFolder.createFile(fileName, content, MimeType.PLAIN_TEXT);
       }
     }
 

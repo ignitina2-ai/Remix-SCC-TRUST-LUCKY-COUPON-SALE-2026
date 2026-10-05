@@ -138,7 +138,7 @@ export function AdminSettings({
         <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-50 pb-4">
             <p className="text-slate-500 text-xs font-semibold leading-relaxed text-left max-w-xl">
-              Strict control over which email addresses can log in. Whoever logs in via any authorized ID will automatically update the Google Sheet (&quot;COUPON SALE 2026&quot;) and the JSON backup in Google Drive for stcasimircharitabletrust@gmail.com.
+              Strict control over which email addresses can log in. Whoever logs in via any authorized ID will automatically update the Google Sheet (&quot;COUPON SALE 2026&quot;) and the JSON backup in Google Drive for ignitina2@gmail.com.
             </p>
             {/* Informative info bubble */}
             <div className="self-start sm:self-center flex flex-wrap gap-1.5">

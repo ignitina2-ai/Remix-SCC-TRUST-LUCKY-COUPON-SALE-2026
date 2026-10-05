@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, AlertCircle, ShieldAlert, CheckCircle, Smartphone, ExternalLink, Copy, Check } from 'lucide-react';
+import { LogIn, AlertCircle, ShieldAlert } from 'lucide-react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 
@@ -18,8 +18,6 @@ export default function LoginPage({
   loginError,
   setLoginError,
 }: LoginPageProps) {
-  const [copiedText, setCopiedText] = useState<string | null>(null);
-
   const handleGoogleLogin = async () => {
     setIsLoggingIn(true);
     setLoginError(null);
@@ -45,7 +43,7 @@ export default function LoginPage({
           err.message.includes('developer-approved testers')
         ))
       ) {
-        setLoginError("Google Error 403 (access_denied): The app is in Testing mode. Only approved Test Users can log in. Please add stcasimircharitabletrust@gmail.com to Test Users in Google Cloud Console, or sign in using ignitina2@gmail.com.");
+        setLoginError("Google Error 403 (access_denied): The app is in Testing mode. Only approved Test Users can log in. Sign in using ignitina2@gmail.com, or add your email to Test Users in Google Cloud Console.");
       } else {
         setLoginError(err.message || "An unexpected error occurred during Google Sign-In.");
       }
@@ -53,25 +51,6 @@ export default function LoginPage({
       setIsLoggingIn(false);
     }
   };
-
-  const rawHostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const currentHostname = rawHostname.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  const isVercel = currentHostname.includes('vercel.app') || currentHostname === 'scc-trust-lucky-coupon-sale-2026.vercel.app';
-  const vercelDomainClean = "scc-trust-lucky-coupon-sale-2026.vercel.app";
-  const vercelOrigin = `https://${currentHostname || vercelDomainClean}`;
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedText(text);
-    setTimeout(() => {
-      setCopiedText(null);
-    }, 2000);
-  };
-
-  const isUnauthorizedDomain = loginError && (
-    loginError.includes('auth/unauthorized-domain') || 
-    loginError.includes('unauthorized-domain')
-  );
 
   const isTestUserError = loginError && (
     loginError.includes('access_denied') ||
@@ -143,110 +122,6 @@ export default function LoginPage({
                 <p className="text-[10px] text-rose-400 leading-relaxed font-semibold">
                   {loginError}
                 </p>
-              </div>
-            </div>
-          )}
-
-          {/* Vercel & Firebase Console Hostname Guide Card */}
-          {(isUnauthorizedDomain || isVercel) && (
-            <div className="bg-amber-950/40 border border-amber-500/50 p-4 rounded-2xl text-left space-y-3">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={16} />
-                <div className="space-y-0.5">
-                  <p className="text-xs font-black text-amber-300 uppercase tracking-wide">
-                    Vercel Hostname Setup Guide (Firebase Console)
-                  </p>
-                  <p className="text-[10px] text-amber-200/90 leading-relaxed">
-                    Firebase Console-ൽ ഹോസ്റ്റ്നെയിം ചേർക്കുമ്പോൾ <strong className="text-white underline">https:// അല്ലെങ്കിൽ അവസാനം / ഇടരുത്</strong>. താഴെ കൊടുത്തിരിക്കുന്ന രീതിയിൽ കൃത്യമായി നൽകുക:
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-slate-900/90 p-3 rounded-xl space-y-3 border border-slate-800 text-[10px]">
-                {/* Step 1: Firebase Console Authorized Domain */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-300">1. Firebase Authorized Domains:</span>
-                    <a 
-                      href="https://console.firebase.google.com/u/0/project/gen-lang-client-0728385363/authentication/settings" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-[9px]"
-                    >
-                      <span>Open Firebase Console</span>
-                      <ExternalLink size={10} />
-                    </a>
-                  </div>
-                  <p className="text-slate-400 text-[9.5px]">
-                    Authentication &gt; Settings &gt; Authorized domains &gt; Add Domain:
-                  </p>
-                  <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-700">
-                    <code className="text-emerald-400 font-mono text-[10px] select-all">
-                      {currentHostname || vercelDomainClean}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(currentHostname || vercelDomainClean)}
-                      className="ml-2 text-[9px] bg-slate-800 hover:bg-slate-700 text-blue-300 px-2 py-1 rounded font-bold uppercase transition-all flex items-center gap-1"
-                    >
-                      {copiedText === (currentHostname || vercelDomainClean) ? (
-                        <>
-                          <Check size={10} className="text-emerald-400" />
-                          <span>COPIED</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={10} />
-                          <span>COPY</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-rose-300/80 text-[9px] font-semibold">
-                    ⚠️ പ്രധാനം: 'https://' കൂടാതെ 'scc-trust-lucky-coupon-sale-2026.vercel.app' എന്ന് മാത്രം പേസ്റ്റ് ചെയ്യുക.
-                  </p>
-                </div>
-
-                {/* Step 2: Google Cloud Console OAuth Web Client */}
-                <div className="space-y-1.5 pt-2 border-t border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-300">2. Google Cloud OAuth Web Client (JS Origin):</span>
-                    <a 
-                      href="https://console.cloud.google.com/apis/credentials?project=gen-lang-client-0728385363" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-[9px]"
-                    >
-                      <span>Open GCP Credentials</span>
-                      <ExternalLink size={10} />
-                    </a>
-                  </div>
-                  <p className="text-slate-400 text-[9.5px]">
-                    OAuth 2.0 Web Client &gt; Authorized JavaScript origins:
-                  </p>
-                  <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-700">
-                    <code className="text-emerald-400 font-mono text-[10px] select-all">
-                      {vercelOrigin}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(vercelOrigin)}
-                      className="ml-2 text-[9px] bg-slate-800 hover:bg-slate-700 text-blue-300 px-2 py-1 rounded font-bold uppercase transition-all flex items-center gap-1"
-                    >
-                      {copiedText === vercelOrigin ? (
-                        <>
-                          <Check size={10} className="text-emerald-400" />
-                          <span>COPIED</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={10} />
-                          <span>COPY</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           )}
