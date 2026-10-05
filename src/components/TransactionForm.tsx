@@ -59,6 +59,72 @@ const AREAS = [
   'Thillery'
 ];
 
+/**
+ * Automatically calculates count of books or items from range strings such as:
+ * - "1-25" -> 25
+ * - "1 - 25" -> 25
+ * - "1 to 25" -> 25
+ * - "101-105" -> 5 (105 - 101 + 1)
+ * - "1, 2, 3" -> 3
+ * - "1-5, 8, 10-12" -> 9
+ * - "1-25=25" -> 25
+ */
+export const calculateCountFromRangeString = (input: string): number | null => {
+  if (!input || typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // 1. Explicit equals format: e.g. "1-25=25" or "= 25"
+  const equalsMatch = trimmed.match(/=\s*(\d+)/);
+  if (equalsMatch) {
+    const val = parseInt(equalsMatch[1], 10);
+    if (!isNaN(val) && val > 0) return val;
+  }
+
+  // 2. Comma, semicolon, or "and" separated segments
+  const parts = trimmed.split(/[,;&]|\band\b/i);
+  let total = 0;
+  let hasRangeOrList = false;
+
+  for (const rawPart of parts) {
+    const part = rawPart.trim();
+    if (!part) continue;
+
+    // Check for range: "1-25", "1 - 25", "1 to 25", "1–25", "1—25"
+    const rangeMatch = part.match(/^(\d+)\s*(?:[-–—]|to)\s*(\d+)/i);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      if (!isNaN(start) && !isNaN(end) && end >= start) {
+        total += (end - start + 1);
+        hasRangeOrList = true;
+        continue;
+      }
+    }
+
+    // Check for single standalone number
+    const singleMatch = part.match(/\b(\d+)\b/);
+    if (singleMatch) {
+      total += 1;
+      if (parts.length > 1) {
+        hasRangeOrList = true;
+      }
+      continue;
+    }
+  }
+
+  if (hasRangeOrList && total > 0) {
+    return total;
+  }
+
+  // If a single plain number was entered (e.g. "25" without dash)
+  if (total === 1 && !trimmed.includes('-')) {
+    return 1;
+  }
+
+  return null;
+};
+
 const InputField = ({ label, icon: Icon, bgClass = "bg-slate-50", labelClass = "text-slate-600", ...props }: any) => (
   <div className="space-y-1 md:space-y-1.5 w-full">
     <label className={cn("text-[10px] md:text-xs font-bold ml-1 uppercase tracking-wider", labelClass)}>{label}</label>
@@ -196,6 +262,24 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     setShowQr(false);
     setCopied(false);
   }, [formData.paymentMethod]);
+
+  const handleBookNumberChange = (value: string) => {
+    const calculatedCount = calculateCountFromRangeString(value);
+    setFormData(prev => ({
+      ...prev,
+      bookNumber: value,
+      books: (calculatedCount !== null && calculatedCount > 0) ? calculatedCount : prev.books
+    }));
+  };
+
+  const handleCouponNumberChange = (value: string) => {
+    const calculatedCount = calculateCountFromRangeString(value);
+    setFormData(prev => ({
+      ...prev,
+      couponNumber: value,
+      coupons: (calculatedCount !== null && calculatedCount > 0) ? calculatedCount : prev.coupons
+    }));
+  };
 
   useEffect(() => {
     const total = (formData.books * COUPONS_PER_BOOK + formData.coupons) * COUPON_PRICE;
@@ -474,27 +558,37 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
           {/* Row 3: Books (25 coupons each) and Book Number (Optional) column styled as single line, light blue bg 50% opacity style */}
           <div className="col-span-1 md:col-span-2 bg-blue-100/90 border-2 border-blue-300 p-3.5 rounded-2xl grid grid-cols-2 gap-3 shadow-sm shadow-blue-50">
-            <InputField 
-              label="Books (25 coupons each)" 
-              icon={BookOpen} 
-              type="number" 
-              inputMode="numeric"
-              pattern="[0-9]*"
-              min="0"
-              value={formData.books}
-              onChange={(e: any) => setFormData({ ...formData, books: parseInt(e.target.value) || 0 })}
-              bgClass="bg-white border-blue-400 text-blue-950 focus:ring-blue-600 focus:border-blue-600 font-bold"
-              labelClass="text-blue-950 font-black"
-            />
-            <InputField 
-              label="Book Number (Optional)" 
-              icon={BookOpen} 
-              placeholder="e.g. 101-105" 
-              value={formData.bookNumber}
-              onChange={(e: any) => setFormData({ ...formData, bookNumber: e.target.value })}
-              bgClass="bg-white border-blue-400 text-blue-950 placeholder:text-blue-400 focus:ring-blue-600 focus:border-blue-600 font-bold"
-              labelClass="text-blue-950 font-black"
-            />
+            <div>
+              <InputField 
+                label="Books (25 coupons each)" 
+                icon={BookOpen} 
+                type="number" 
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="0"
+                value={formData.books}
+                onChange={(e: any) => setFormData({ ...formData, books: parseInt(e.target.value) || 0 })}
+                bgClass="bg-white border-blue-400 text-blue-950 focus:ring-blue-600 focus:border-blue-600 font-bold"
+                labelClass="text-blue-950 font-black"
+              />
+            </div>
+            <div>
+              <InputField 
+                label="Book Number (Optional)" 
+                icon={BookOpen} 
+                placeholder="e.g. 1-25" 
+                value={formData.bookNumber}
+                onChange={(e: any) => handleBookNumberChange(e.target.value)}
+                bgClass="bg-white border-blue-400 text-blue-950 placeholder:text-blue-400 focus:ring-blue-600 focus:border-blue-600 font-bold"
+                labelClass="text-blue-950 font-black"
+              />
+              {formData.bookNumber && calculateCountFromRangeString(formData.bookNumber) !== null && (
+                <p className="text-[10px] font-black text-blue-900 mt-1 flex items-center gap-1 leading-tight">
+                  <CheckCircle2 size={12} className="text-blue-600 shrink-0" />
+                  <span>Auto-counted: {calculateCountFromRangeString(formData.bookNumber)} Books ({calculateCountFromRangeString(formData.bookNumber)! * COUPONS_PER_BOOK} Coupons)</span>
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Row 4: Individual Coupons and Coupon Number (Optional) */}
@@ -509,13 +603,21 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             onChange={(e: any) => setFormData({ ...formData, coupons: parseInt(e.target.value) || 0 })}
           />
 
-          <InputField 
-            label="Coupon Number (Optional)" 
-            icon={Ticket} 
-            placeholder="e.g. 1-10=10 coupons" 
-            value={formData.couponNumber}
-            onChange={(e: any) => setFormData({ ...formData, couponNumber: e.target.value })}
-          />
+          <div>
+            <InputField 
+              label="Coupon Number (Optional)" 
+              icon={Ticket} 
+              placeholder="e.g. 1-10=10 coupons" 
+              value={formData.couponNumber}
+              onChange={(e: any) => handleCouponNumberChange(e.target.value)}
+            />
+            {formData.couponNumber && calculateCountFromRangeString(formData.couponNumber) !== null && (
+              <p className="text-[10px] font-bold text-slate-600 mt-1 flex items-center gap-1 leading-tight">
+                <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                <span>Auto-counted: {calculateCountFromRangeString(formData.couponNumber)} Coupons</span>
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2 md:space-y-3">
