@@ -16,7 +16,7 @@ export const PaymentSettings: React.FC<PaymentSettingsProps> = ({
 }) => {
   const [newMethodLabel, setNewMethodLabel] = useState('');
   const [newMethodUpiId, setNewMethodUpiId] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const rawMethodsList = appData.paymentMethodsList && appData.paymentMethodsList.length > 0
     ? appData.paymentMethodsList

@@ -8,7 +8,11 @@ import {
   LogIn,
   RefreshCw,
   Sliders,
-  Database
+  Database,
+  Palette,
+  Users,
+  ShieldCheck,
+  Smartphone
 } from 'lucide-react';
 import { AppData, PaymentMethod, CustomPaymentMethod } from '@/types';
 import { cn } from '@/lib/utils';
@@ -44,6 +48,8 @@ interface SettingsProps {
   onSyncLocalToCloud?: () => Promise<boolean>;
 }
 
+type SettingsTab = 'all' | 'branding' | 'cloud' | 'backup';
+
 const Settings: React.FC<SettingsProps> = ({ 
   appData, 
   onUpdateLogo, 
@@ -69,7 +75,8 @@ const Settings: React.FC<SettingsProps> = ({
 }) => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [userToRevoke, setUserToRevoke] = useState<string | null>(null);
-  const [isFirebaseSyncExpanded, setIsFirebaseSyncExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('all');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -88,74 +95,145 @@ const Settings: React.FC<SettingsProps> = ({
     setUserToRevoke(null);
   };
 
+  const handleForceSync = async () => {
+    if (!onSyncLocalToCloud) return;
+    setIsSyncing(true);
+    try {
+      const success = await onSyncLocalToCloud();
+      if (success) {
+        showNotification('success', 'Database cloud synchronization succeeded!');
+      } else {
+        showNotification('error', 'Database cloud sync failed. Please check network connection.');
+      }
+    } catch (e) {
+      showNotification('error', 'Error syncing with cloud.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const tabs = [
+    { id: 'all' as SettingsTab, label: 'All Settings', icon: Sliders },
+    { id: 'branding' as SettingsTab, label: 'Branding & Payments', icon: Palette },
+    { id: 'cloud' as SettingsTab, label: 'Cloud Sync & Team', icon: Cloud },
+    { id: 'backup' as SettingsTab, label: 'Backup & Security', icon: Database },
+  ];
+
   return (
-    <div id="settings-management-container" className="max-w-4xl mx-auto space-y-10 p-4 font-sans pb-16">
+    <div id="settings-management-container" className="max-w-5xl mx-auto space-y-8 p-4 font-sans pb-20">
       
       {/* Toast Notification */}
       {notification && (
         <div className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-bold animate-in fade-in slide-in-from-bottom-2",
+          "fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-xs font-bold animate-in fade-in slide-in-from-bottom-2",
           notification.type === 'success' 
-            ? "bg-emerald-50 text-emerald-800 border-emerald-100" 
-            : "bg-rose-50 text-rose-800 border-rose-100"
+            ? "bg-emerald-50 text-emerald-800 border-emerald-200" 
+            : "bg-rose-50 text-rose-800 border-rose-200"
         )}>
-          {notification.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          {notification.type === 'success' ? <CheckCircle2 size={16} className="text-emerald-600" /> : <AlertCircle size={16} className="text-rose-600" />}
           <span>{notification.message}</span>
         </div>
       )}
 
-      {/* Title Header */}
-      <div className="text-left space-y-1.5 border-b border-slate-100 pb-4">
-        <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">System Settings & Controls</h1>
-        <p className="text-slate-500 font-bold text-xs uppercase tracking-wider">Configure database sync, company branding, customized payment methods and local backup files</p>
-      </div>
-
-      {/* SECTION 1: CUSTOMISATION & APP BRANDING */}
-      <div className="space-y-4">
-        <div className="text-left border-b border-slate-100 pb-2">
-          <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider">Section 01</span>
-          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1.5 flex items-center gap-2">
-            <Sliders size={16} className="text-slate-500" />
-            App Customisation & Branding
-          </h2>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 text-left">
+        <div>
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">System Settings</h1>
+          <p className="text-slate-500 font-medium text-xs mt-0.5">
+            Manage branding, cloud synchronization, team access, payment methods, and backups
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* App Logo Settings */}
-          <LogoSettings 
-            appData={appData} 
-            onUpdateLogo={onUpdateLogo} 
-            onUpdateLogoMobile={onUpdateLogoMobile}
-            onUpdateLogoDesktop={onUpdateLogoDesktop}
-            user={user} 
-          />
-
-          {/* Custom Payment Methods */}
-          <PaymentSettings 
-            appData={appData} 
-            onUpdatePaymentLabels={onUpdatePaymentLabels} 
-            onUpdatePaymentMethodsList={onUpdatePaymentMethodsList} 
-          />
+        {/* Quick Connection Indicator in Header */}
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          {user && !user.isLocal ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Cloud Sync Online</span>
+            </div>
+          ) : user && user.isLocal ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200/60 text-amber-700 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>Local Bypass Mode</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              <span>Offline</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* SECTION 2: CLOUD SYNC & TEAM SECURITY */}
-      <div className="space-y-4">
-        <div className="text-left border-b border-slate-100 pb-2">
-          <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider">Section 02</span>
-          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1.5 flex items-center gap-2">
-            <Cloud size={16} className="text-slate-500" />
-            Database Synchronisation & Team Security
-          </h2>
-        </div>
+      {/* Simplified Segmented Tabs Navigation */}
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer",
+                isActive 
+                  ? "bg-white text-slate-900 shadow-sm" 
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+              )}
+            >
+              <Icon size={15} className={isActive ? "text-blue-600" : "text-slate-400"} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-        <div className="space-y-6">
-          {/* Google Firebase Sync Section - TOP SIDE */}
-          <div id="settings-firebase-sync-section" className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6 text-left">
-            <div className="flex items-center justify-between gap-3 flex-wrap border-b border-slate-50 pb-4">
-              <div className="flex items-center gap-3">
+      {/* SECTION 1: BRANDING & PAYMENT METHODS */}
+      {(activeTab === 'all' || activeTab === 'branding') && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="text-left border-b border-slate-100 pb-2 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Palette size={16} className="text-blue-600" />
+              Branding & Payment Methods
+            </h2>
+            <span className="text-[11px] text-slate-400 font-medium">Logo & payment options</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <LogoSettings 
+              appData={appData} 
+              onUpdateLogo={onUpdateLogo} 
+              onUpdateLogoMobile={onUpdateLogoMobile}
+              onUpdateLogoDesktop={onUpdateLogoDesktop}
+              user={user} 
+            />
+
+            <PaymentSettings 
+              appData={appData} 
+              onUpdatePaymentLabels={onUpdatePaymentLabels} 
+              onUpdatePaymentMethodsList={onUpdatePaymentMethodsList} 
+            />
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 2: CLOUD SYNCHRONIZATION & TEAM ACCESS */}
+      {(activeTab === 'all' || activeTab === 'cloud') && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="text-left border-b border-slate-100 pb-2 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Cloud size={16} className="text-blue-600" />
+              Cloud Database & Team Security
+            </h2>
+            <span className="text-[11px] text-slate-400 font-medium">Firestore sync & permissions</span>
+          </div>
+
+          {/* Simple, Clean Google Firebase Cloud Sync Card */}
+          <div id="settings-firebase-sync-section" className="bg-white p-6 md:p-7 rounded-3xl border border-slate-100 shadow-sm space-y-6 text-left">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
                 <div className={cn(
-                  "p-2.5 rounded-2xl shrink-0 border",
+                  "p-3 rounded-2xl shrink-0 border",
                   user && !user.isLocal 
                     ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
                     : user && user.isLocal 
@@ -163,161 +241,104 @@ const Settings: React.FC<SettingsProps> = ({
                       : "bg-slate-50 text-slate-400 border-slate-100"
                 )}>
                   {user && !user.isLocal ? (
-                    <Cloud size={20} className="animate-bounce" style={{ animationDuration: '3s' }} />
+                    <Cloud size={22} className="text-emerald-600" />
                   ) : (
-                    <CloudOff size={20} />
+                    <CloudOff size={22} />
                   )}
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase leading-tight">Google Firebase Cloud Sync</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Database Synchronisation & Security</p>
+                  <h3 className="text-base font-bold text-slate-900 leading-tight">Google Firebase Cloud Sync</h3>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">
+                    Real-time cloud database synchronization and backup
+                  </p>
                 </div>
               </div>
 
-              {/* Expand Toggle */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">
-                  {isFirebaseSyncExpanded ? "Setup open" : "Setup hidden"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsFirebaseSyncExpanded(!isFirebaseSyncExpanded)}
-                  className={cn(
-                    "w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out shrink-0 cursor-pointer shadow-inner",
-                    isFirebaseSyncExpanded ? "bg-blue-600" : "bg-slate-300"
-                  )}
-                  title={isFirebaseSyncExpanded ? "Collapse Sync Settings" : "Expand Sync Settings"}
-                >
-                  <div className={cn(
-                    "w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-md",
-                    isFirebaseSyncExpanded ? "translate-x-6" : "translate-x-0"
-                  )} />
-                </button>
+              {/* Login / Disconnect Button */}
+              <div className="shrink-0 flex items-center">
+                {user && !user.isLocal ? (
+                  <button
+                    onClick={onGoogleLogout}
+                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-sm border border-slate-200"
+                  >
+                    <LogOut size={14} />
+                    <span>Disconnect Google Sync</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={onGoogleLogin}
+                    disabled={isLoggingIn}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50 shadow-sm"
+                  >
+                    {isLoggingIn ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Connecting Account...</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogIn size={14} />
+                        <span>Sync with Google</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
-            {!isFirebaseSyncExpanded ? (
-              /* Collapsed summary layout to save massive amount of space */
-              <div className="p-4 bg-slate-50/75 hover:bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors animate-in fade-in duration-300 text-left font-sans">
-                <div className="space-y-1.5 w-full sm:w-auto">
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Cloud Engine Status</h4>
-                  <div className="font-mono text-[9px] text-slate-500 font-bold flex flex-wrap gap-1.5">
-                    {user && !user.isLocal ? (
-                      <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-100/50 px-2.5 py-0.5 rounded-lg">
-                        ● Online Sync Active ({user.email})
-                      </span>
-                    ) : user && user.isLocal ? (
-                      <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-100/55 px-2.5 py-0.5 rounded-lg border-dashed">
-                        ⚠️ Local Bypass Mode Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 border border-slate-200/40 px-2.5 py-0.5 rounded-lg">
-                        ● Offline Mode
-                      </span>
-                    )}
+            {/* Cloud User Profile & Status Details */}
+            {user ? (
+              <div className={cn(
+                "p-4 rounded-2xl text-xs border space-y-4",
+                user.isLocal 
+                  ? "bg-amber-50/60 border-amber-200/70 text-amber-950" 
+                  : "bg-slate-50/70 border-slate-200/60 text-slate-800"
+              )}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email || 'Admin')}&background=0284c7&color=fff`} 
+                      alt="Profile Avatar" 
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm shrink-0"
+                    />
+                    <div>
+                      <p className="font-bold text-slate-900 text-sm">{user.displayName || 'Authorized Admin / Helper'}</p>
+                      <p className="text-xs text-slate-500">{user.email || 'No email provided'}</p>
+                    </div>
                   </div>
-                </div>
-                <span className="self-end sm:self-center text-[9px] text-slate-500 font-black uppercase tracking-wider bg-slate-200/50 border border-slate-200/20 px-3 py-1.5 rounded-xl">
-                  Cloud Live
-                </span>
-              </div>
-            ) : (
-              /* Expanded setup details */
-              <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50 pb-4">
-                  <p className="text-slate-500 text-xs font-semibold leading-relaxed max-w-xl">
-                    Connect your Google Account to automatically synchronize sales entries, prize sponsors, secretary handovers, and system settings securely in Google Cloud Firestore and Cloud Storage.
-                  </p>
 
-                  <div className="shrink-0 flex items-center md:justify-end">
-                    {user && !user.isLocal ? (
-                      <button
-                        onClick={onGoogleLogout}
-                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-sm border border-slate-200/50"
-                      >
-                        <LogOut size={14} />
-                        <span>Disconnect Sync</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={onGoogleLogin}
-                        disabled={isLoggingIn}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black tracking-wide shadow-lg shadow-blue-600/15 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                      >
-                        {isLoggingIn ? (
-                          <>
-                            <RefreshCw size={14} className="animate-spin" />
-                            <span>Connecting Account...</span>
-                          </>
-                        ) : (
-                          <>
-                            <LogIn size={14} />
-                            <span>Sync with Google</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sync Status Details / Warnings */}
-                {user && (
-                  <div className={cn(
-                    "p-5 rounded-2xl text-xs font-medium border space-y-3",
-                    user.isLocal 
-                      ? "bg-amber-50/50 border-amber-100/80 text-amber-900" 
-                      : "bg-emerald-50/30 border-emerald-100/50 text-emerald-950"
+                  <span className={cn(
+                    "px-3 py-1 rounded-lg text-xs font-semibold self-start sm:self-center",
+                    user.isLocal ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
                   )}>
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={user.photoURL || `https://picsum.photos/seed/${(user.email || 'helper').replace(/[^a-zA-Z0-9]/g, '_')}/100/100`} 
-                        alt="Profile Avatar" 
-                        referrerPolicy="no-referrer"
-                        className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-sm shrink-0"
-                      />
-                      <div>
-                        <p className="font-extrabold text-slate-800 text-sm">{user.displayName || 'Authorized Admin / Helper'}</p>
-                        <p className="text-[11px] text-slate-500 font-bold">{user.email || 'No email provided'}</p>
-                      </div>
-                    </div>
+                    {user.isLocal ? "Local Mode" : "Firestore Live Connected"}
+                  </span>
+                </div>
 
-                    {user.isLocal ? (
-                      <p className="text-[11px] text-amber-800 leading-relaxed font-semibold bg-white p-3 rounded-xl border border-amber-100">
-                        ⚠️ <strong className="font-bold text-amber-950">You are browsing in Local Bypass Mode.</strong> Your added entries, transactions, and settings updates are currently locked to your browser's private local state. To merge this data and enable multi-user real-time syncing, click the <strong className="font-bold text-amber-950">Sync with Google</strong> button above to link this device.
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-emerald-800 leading-relaxed font-semibold bg-white p-3 rounded-xl border border-emerald-100 flex items-start gap-2">
-                        <span className="text-base leading-none">✅</span>
-                        <span>
-                          <strong className="font-bold text-emerald-950">Active cloud database connection running.</strong> Your data is perfectly secure. Every transaction record and picture receipt is continuously synced to Google Cloud Firestore & Cloud Storage.
-                        </span>
-                      </p>
-                    )}
-
-                    <div className="pt-3 border-t border-slate-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
-                      <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-slate-800">Different dashboard amounts on mobile/desktop?</p>
-                        <p className="text-[10px] text-slate-400 font-bold">If this device has any local/offline data that isn't appearing on other screens, run a force sync to publish them.</p>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          if (onSyncLocalToCloud) {
-                            const success = await onSyncLocalToCloud();
-                            if (success) {
-                              showNotification('success', 'Database cloud synchronization succeeded!');
-                            } else {
-                              showNotification('error', 'Database cloud sync failed. Please check your network connection.');
-                            }
-                          }
-                        }}
-                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 px-3.5 rounded-xl text-[10px] shadow-sm transition-all active:scale-95 flex items-center gap-1.5 border border-blue-100 shrink-0 cursor-pointer justify-center"
-                      >
-                        <RefreshCw size={13} />
-                        <span>Force Database Cloud Sync</span>
-                      </button>
-                    </div>
+                {user.isLocal ? (
+                  <p className="text-xs text-amber-900 leading-relaxed bg-white p-3 rounded-xl border border-amber-200/80">
+                    ⚠️ <strong>You are browsing in Local Bypass Mode.</strong> Your added entries, transactions, and settings updates are currently locked to your browser's private local state. To merge this data and enable multi-user real-time syncing, click the <strong>Sync with Google</strong> button above to link this device.
+                  </p>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
+                    <p className="text-xs text-slate-600">
+                      If you notice different totals on mobile or another screen, run a force sync to publish local changes.
+                    </p>
+                    <button
+                      onClick={handleForceSync}
+                      disabled={isSyncing}
+                      className="flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl text-xs transition-all active:scale-95 border border-blue-200/70 shrink-0 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw size={13} className={isSyncing ? "animate-spin" : ""} />
+                      <span>{isSyncing ? 'Syncing...' : 'Force Database Sync'}</span>
+                    </button>
                   </div>
                 )}
+              </div>
+            ) : (
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs text-slate-600 leading-relaxed">
+                Connect your Google Account to automatically synchronize sales entries, prize sponsors, treasury handovers, and system settings securely in Google Cloud Firestore.
               </div>
             )}
           </div>
@@ -342,32 +363,38 @@ const Settings: React.FC<SettingsProps> = ({
             />
           )}
         </div>
-      </div>
+      )}
 
-      {/* SECTION 3: SYSTEM DATA MAINTENANCE */}
-      <div className="space-y-4">
-        <div className="text-left border-b border-slate-100 pb-2">
-          <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider">Section 03</span>
-          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1.5 flex items-center gap-2">
-            <Database size={16} className="text-slate-500" />
-            Data Backups & Local Maintenance
-          </h2>
+      {/* SECTION 3: DATA BACKUP & MAINTENANCE */}
+      {(activeTab === 'all' || activeTab === 'backup') && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="text-left border-b border-slate-100 pb-2 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Database size={16} className="text-blue-600" />
+              Data Backups & System Maintenance
+            </h2>
+            <span className="text-[11px] text-slate-400 font-medium">Archives & reset options</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Data Management (Backup, Restore, Notification Toggle) */}
+            <BackupSettings 
+              appData={appData} 
+              onBackup={onBackup} 
+              onRestore={onRestore} 
+              onToggleNotifications={onToggleNotifications}
+              showNotification={showNotification}
+            />
+
+            {/* Danger Zone */}
+            <DangerSettings 
+              onClearAll={onClearData} 
+              onBackup={onBackup} 
+              showNotification={showNotification} 
+            />
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Data Management (Backup, Restore, Notification Toggle) */}
-          <BackupSettings 
-            appData={appData} 
-            onBackup={onBackup} 
-            onRestore={onRestore} 
-            onToggleNotifications={onToggleNotifications}
-            showNotification={showNotification}
-          />
-
-          {/* Danger Zone */}
-          <DangerSettings onClearAll={onClearData} onBackup={onBackup} showNotification={showNotification} />
-        </div>
-      </div>
+      )}
 
       {/* Confirmation Modal for Revoking Users */}
       {userToRevoke && (

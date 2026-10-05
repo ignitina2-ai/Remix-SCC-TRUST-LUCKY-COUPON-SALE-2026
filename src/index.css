@@ -1,18 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
+/*
+  Anek Malayalam font restricted strictly to Malayalam characters & ligatures.
+  English words remain rendered in Inter because Inter is first in the font stack
+  and covers all Latin glyphs, while Malayalam glyphs (U+0D00-0D7F) fall back to Anek Malayalam.
+*/
+@font-face {
+  font-family: 'Anek Malayalam Only';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/anekmalayalam/v18/6qLUKZActRTs_mZAJUZWWkhke0nYa_vC8_Azq3-gP1S7bb9_TDudCngS.woff2') format('woff2');
+  unicode-range: U+0D00-0D7F, U+200C-200D, U+0307, U+0323, U+0951-0952, U+0964-0965, U+20B9, U+25CC;
+}
+
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Anek Malayalam Only", "Anek Malayalam", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-/* Base custom styles if needed */
+/* Base custom styles */
 body {
   font-family: var(--font-sans);
 }
 
 .font-mono {
   font-family: var(--font-mono);
+}
+
+.font-malayalam {
+  font-family: "Anek Malayalam Only", "Anek Malayalam", var(--font-sans);
 }
 
 /* ==========================================

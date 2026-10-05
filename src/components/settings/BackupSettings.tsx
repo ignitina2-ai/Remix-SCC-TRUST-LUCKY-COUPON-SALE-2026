@@ -20,7 +20,7 @@ export const BackupSettings: React.FC<BackupSettingsProps> = ({
   showNotification,
 }) => {
   const restoreInputRef = useRef<HTMLInputElement>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

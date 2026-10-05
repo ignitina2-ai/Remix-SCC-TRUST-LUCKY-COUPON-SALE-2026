@@ -76,7 +76,7 @@ export function AdminSettings({
     }
   };
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <div id="settings-card-admin" className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
