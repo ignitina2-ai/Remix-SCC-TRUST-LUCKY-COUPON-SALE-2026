@@ -583,6 +583,13 @@ export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * 8. Click "Deploy", copy the Web App URL, and paste it into the App Settings.
  */
 
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'online',
+    message: 'SCC Trust Lucky Coupon 2026 Webhook is active and connected to COUPON SALE 2026 sheet!'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);

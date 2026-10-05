@@ -24,14 +24,14 @@ try {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager()
     }),
-    experimentalForceLongPolling: true
+    experimentalAutoDetectLongPolling: true
   }, dbId);
 } catch (error) {
   console.warn("Firestore persistent local cache failed to initialize, falling back to memory cache:", error);
   try {
     firestoreDb = initializeFirestore(app, {
       localCache: memoryLocalCache(),
-      experimentalForceLongPolling: true
+      experimentalAutoDetectLongPolling: true
     }, dbId);
   } catch (err2) {
     // If already initialized, fetch the existing instance
