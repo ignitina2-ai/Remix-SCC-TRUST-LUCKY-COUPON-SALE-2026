@@ -9,7 +9,7 @@ export const TARGET_DRIVE_EMAIL = 'ignitina2@gmail.com';
 export const FOLDER_NAME = 'LUCKY COUPON SALE 2026';
 export const SHEET_NAME = 'COUPON SALE 2026';
 export const BACKUP_FILE_NAME = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
-export const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyH12BF9zsSX5guESELutMdbmEUPKXvjQL3sZDq01ayQ1nFukzua3bfaGns1Jdo-J_X/exec';
+export const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwo4Eu7L0TU85LkEsyLfoql81bY_amPwtfn0djqgttXt7PXu0fbdd76Kutr8dHtB0A7jw/exec';
 
 export interface DriveFolderInfo {
   id: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileSpreadsheet, 
   FolderSync, 
@@ -65,6 +65,12 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
   const [webhookInput, setWebhookInput] = useState(driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL);
   const [isSavingWebhook, setIsSavingWebhook] = useState(false);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+
+  useEffect(() => {
+    if (driveSyncConfig?.webhookUrl) {
+      setWebhookInput(driveSyncConfig.webhookUrl);
+    }
+  }, [driveSyncConfig?.webhookUrl]);
 
   const activeToken = accessToken || driveSyncConfig?.activeAccessToken;
   const currentWebhookUrl = driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL;

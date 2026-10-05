@@ -498,11 +498,20 @@ export default function App() {
       const unsubDriveConfig = onSnapshot(doc(db, 'settings', 'driveSyncConfig'), (snap) => {
         if (snap.exists()) {
           const d = snap.data() as DriveSyncConfig;
+          const activeWebhook = (!d.webhookUrl || d.webhookUrl.includes('AKfycbyH12BF9zsSX5guESELutMdbmEUPKXvjQL3sZDq01ayQ1nFukzua3bfaGns1Jdo-J_X'))
+            ? DEFAULT_WEBHOOK_URL
+            : d.webhookUrl;
           const merged: DriveSyncConfig = {
             ...d,
-            webhookUrl: d.webhookUrl || DEFAULT_WEBHOOK_URL,
+            webhookUrl: activeWebhook,
           };
           setDriveSyncConfig(merged);
+          if (d.webhookUrl !== activeWebhook) {
+            setDoc(doc(db, 'settings', 'driveSyncConfig'), {
+              webhookUrl: DEFAULT_WEBHOOK_URL,
+              autoSyncEnabled: true,
+            }, { merge: true }).catch(console.warn);
+          }
           if (d.activeAccessToken) {
             setDriveAccessToken(d.activeAccessToken);
             setCachedAccessToken(d.activeAccessToken);
