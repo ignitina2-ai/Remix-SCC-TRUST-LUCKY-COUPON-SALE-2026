@@ -48,6 +48,8 @@ interface SettingsProps {
   isLoggingIn?: boolean;
   onSyncLocalToCloud?: () => Promise<boolean>;
   driveAccessToken?: string | null;
+  driveSyncConfig?: any;
+  onUpdateDriveSyncConfig?: (config: any) => Promise<void>;
   onConnectDrive?: () => Promise<void>;
   isDriveAutoSyncEnabled?: boolean;
   onToggleDriveAutoSync?: (enabled: boolean) => void;
@@ -78,6 +80,8 @@ const Settings: React.FC<SettingsProps> = ({
   isLoggingIn = false,
   onSyncLocalToCloud,
   driveAccessToken = null,
+  driveSyncConfig,
+  onUpdateDriveSyncConfig,
   onConnectDrive = async () => {},
   isDriveAutoSyncEnabled = true,
   onToggleDriveAutoSync = () => {}
@@ -357,6 +361,8 @@ const Settings: React.FC<SettingsProps> = ({
             appData={appData}
             user={user}
             accessToken={driveAccessToken}
+            driveSyncConfig={driveSyncConfig}
+            onUpdateDriveSyncConfig={onUpdateDriveSyncConfig}
             onConnectDrive={onConnectDrive}
             isAutoSyncEnabled={isDriveAutoSyncEnabled}
             onToggleAutoSync={onToggleDriveAutoSync}

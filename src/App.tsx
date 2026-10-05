@@ -36,6 +36,8 @@ import { sendNotification, requestNotificationPermission } from './lib/notificat
 import { 
   auth, 
   db, 
+  authGoogleProvider,
+  driveGoogleProvider,
   googleProvider, 
   OperationType, 
   handleFirestoreError,
@@ -62,6 +64,11 @@ import {
   syncAllTransactionsToSheet, 
   getOrCreateDriveFolder, 
   getOrCreateCouponSheet,
+  syncViaWebhook,
+  DriveSyncConfig,
+  TARGET_DRIVE_EMAIL,
+  FOLDER_NAME,
+  SHEET_NAME,
   WORKSPACE_SCOPES
 } from './lib/googleDriveSheets';
 
@@ -89,6 +96,9 @@ export default function App() {
   const [firestoreError, setFirestoreError] = useState<string | null>(null);
   const [driveAccessToken, setDriveAccessToken] = useState<string | null>(() => getCachedAccessToken());
   const [isDriveAutoSyncEnabled, setIsDriveAutoSyncEnabled] = useState(true);
+  const [driveSyncConfig, setDriveSyncConfig] = useState<DriveSyncConfig>({
+    autoSyncEnabled: true,
+  });
 
   const [userPermissions, setUserPermissions] = useState({
     canAdd: true,
@@ -99,7 +109,9 @@ export default function App() {
     hideSecretaryHandover: false,
   });
 
-  const isPrimaryAdmin = user?.email?.toLowerCase() === 'ignitina2@gmail.com';
+  const isPrimaryAdmin = 
+    user?.email?.toLowerCase() === 'ignitina2@gmail.com' || 
+    user?.email?.toLowerCase() === 'stcasimircharitabletrust@gmail.com';
 
   // Expose setActiveTab on window for sub-components to trigger tab switches easily
   useEffect(() => {
@@ -188,9 +200,9 @@ export default function App() {
 
       const email = firebaseUser.email?.toLowerCase().trim() || '';
 
-      // Direct access for the primary administrator
-      if (email === 'ignitina2@gmail.com') {
-        const dName = firebaseUser.displayName || 'Primary Administrator';
+      // Direct access for primary trust administrators
+      if (email === 'ignitina2@gmail.com' || email === 'stcasimircharitabletrust@gmail.com') {
+        const dName = firebaseUser.displayName || (email === 'stcasimircharitabletrust@gmail.com' ? 'Trust Administrator' : 'Primary Administrator');
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
@@ -476,6 +488,24 @@ export default function App() {
         setFirestoreError(`Global Settings: ${err.message || String(err)}`);
       });
       activeSubscriptions.push(unsubSettings);
+
+      // 7. Shared Google Drive & Sheets Sync Config Listener
+      const unsubDriveConfig = onSnapshot(doc(db, 'settings', 'driveSyncConfig'), (snap) => {
+        if (snap.exists()) {
+          const d = snap.data() as DriveSyncConfig;
+          setDriveSyncConfig(d);
+          if (d.activeAccessToken) {
+            setDriveAccessToken(d.activeAccessToken);
+            setCachedAccessToken(d.activeAccessToken);
+          }
+          if (d.autoSyncEnabled !== undefined) {
+            setIsDriveAutoSyncEnabled(d.autoSyncEnabled);
+          }
+        }
+      }, (err) => {
+        console.warn("Drive config sync notice:", err);
+      });
+      activeSubscriptions.push(unsubDriveConfig);
     }
 
     return () => {
@@ -488,25 +518,78 @@ export default function App() {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setCachedAccessToken(credential.accessToken);
-        setDriveAccessToken(credential.accessToken);
-        // Pre-create/verify target Google Drive folder and spreadsheet
-        getOrCreateDriveFolder(credential.accessToken).then(folder => {
-          getOrCreateCouponSheet(credential.accessToken, folder.id).catch(console.warn);
-        }).catch(console.warn);
-      }
+      // Standard auth provider without sensitive scopes.
+      // This allows ANY permitted team member or admin to sign in without being blocked by Error 403 (unverified app / test user).
+      await signInWithPopup(auth, authGoogleProvider);
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
-        // do nothing or handle quietly
+        // quiet
       } else if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('unauthorized-domain'))) {
         setLoginError("Firebase: Error (auth/unauthorized-domain)");
       } else {
         setLoginError(err.message || 'Verification failure.');
       }
+    } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleConnectDrive = async () => {
+    try {
+      setLoginError(null);
+      const result = await signInWithPopup(auth, driveGoogleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        const token = credential.accessToken;
+        setCachedAccessToken(token);
+        setDriveAccessToken(token);
+
+        // Pre-create/verify target Google Drive folder and spreadsheet
+        const folder = await getOrCreateDriveFolder(token);
+        const sheet = await getOrCreateCouponSheet(token, folder.id);
+
+        const newConfig: Partial<DriveSyncConfig> = {
+          activeAccessToken: token,
+          tokenUpdatedAt: new Date().toISOString(),
+          connectedEmail: result.user.email,
+          folderId: folder.id,
+          folderLink: folder.webViewLink,
+          sheetId: sheet.id,
+          sheetLink: sheet.webViewLink,
+          autoSyncEnabled: true,
+          lastSyncedAt: new Date().toISOString(),
+          lastSyncedBy: result.user.email || 'Admin',
+          lastSyncStatus: 'success',
+          lastSyncMessage: 'Drive & Sheets initialized successfully',
+        };
+
+        // Save to shared Firestore settings so ALL permitted team members can sync!
+        await setDoc(doc(db, 'settings', 'driveSyncConfig'), cleanUndefined(newConfig), { merge: true });
+        setDriveSyncConfig(prev => ({ ...prev, ...newConfig }));
+      }
+    } catch (err: any) {
+      console.error("Drive connection error:", err);
+      if (
+        err.code === 'auth/access_denied' ||
+        (err.message && (
+          err.message.includes('access_denied') ||
+          err.message.includes('verification process') ||
+          err.message.includes('developer-approved testers')
+        ))
+      ) {
+        setLoginError("Google Error 403 (access_denied): The app is in Testing mode. In Google Cloud Console (Project gen-lang-client-0728385363), go to OAuth consent screen > Test users > add stcasimircharitabletrust@gmail.com and save.");
+      } else if (err.code !== 'auth/popup-closed-by-user') {
+        setLoginError(err.message || 'Failed to connect Google Drive.');
+      }
+    }
+  };
+
+  const handleUpdateDriveSyncConfig = async (partialConfig: Partial<DriveSyncConfig>) => {
+    try {
+      await setDoc(doc(db, 'settings', 'driveSyncConfig'), cleanUndefined(partialConfig), { merge: true });
+      setDriveSyncConfig(prev => ({ ...prev, ...partialConfig }));
+    } catch (err) {
+      console.error("Failed to update driveSyncConfig:", err);
     }
   };
 
@@ -656,6 +739,59 @@ export default function App() {
     return clean;
   };
 
+  // Automated live sync to Google Drive & Google Sheet for ANY permitted team member
+  const syncTransactionToDriveAndSheet = async (
+    action: 'add' | 'update' | 'delete',
+    tx: Transaction,
+    currentAppData: AppData
+  ) => {
+    if (!isDriveAutoSyncEnabled && !driveSyncConfig.autoSyncEnabled) {
+      return;
+    }
+
+    // 1. Webhook sync if configured (Google Apps Script - 24/7 zero token expiration)
+    if (driveSyncConfig.webhookUrl) {
+      syncViaWebhook(driveSyncConfig.webhookUrl, {
+        action,
+        transaction: tx,
+        transactions: currentAppData.transactions,
+        fullBackup: currentAppData,
+      }).then(res => {
+        if (res.success) {
+          setDoc(doc(db, 'settings', 'driveSyncConfig'), {
+            lastSyncedAt: new Date().toISOString(),
+            lastSyncedBy: user?.email || 'Authorized Team Member',
+            lastSyncStatus: 'success',
+            lastSyncMessage: `Transaction ${tx.id || ''} synced via Webhook`,
+          }, { merge: true }).catch(console.warn);
+        }
+      }).catch(console.warn);
+    }
+
+    // 2. Direct Google Drive & Sheet REST API with active OAuth token (local or shared)
+    const token = getCachedAccessToken() || driveAccessToken || driveSyncConfig.activeAccessToken;
+    if (token) {
+      if (action === 'delete') {
+        syncAllTransactionsToSheet(token, currentAppData.transactions).catch(console.warn);
+        saveBackupJsonToDrive(token, currentAppData).catch(console.warn);
+      } else {
+        recordTransactionAndBackupToDrive(token, tx, currentAppData).then(res => {
+          setDoc(doc(db, 'settings', 'driveSyncConfig'), {
+            sheetId: res.sheetResult.sheetId,
+            sheetLink: res.sheetResult.webViewLink,
+            backupFileId: res.backupResult.fileId,
+            lastSyncedAt: new Date().toISOString(),
+            lastSyncedBy: user?.email || 'Authorized Team Member',
+            lastSyncStatus: 'success',
+            lastSyncMessage: `Transaction ${tx.id} ${res.sheetResult.action} in Sheet & JSON backup updated`,
+          }, { merge: true }).catch(console.warn);
+        }).catch(err => {
+          console.warn("Drive auto-sync notice:", err);
+        });
+      }
+    }
+  };
+
   // 100% Secure cloud synchronised operations writing to multi-tab cache
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     if (!userPermissions.canAdd) {
@@ -672,12 +808,9 @@ export default function App() {
       await setDoc(doc(db, 'transactions', transactionId), cleanUndefined(docData));
 
       // Automated Sync to Google Drive ("LUCKY COUPON SALE 2026") & Google Sheet ("COUPON SALE 2026")
-      const token = getCachedAccessToken() || driveAccessToken;
-      if (token && isDriveAutoSyncEnabled) {
-        recordTransactionAndBackupToDrive(token, docData, appData).catch(err => {
-          console.warn("Drive/Sheet auto-sync notice:", err);
-        });
-      }
+      // Works for ANY team member / ID permitted by Trust Admin Team
+      const updatedList = [docData, ...appData.transactions.filter(t => t.id !== transactionId)];
+      syncTransactionToDriveAndSheet('add', docData, { ...appData, transactions: updatedList });
 
       if (appData.notificationsEnabled) {
         sendNotification('New Transaction Added', {
@@ -697,16 +830,12 @@ export default function App() {
     try {
       await updateDoc(doc(db, 'transactions', id), cleanUndefined(updates));
 
-      // Automated Sync to Google Drive & Google Sheet on update
-      const token = getCachedAccessToken() || driveAccessToken;
-      if (token && isDriveAutoSyncEnabled) {
-        const existingTx = appData.transactions.find(t => t.id === id);
-        if (existingTx) {
-          const updatedTx: Transaction = { ...existingTx, ...updates };
-          recordTransactionAndBackupToDrive(token, updatedTx, appData).catch(err => {
-            console.warn("Drive auto-sync on update notice:", err);
-          });
-        }
+      // Automated Sync to Google Drive & Google Sheet on update for ANY permitted team member
+      const existingTx = appData.transactions.find(t => t.id === id);
+      if (existingTx) {
+        const updatedTx: Transaction = { ...existingTx, ...updates };
+        const updatedList = appData.transactions.map(t => t.id === id ? updatedTx : t);
+        syncTransactionToDriveAndSheet('update', updatedTx, { ...appData, transactions: updatedList });
       }
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
@@ -723,13 +852,9 @@ export default function App() {
         await deleteDoc(doc(db, 'transactions', id));
       }
 
-      // Automated Sync to Google Drive & Google Sheet on deletion
-      const token = getCachedAccessToken() || driveAccessToken;
-      if (token && isDriveAutoSyncEnabled) {
-        const remainingTx = appData.transactions.filter(t => !ids.includes(t.id));
-        syncAllTransactionsToSheet(token, remainingTx).catch(console.warn);
-        saveBackupJsonToDrive(token, { ...appData, transactions: remainingTx }).catch(console.warn);
-      }
+      // Automated Sync to Google Drive & Google Sheet on deletion for ANY permitted team member
+      const remainingTx = appData.transactions.filter(t => !ids.includes(t.id));
+      syncTransactionToDriveAndSheet('delete', { id: ids[0] } as any, { ...appData, transactions: remainingTx });
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `transactions/${ids.join(',')}`);
     }
@@ -1221,9 +1346,14 @@ export default function App() {
             onSyncLocalToCloud={handleForceSyncLocalToCloud}
             activeSessions={activeSessions}
             driveAccessToken={driveAccessToken}
-            onConnectDrive={handleGoogleLogin}
+            driveSyncConfig={driveSyncConfig}
+            onUpdateDriveSyncConfig={handleUpdateDriveSyncConfig}
+            onConnectDrive={handleConnectDrive}
             isDriveAutoSyncEnabled={isDriveAutoSyncEnabled}
-            onToggleDriveAutoSync={(enabled) => setIsDriveAutoSyncEnabled(enabled)}
+            onToggleDriveAutoSync={(enabled) => {
+              setIsDriveAutoSyncEnabled(enabled);
+              handleUpdateDriveSyncConfig({ autoSyncEnabled: enabled });
+            }}
           />
         );
       default:

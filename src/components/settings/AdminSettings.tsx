@@ -40,8 +40,10 @@ export function AdminSettings({
   const [perms, setPerms] = useState({ canAdd: true, canEdit: true, canDelete: false });
   const [isAdding, setIsAdding] = useState(false);
 
-  // Strict check to ensure only the primary administrator has full edit and administrative controls over parish helpers
-  const isPrimary = user?.email?.toLowerCase().trim() === 'ignitina2@gmail.com';
+  // Strict check to ensure the primary trust administrators have full edit and administrative controls over helpers
+  const isPrimary = 
+    user?.email?.toLowerCase().trim() === 'ignitina2@gmail.com' || 
+    user?.email?.toLowerCase().trim() === 'stcasimircharitabletrust@gmail.com';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +55,8 @@ export function AdminSettings({
       return;
     }
 
-    if (emailToRegister === 'ignitina2@gmail.com') {
-      showNotification('error', 'The primary admin is registered implicitly other than manually.');
+    if (emailToRegister === 'ignitina2@gmail.com' || emailToRegister === 'stcasimircharitabletrust@gmail.com') {
+      showNotification('error', 'This email is already recognized as a Trust Super Administrator.');
       return;
     }
 
@@ -66,11 +68,11 @@ export function AdminSettings({
     setIsAdding(true);
     try {
       await onAddAllowedUser(emailToRegister, newRole, perms);
-      showNotification('success', `Success! Registered "${emailToRegister}" as an administrator.`);
+      showNotification('success', `Success! Registered "${emailToRegister}" as an authorized team member.`);
       setNewEmail('');
       setPerms({ canAdd: true, canEdit: true, canDelete: false });
     } catch (err) {
-      showNotification('error', 'Failed to register the new admin user. Please try again.');
+      showNotification('error', 'Failed to register the new user. Please try again.');
     } finally {
       setIsAdding(false);
     }
@@ -120,10 +122,10 @@ export function AdminSettings({
             <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Authorized Team Status</h4>
             <div className="font-mono text-[9px] text-slate-500 font-bold flex flex-wrap gap-1.5">
               <span className="inline-flex items-center gap-1 bg-blue-50/50 text-blue-700 border border-blue-100/50 px-2.5 py-0.5 rounded-lg">
-                Super Admin: ignitina2@gmail.com (Primary)
+                Super Admins: ignitina2@gmail.com & stcasimircharitabletrust@gmail.com
               </span>
               <span className="inline-flex items-center gap-1 bg-slate-100/60 text-slate-700 border border-slate-200/40 px-2.5 py-0.5 rounded-lg">
-                Helpers listed: {allowedUsers.length}
+                Authorized helpers: {allowedUsers.length}
               </span>
             </div>
           </div>
@@ -136,12 +138,12 @@ export function AdminSettings({
         <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-50 pb-4">
             <p className="text-slate-500 text-xs font-semibold leading-relaxed text-left max-w-xl">
-              Strict control over which email addresses can log into the system and customize, view, or delete sales ledger documents.
+              Strict control over which email addresses can log in. Whoever logs in via any authorized ID will automatically update the Google Sheet (&quot;COUPON SALE 2026&quot;) and the JSON backup in Google Drive for stcasimircharitabletrust@gmail.com.
             </p>
             {/* Informative info bubble */}
-            <div className="self-start sm:self-center">
+            <div className="self-start sm:self-center flex flex-wrap gap-1.5">
               <span className="text-[10px] font-black uppercase bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
-                Main Admin: ignitina2@gmail.com
+                Admins: ignitina2 / stcasimircharitabletrust
               </span>
             </div>
           </div>

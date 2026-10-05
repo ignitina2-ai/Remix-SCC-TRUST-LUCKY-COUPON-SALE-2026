@@ -38,6 +38,15 @@ export default function LoginPage({
         setLoginError("Login popup was closed. Please try again.");
       } else if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('unauthorized-domain'))) {
         setLoginError("Firebase: Error (auth/unauthorized-domain)");
+      } else if (
+        err.code === 'auth/access_denied' || 
+        (err.message && (
+          err.message.includes('access_denied') || 
+          err.message.includes('verification process') || 
+          err.message.includes('developer-approved testers')
+        ))
+      ) {
+        setLoginError("Google Error 403 (access_denied): The app is in Testing mode. Only approved Test Users can log in. Please add stcasimircharitabletrust@gmail.com to Test Users in Google Cloud Console, or sign in using ignitina2@gmail.com.");
       } else {
         setLoginError(err.message || "An unexpected error occurred during Google Sign-In.");
       }
@@ -60,6 +69,13 @@ export default function LoginPage({
   const isUnauthorizedDomain = loginError && (
     loginError.includes('auth/unauthorized-domain') || 
     loginError.includes('unauthorized-domain')
+  );
+
+  const isTestUserError = loginError && (
+    loginError.includes('access_denied') ||
+    loginError.includes('verification process') ||
+    loginError.includes('developer-approved testers') ||
+    loginError.includes('Testing mode')
   );
 
   return (
@@ -110,6 +126,46 @@ export default function LoginPage({
                   </p>
                 </div>
               </div>
+
+              {isTestUserError && (
+                <div className="bg-amber-950/50 border border-amber-600/60 p-4 rounded-2xl text-left space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={17} />
+                    <div className="space-y-1">
+                      <p className="text-xs font-black text-amber-300 uppercase tracking-wide">Google Error 403: Add stcasimircharitabletrust@gmail.com to Test Users</p>
+                      <p className="text-[11px] text-amber-200/90 leading-relaxed font-medium">
+                        ആപ്പ് Google Cloud-ൽ Testing മോഡിലാണ്. ഇതിൽ ലോഗിൻ ചെയ്യാൻ താഴെ പറയുന്ന വഴിയിലൂടെ ഇമെയിൽ ടെസ്റ്റ് യൂസറായി ആഡ് ചെയ്യുക:
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2.5 text-[11px] text-slate-300">
+                    <ol className="list-decimal list-inside space-y-2 leading-relaxed">
+                      <li>
+                        ഗൂഗിൾ ക്ലൗഡ് കൺസോളിൽ പ്രൊജക്റ്റ് (<strong className="text-white">gen-lang-client-0728385363</strong>) തുറക്കുക:
+                        <a 
+                          href="https://console.cloud.google.com/apis/credentials/consent?project=gen-lang-client-0728385363" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block mt-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-center transition-all cursor-pointer shadow-sm text-xs"
+                        >
+                          🔗 Open Google Cloud Consent Screen
+                        </a>
+                      </li>
+                      <li>
+                        താഴെയുള്ള <strong className="text-white font-semibold">Test users</strong> എന്ന ഭാഗത്തേക്ക് സ്ക്രോൾ ചെയ്യുക.
+                      </li>
+                      <li>
+                        <strong className="text-white font-semibold">+ ADD USERS</strong> ക്ലിക്ക് ചെയ്ത് <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400 font-mono">stcasimircharitabletrust@gmail.com</code> എന്ന് നൽകി <strong className="text-white">SAVE</strong> ചെയ്യുക.
+                      </li>
+                    </ol>
+
+                    <div className="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
+                      <span>അല്ലെങ്കിൽ നേരിട്ട് <strong className="text-white">ignitina2@gmail.com</strong> വെച്ച് ലോഗിൻ ചെയ്യാം.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {isUnauthorizedDomain && (
                 <div className="bg-amber-950/40 border border-amber-900/50 p-4 rounded-2xl text-left space-y-2">

@@ -44,10 +44,17 @@ export const db = firestoreDb;
 // Initialize Authentication and Storage
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-export const googleProvider = new GoogleAuthProvider();
-// Workspace Scopes for Google Drive and Google Sheets integration
-googleProvider.addScope('https://www.googleapis.com/auth/drive');
-googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+
+// 1. Standard authentication provider with NO sensitive scopes.
+// This allows ANY permitted team member or admin to sign in without being blocked by Error 403 (unverified app / test user).
+export const authGoogleProvider = new GoogleAuthProvider();
+export const googleProvider = authGoogleProvider; // Backward compatibility alias
+
+// 2. Specialized provider with Google Drive & Google Sheets scopes.
+// Used specifically when connecting or authorizing Drive sync with stcasimircharitabletrust@gmail.com
+export const driveGoogleProvider = new GoogleAuthProvider();
+driveGoogleProvider.addScope('https://www.googleapis.com/auth/drive');
+driveGoogleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
 
 // In-memory access token caching (never stored in localStorage or sessionStorage)
 let cachedAccessToken: string | null = null;

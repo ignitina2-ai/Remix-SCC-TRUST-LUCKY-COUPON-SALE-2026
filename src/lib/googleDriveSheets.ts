@@ -495,3 +495,178 @@ export async function recordTransactionAndBackupToDrive(
 
   return { sheetResult, backupResult };
 }
+
+export interface DriveSyncConfig {
+  activeAccessToken?: string | null;
+  tokenUpdatedAt?: string | null;
+  connectedEmail?: string | null;
+  folderId?: string;
+  folderLink?: string;
+  sheetId?: string;
+  sheetLink?: string;
+  backupFileId?: string;
+  webhookUrl?: string;
+  autoSyncEnabled?: boolean;
+  lastSyncedAt?: string;
+  lastSyncedBy?: string;
+  lastSyncStatus?: 'success' | 'error';
+  lastSyncMessage?: string;
+}
+
+/**
+ * Sync transaction or full backup via Google Apps Script Webhook.
+ * This allows all team members across any device to sync directly without needing local OAuth tokens!
+ */
+export async function syncViaWebhook(
+  webhookUrl: string,
+  payload: {
+    action: 'add' | 'update' | 'delete' | 'syncAll';
+    transaction?: Transaction;
+    transactions?: Transaction[];
+    fullBackup?: AppData;
+  }
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return { success: false, message: `Webhook responded with status ${res.status}: ${errText}` };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Webhook sync failed:', err);
+    return { success: false, message: err.message || String(err) };
+  }
+}
+
+/**
+ * Ready-to-copy Google Apps Script code for stcasimircharitabletrust@gmail.com
+ */
+export const GOOGLE_APPS_SCRIPT_CODE = `/**
+ * SCC TRUST - LUCKY COUPON SALE 2026
+ * Automated Real-Time Google Sheet & Google Drive Sync Webhook
+ * 
+ * SETUP INSTRUCTIONS:
+ * 1. Open Google Sheet "COUPON SALE 2026"
+ * 2. Click "Extensions" > "Apps Script"
+ * 3. Replace all code in the script editor with this exact code and Save.
+ * 4. Click "Deploy" > "New deployment"
+ * 5. Select type: "Web app"
+ * 6. Set "Execute as": "Me (stcasimircharitabletrust@gmail.com)"
+ * 7. Set "Who has access": "Anyone" (allows applet to send live transaction updates)
+ * 8. Click "Deploy", copy the Web App URL, and paste it into the App Settings.
+ */
+
+function doPost(e) {
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('COUPON SALE 2026') || ss.getActiveSheet();
+    
+    // Ensure Sheet Title
+    if (sheet.getName() !== 'COUPON SALE 2026') {
+      try { sheet.setName('COUPON SALE 2026'); } catch(e){}
+    }
+
+    // 1. Process Single Transaction (Add / Update)
+    if (payload.action === 'add' || payload.action === 'update') {
+      var tx = payload.transaction;
+      var data = sheet.getDataRange().getValues();
+      var rowIndex = -1;
+      
+      // Match by Transaction ID (Column B)
+      for (var i = 1; i < data.length; i++) {
+        if (data[i] && String(data[i][1]) === String(tx.id)) {
+          rowIndex = i + 1;
+          break;
+        }
+      }
+      
+      var row = [
+        rowIndex > 1 ? rowIndex - 1 : Math.max(1, data.length),
+        tx.id || '',
+        tx.date ? new Date(tx.date).toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'}) : new Date().toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'}),
+        tx.name || '',
+        tx.area || '',
+        tx.phone || '',
+        tx.books || 0,
+        tx.bookNumber || '',
+        tx.coupons || 0,
+        tx.couponNumber || '',
+        tx.totalAmount || 0,
+        tx.paidAmount || 0,
+        tx.creditAmount || 0,
+        tx.paymentMethod || 'CASH',
+        tx.paidToTreasurer ? 'YES' : 'NO',
+        new Date().toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'})
+      ];
+      
+      if (rowIndex > 1) {
+        sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+      } else {
+        sheet.appendRow(row);
+      }
+    } 
+    // 2. Full Bulk Sync
+    else if (payload.action === 'syncAll' && payload.transactions) {
+      sheet.clear();
+      var headers = [
+        'Sl No', 'Transaction ID', 'Date & Time', 'Name', 'Area', 'Phone',
+        'Books', 'Book Number', 'Coupons', 'Coupon Number',
+        'Total Amount (₹)', 'Paid Amount (₹)', 'Balance / Credit (₹)',
+        'Payment Mode', 'Paid to Treasurer', 'System Sync Timestamp'
+      ];
+      var rows = [headers];
+      payload.transactions.forEach(function(tx, idx) {
+        rows.push([
+          idx + 1,
+          tx.id || '',
+          tx.date ? new Date(tx.date).toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'}) : '',
+          tx.name || '',
+          tx.area || '',
+          tx.phone || '',
+          tx.books || 0,
+          tx.bookNumber || '',
+          tx.coupons || 0,
+          tx.couponNumber || '',
+          tx.totalAmount || 0,
+          tx.paidAmount || 0,
+          tx.creditAmount || 0,
+          tx.paymentMethod || 'CASH',
+          tx.paidToTreasurer ? 'YES' : 'NO',
+          new Date().toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'})
+        ]);
+      });
+      sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+    }
+
+    // 3. Save / Update Full Backup JSON in "LUCKY COUPON SALE 2026" Drive Folder
+    if (payload.fullBackup) {
+      var folderName = 'LUCKY COUPON SALE 2026';
+      var folders = DriveApp.getFoldersByName(folderName);
+      var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+      var fileName = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
+      var files = folder.getFilesByName(fileName);
+      var content = JSON.stringify(payload.fullBackup, null, 2);
+      if (files.hasNext()) {
+        files.next().setContent(content);
+      } else {
+        folder.createFile(fileName, content, MimeType.PLAIN_TEXT);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
