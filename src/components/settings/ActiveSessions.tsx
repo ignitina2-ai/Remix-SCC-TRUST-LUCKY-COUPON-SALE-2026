@@ -116,7 +116,7 @@ export function ActiveSessions({
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase leading-tight">
-              ലോഗിൻ ചെയ്തവർ <span className="text-xs font-bold text-slate-400">/ Active Logged-in Sessions</span>
+              ലോഗിൻ ചെയ്തവർ <span className="text-xs font-bold text-slate-400"></span>
             </h3>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
               നിങ്ങൾ ലോഗിൻ ചെയ്തിട്ടുള്ള മൊബൈലുകളും പിസികളും / Devices logged in
