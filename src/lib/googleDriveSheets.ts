@@ -521,7 +521,7 @@ export interface DriveSyncConfig {
 export async function syncViaWebhook(
   webhookUrl: string,
   payload: {
-    action: 'add' | 'update' | 'delete' | 'syncAll';
+    action: 'add' | 'update' | 'delete' | 'syncAll' | 'restructure' | 'recreate';
     transaction?: Transaction;
     transactions?: Transaction[];
     fullBackup?: AppData;
@@ -569,56 +569,89 @@ export async function syncViaWebhook(
  * Ready-to-copy Google Apps Script code for ignitina2@gmail.com
  */
 export const GOOGLE_APPS_SCRIPT_CODE = `/**
- * SCC TRUST - LUCKY COUPON SALE 2026
- * Automated Real-Time Google Sheet & Google Drive Sync Webhook
+ * ============================================================================
+ * ST. CASIMIR CHARITABLE TRUST - LUCKY COUPON SALE 2026
+ * 100% AUTOMATED GOOGLE SHEET & DRIVE BACKUP SYNC SCRIPT (FRESH RESTRUCTURED)
+ * ============================================================================
  * 
  * SETUP INSTRUCTIONS:
- * 1. Open Google Sheet "COUPON SALE 2026" in ignitina2@gmail.com
- * 2. Click "Extensions" > "Apps Script"
- * 3. Replace all code in the script editor with this exact code and Save.
- * 4. Click "Deploy" > "New deployment"
- * 5. Select type: "Web app"
- * 6. Set "Execute as": "Me (ignitina2@gmail.com)"
- * 7. Set "Who has access": "Anyone" (allows applet to send live transaction updates)
- * 8. Click "Deploy", copy the Web App URL, and paste it into the App Settings.
+ * 1. Open Google Sheet "COUPON SALE 2026" or go to https://script.google.com
+ * 2. Paste this entire code into the code editor and click Save (💾).
+ * 3. Click "Deploy" > "New deployment"
+ * 4. Select type: "Web app"
+ * 5. Configuration:
+ *    - Description: "Lucky Coupon Sale 2026 Live Sync"
+ *    - Execute as: "Me (ignitina2@gmail.com)"
+ *    - Who has access: "Anyone"  <--- (IMPORTANT: MUST BE "Anyone")
+ * 6. Click "Deploy", copy the Web App URL, and paste it into the App Settings!
  */
 
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'online',
-    message: 'SCC Trust Lucky Coupon 2026 Webhook is active and connected to COUPON SALE 2026 sheet!'
-  })).setMimeType(ContentService.MimeType.JSON);
+  try {
+    var setup = getOrCreateTargetSpreadsheet();
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'online',
+      message: 'SCC Trust Lucky Coupon 2026 Webhook is active and operational!',
+      sheetUrl: setup.ss.getUrl(),
+      folderName: 'LUCKY COUPON SALE 2026',
+      sheetName: 'COUPON SALE 2026',
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('COUPON SALE 2026') || ss.getActiveSheet();
-    
-    // Ensure Sheet Title
-    if (sheet.getName() !== 'COUPON SALE 2026') {
-      try { sheet.setName('COUPON SALE 2026'); } catch(e){}
+    var setup = getOrCreateTargetSpreadsheet();
+    var sheet = setup.sheet;
+    var targetFolder = setup.folder;
+
+    // 1. FRESH RESTRUCTURE / RESET ALL
+    if (payload.action === 'restructure' || payload.action === 'recreate') {
+      sheet.clear();
+      formatHeaders(sheet);
+      if (payload.transactions && payload.transactions.length > 0) {
+        writeAllRows(sheet, payload.transactions);
+      }
+      saveBackupJson(targetFolder, payload.fullBackup);
+      return jsonResponse({
+        status: 'success',
+        message: 'Sheet restructured fresh with headers, formats and ' + (payload.transactions ? payload.transactions.length : 0) + ' records.'
+      });
     }
 
-    // 1. Process Single Transaction (Add / Update)
+    // 2. SINGLE TRANSACTION (ADD / UPDATE)
     if (payload.action === 'add' || payload.action === 'update') {
       var tx = payload.transaction;
+      if (!tx) throw new Error('Transaction data missing in payload');
+
       var data = sheet.getDataRange().getValues();
       var rowIndex = -1;
-      
-      // Match by Transaction ID (Column B)
+
+      // Format headers if sheet is empty
+      if (data.length === 0 || (data.length === 1 && !data[0][0])) {
+        formatHeaders(sheet);
+        data = sheet.getDataRange().getValues();
+      }
+
+      // Match existing transaction by ID (Column B)
       for (var i = 1; i < data.length; i++) {
         if (data[i] && String(data[i][1]) === String(tx.id)) {
           rowIndex = i + 1;
           break;
         }
       }
-      
+
       var row = [
         rowIndex > 1 ? rowIndex - 1 : Math.max(1, data.length),
         tx.id || '',
-        tx.date ? new Date(tx.date).toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'}) : new Date().toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'}),
+        tx.date ? new Date(tx.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
         tx.name || '',
         tx.area || '',
         tx.phone || '',
@@ -631,26 +664,16 @@ function doPost(e) {
         tx.creditAmount || 0,
         tx.paymentMethod || 'CASH',
         tx.paidToTreasurer ? 'YES' : 'NO',
-        new Date().toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'})
+        new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
       ];
-      
+
       if (rowIndex > 1) {
         sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
       } else {
-        if (data.length === 0 || (data.length === 1 && !data[0][0])) {
-          var headers = [
-            'Sl No', 'Transaction ID', 'Date & Time', 'Name', 'Area', 'Phone',
-            'Books', 'Book Number', 'Coupons', 'Coupon Number',
-            'Total Amount (₹)', 'Paid Amount (₹)', 'Balance / Credit (₹)',
-            'Payment Mode', 'Paid to Treasurer', 'System Sync Timestamp'
-          ];
-          sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-          row[0] = 1;
-        }
         sheet.appendRow(row);
       }
-    } 
-    // 2. Process Delete Transaction
+    }
+    // 3. DELETE TRANSACTION
     else if (payload.action === 'delete') {
       var txId = (payload.transaction && payload.transaction.id) ? payload.transaction.id : (payload.transactionId || '');
       if (txId) {
@@ -663,81 +686,139 @@ function doPost(e) {
         }
       }
     }
-    // 3. Full Bulk Sync
+    // 4. FULL BULK SYNC
     else if (payload.action === 'syncAll' && payload.transactions) {
       sheet.clear();
-      var headers = [
-        'Sl No', 'Transaction ID', 'Date & Time', 'Name', 'Area', 'Phone',
-        'Books', 'Book Number', 'Coupons', 'Coupon Number',
-        'Total Amount (₹)', 'Paid Amount (₹)', 'Balance / Credit (₹)',
-        'Payment Mode', 'Paid to Treasurer', 'System Sync Timestamp'
-      ];
-      var rows = [headers];
-      payload.transactions.forEach(function(tx, idx) {
-        rows.push([
-          idx + 1,
-          tx.id || '',
-          tx.date ? new Date(tx.date).toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'}) : '',
-          tx.name || '',
-          tx.area || '',
-          tx.phone || '',
-          tx.books || 0,
-          tx.bookNumber || '',
-          tx.coupons || 0,
-          tx.couponNumber || '',
-          tx.totalAmount || 0,
-          tx.paidAmount || 0,
-          tx.creditAmount || 0,
-          tx.paymentMethod || 'CASH',
-          tx.paidToTreasurer ? 'YES' : 'NO',
-          new Date().toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'})
-        ]);
-      });
-      sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+      formatHeaders(sheet);
+      writeAllRows(sheet, payload.transactions);
     }
 
-    // 4. Save / Update Full Backup JSON in "LUCKY COUPON SALE 2026" Drive Folder
+    // 5. AUTO-UPDATE JSON BACKUP IN SAME "LUCKY COUPON SALE 2026" FOLDER
     if (payload.fullBackup) {
-      var folderName = 'LUCKY COUPON SALE 2026';
-      var targetFolder = null;
-      var folders = DriveApp.getFoldersByName(folderName);
-      if (folders.hasNext()) {
-        targetFolder = folders.next();
-      } else {
-        targetFolder = DriveApp.createFolder(folderName);
-      }
-
-      // Ensure the sheet itself is inside 'LUCKY COUPON SALE 2026' folder
-      try {
-        var sheetFile = DriveApp.getFileById(ss.getId());
-        var parents = sheetFile.getParents();
-        var alreadyInFolder = false;
-        while (parents.hasNext()) {
-          var p = parents.next();
-          if (p.getId() === targetFolder.getId()) {
-            alreadyInFolder = true;
-            break;
-          }
-        }
-        if (!alreadyInFolder) {
-          targetFolder.addFile(sheetFile);
-        }
-      } catch (fErr) {}
-
-      var fileName = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
-      var files = targetFolder.getFilesByName(fileName);
-      var content = JSON.stringify(payload.fullBackup, null, 2);
-      if (files.hasNext()) {
-        files.next().setContent(content);
-      } else {
-        targetFolder.createFile(fileName, content, MimeType.PLAIN_TEXT);
-      }
+      saveBackupJson(targetFolder, payload.fullBackup);
     }
 
-    return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ status: 'success', message: 'Sync successful for action: ' + payload.action });
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ status: 'error', message: err.toString() });
   }
+}
+
+/**
+ * Robust helper: Works whether script is bound to a sheet OR standalone in script.google.com!
+ */
+function getOrCreateTargetSpreadsheet() {
+  var folderName = 'LUCKY COUPON SALE 2026';
+  var sheetName = 'COUPON SALE 2026';
+
+  var targetFolder = null;
+  var folders = DriveApp.getFoldersByName(folderName);
+  if (folders.hasNext()) {
+    targetFolder = folders.next();
+  } else {
+    targetFolder = DriveApp.createFolder(folderName);
+  }
+
+  var ss = null;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch (e) {}
+
+  if (ss) {
+    // If bound, ensure it resides in the target folder
+    try {
+      var file = DriveApp.getFileById(ss.getId());
+      var parents = file.getParents();
+      var inFolder = false;
+      while (parents.hasNext()) {
+        if (parents.next().getId() === targetFolder.getId()) {
+          inFolder = true;
+          break;
+        }
+      }
+      if (!inFolder) {
+        targetFolder.addFile(file);
+      }
+    } catch (e) {}
+  } else {
+    // If standalone, search or create in the folder
+    var sheetFiles = targetFolder.getFilesByName(sheetName);
+    if (sheetFiles.hasNext()) {
+      ss = SpreadsheetApp.open(sheetFiles.next());
+    } else {
+      ss = SpreadsheetApp.create(sheetName);
+      var newFile = DriveApp.getFileById(ss.getId());
+      targetFolder.addFile(newFile);
+      try { DriveApp.getRootFolder().removeFile(newFile); } catch (e) {}
+    }
+  }
+
+  var sheet = ss.getSheetByName(sheetName) || ss.getActiveSheet();
+  if (sheet.getName() !== sheetName) {
+    try { sheet.setName(sheetName); } catch (e) {}
+  }
+
+  return { ss: ss, sheet: sheet, folder: targetFolder };
+}
+
+function formatHeaders(sheet) {
+  var headers = [
+    'Sl No', 'Transaction ID', 'Date & Time', 'Name', 'Area', 'Phone',
+    'Books', 'Book Number', 'Coupons', 'Coupon Number',
+    'Total Amount (₹)', 'Paid Amount (₹)', 'Balance / Credit (₹)',
+    'Payment Mode', 'Paid to Treasurer', 'System Sync Timestamp'
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  try {
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground('#0f172a')
+      .setFontColor('#ffffff')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center');
+    sheet.setFrozenRows(1);
+  } catch (e) {}
+}
+
+function writeAllRows(sheet, transactions) {
+  if (!transactions || transactions.length === 0) return;
+  var rows = [];
+  transactions.forEach(function(tx, idx) {
+    rows.push([
+      idx + 1,
+      tx.id || '',
+      tx.date ? new Date(tx.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
+      tx.name || '',
+      tx.area || '',
+      tx.phone || '',
+      tx.books || 0,
+      tx.bookNumber || '',
+      tx.coupons || 0,
+      tx.couponNumber || '',
+      tx.totalAmount || 0,
+      tx.paidAmount || 0,
+      tx.creditAmount || 0,
+      tx.paymentMethod || 'CASH',
+      tx.paidToTreasurer ? 'YES' : 'NO',
+      new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+    ]);
+  });
+  sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+}
+
+function saveBackupJson(targetFolder, fullBackup) {
+  if (!fullBackup || !targetFolder) return;
+  var fileName = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
+  var files = targetFolder.getFilesByName(fileName);
+  var content = JSON.stringify(fullBackup, null, 2);
+  if (files.hasNext()) {
+    files.next().setContent(content);
+  } else {
+    targetFolder.createFile(fileName, content, MimeType.PLAIN_TEXT);
+  }
+}
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }`;

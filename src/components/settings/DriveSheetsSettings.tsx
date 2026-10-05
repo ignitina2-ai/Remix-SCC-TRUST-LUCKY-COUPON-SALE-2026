@@ -14,7 +14,9 @@ import {
   Code2,
   Users,
   ShieldCheck,
-  Zap
+  Zap,
+  Sparkles,
+  RotateCcw
 } from 'lucide-react';
 import { AppData } from '@/types';
 import { cn } from '@/lib/utils';
@@ -65,6 +67,8 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
   const [webhookInput, setWebhookInput] = useState(driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL);
   const [isSavingWebhook, setIsSavingWebhook] = useState(false);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+  const [isRestructuring, setIsRestructuring] = useState(false);
+  const [showRestructureModal, setShowRestructureModal] = useState(false);
 
   useEffect(() => {
     if (driveSyncConfig?.webhookUrl) {
@@ -75,6 +79,54 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
   const activeToken = accessToken || driveSyncConfig?.activeAccessToken;
   const currentWebhookUrl = driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL;
   const isConnected = !!activeToken || !!currentWebhookUrl;
+
+  const handleRestructureFresh = async () => {
+    if (!activeToken && !currentWebhookUrl) {
+      showNotification('error', 'Please connect with Google Drive & Sheets or save a Webhook URL first.');
+      return;
+    }
+
+    setIsRestructuring(true);
+    try {
+      let sheetRes: any = null;
+      let backupRes: any = null;
+
+      // 1. If direct OAuth token is present, rebuild sheet via Google REST APIs
+      if (activeToken) {
+        sheetRes = await syncAllTransactionsToSheet(activeToken, appData.transactions);
+        backupRes = await saveBackupJsonToDrive(activeToken, appData);
+      }
+
+      // 2. Dispatch restructure to Webhook URL
+      if (currentWebhookUrl) {
+        await syncViaWebhook(currentWebhookUrl, {
+          action: 'restructure',
+          transactions: appData.transactions,
+          fullBackup: appData,
+        });
+      }
+
+      if (onUpdateDriveSyncConfig) {
+        await onUpdateDriveSyncConfig({
+          sheetId: sheetRes?.sheetId || driveSyncConfig?.sheetId,
+          sheetLink: sheetRes?.webViewLink || driveSyncConfig?.sheetLink,
+          backupFileId: backupRes?.fileId || driveSyncConfig?.backupFileId,
+          lastSyncedAt: new Date().toISOString(),
+          lastSyncedBy: user?.email || 'Admin',
+          lastSyncStatus: 'success',
+          lastSyncMessage: `Sheet restructured fresh with ${appData.transactions.length} records & Drive JSON backup saved`,
+        });
+      }
+
+      showNotification('success', `Google Sheet restructured fresh! ${appData.transactions.length} records written with new formatting.`);
+    } catch (err: any) {
+      console.error('Restructure sheet error:', err);
+      showNotification('error', `Restructure failed: ${err.message || 'Please check connection.'}`);
+    } finally {
+      setIsRestructuring(false);
+      setShowRestructureModal(false);
+    }
+  };
 
   const handleManualSyncAll = async () => {
     if (!activeToken && !currentWebhookUrl) {
@@ -390,6 +442,27 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
         </div>
       </div>
 
+      {/* Fresh Restructure Card */}
+      <div className="p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 font-bold text-amber-950 text-xs">
+            <Sparkles size={15} className="text-amber-600 shrink-0" />
+            <span>Google Sheet ഫ്രഷ് ആയി റീ-സ്ട്രക്ചർ ചെയ്യണോ? (Fresh Restructure &amp; Reset)</span>
+          </div>
+          <p className="text-[11px] text-amber-900/90 leading-relaxed">
+            പഴയ ഷീറ്റ് ക്ലീൻ ചെയ്ത്, പുതിയ ഡാർക്ക് ഹെഡറുകളോടെ നിലവിലുള്ള <strong>{appData.transactions.length}</strong> ഇടപാടുകളും പുത്തനായി റീ-ബിൽഡ് ചെയ്യാം.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowRestructureModal(true)}
+          disabled={isRestructuring || !isConnected}
+          className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-1.5"
+        >
+          <RotateCcw size={13} className={isRestructuring ? "animate-spin" : ""} />
+          <span>{isRestructuring ? "Restructuring..." : "Re-structure Sheet Fresh"}</span>
+        </button>
+      </div>
+
       {/* Manual Bulk Sync Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <div className="space-y-0.5">
@@ -410,6 +483,18 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
           <span>{isSyncingAll ? "Syncing to Drive & Sheets..." : "Sync All to Google Sheet & Drive"}</span>
         </button>
       </div>
+
+      {/* Restructure Confirmation Modal */}
+      {showRestructureModal && (
+        <ConfirmationModal
+          isOpen={showRestructureModal}
+          onClose={() => setShowRestructureModal(false)}
+          onConfirm={handleRestructureFresh}
+          title="Google Sheet ഫ്രഷ് ആയി റീ-സ്ട്രക്ചർ ചെയ്യണോ?"
+          message={`ഇത് Google Sheet-ലെ മുഴുവൻ ഡാറ്റയും ക്ലീൻ ചെയ്ത്, പുതിയ ഡാർക്ക് ഹെഡറുകളോടെ നിലവിലുള്ള ${appData.transactions.length} ട്രാൻസാക്ഷനുകളും ക്രമമായി വീണ്ടും എഴുതും. കൂടാതെ "LUCKY COUPON SALE 2026" ഫോൾഡറിലെ JSON ബാക്കപ്പും പുതുക്കും. തുടരണോ?`}
+          size="sm"
+        />
+      )}
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
