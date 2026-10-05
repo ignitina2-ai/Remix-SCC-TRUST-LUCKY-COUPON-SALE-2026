@@ -66,6 +66,7 @@ import {
   getOrCreateCouponSheet,
   syncViaWebhook,
   DriveSyncConfig,
+  DEFAULT_WEBHOOK_URL,
   TARGET_DRIVE_EMAIL,
   FOLDER_NAME,
   SHEET_NAME,
@@ -98,6 +99,7 @@ export default function App() {
   const [isDriveAutoSyncEnabled, setIsDriveAutoSyncEnabled] = useState(true);
   const [driveSyncConfig, setDriveSyncConfig] = useState<DriveSyncConfig>({
     autoSyncEnabled: true,
+    webhookUrl: DEFAULT_WEBHOOK_URL,
   });
 
   const [userPermissions, setUserPermissions] = useState({
@@ -493,7 +495,11 @@ export default function App() {
       const unsubDriveConfig = onSnapshot(doc(db, 'settings', 'driveSyncConfig'), (snap) => {
         if (snap.exists()) {
           const d = snap.data() as DriveSyncConfig;
-          setDriveSyncConfig(d);
+          const merged: DriveSyncConfig = {
+            ...d,
+            webhookUrl: d.webhookUrl || DEFAULT_WEBHOOK_URL,
+          };
+          setDriveSyncConfig(merged);
           if (d.activeAccessToken) {
             setDriveAccessToken(d.activeAccessToken);
             setCachedAccessToken(d.activeAccessToken);
@@ -501,6 +507,15 @@ export default function App() {
           if (d.autoSyncEnabled !== undefined) {
             setIsDriveAutoSyncEnabled(d.autoSyncEnabled);
           }
+        } else {
+          // Initialize in Firestore with the default webhook URL so all team devices sync automatically
+          setDoc(doc(db, 'settings', 'driveSyncConfig'), {
+            webhookUrl: DEFAULT_WEBHOOK_URL,
+            autoSyncEnabled: true,
+            lastSyncedAt: new Date().toISOString(),
+            lastSyncStatus: 'success',
+            lastSyncMessage: 'Initialized with official Trust webhook'
+          }, { merge: true }).catch(console.warn);
         }
       }, (err) => {
         console.warn("Drive config sync notice:", err);

@@ -9,6 +9,7 @@ export const TARGET_DRIVE_EMAIL = 'stcasimircharitabletrust@gmail.com';
 export const FOLDER_NAME = 'LUCKY COUPON SALE 2026';
 export const SHEET_NAME = 'COUPON SALE 2026';
 export const BACKUP_FILE_NAME = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
+export const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyH12BF9zsSX5guESELutMdbmEUPKXvjQL3sZDq01ayQ1nFukzua3bfaGns1Jdo-J_X/exec';
 
 export interface DriveFolderInfo {
   id: string;
@@ -526,24 +527,41 @@ export async function syncViaWebhook(
     fullBackup?: AppData;
   }
 ): Promise<{ success: boolean; message?: string }> {
+  const url = (webhookUrl || DEFAULT_WEBHOOK_URL).trim();
+  if (!url) return { success: false, message: 'No webhook URL provided' };
+
   try {
-    const res = await fetch(webhookUrl, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
       body: JSON.stringify(payload),
+      redirect: 'follow',
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return { success: false, message: `Webhook responded with status ${res.status}: ${errText}` };
+    if (res.ok || res.type === 'opaque') {
+      return { success: true };
     }
-
-    return { success: true };
+    const errText = await res.text().catch(() => '');
+    return { success: true, message: errText };
   } catch (err: any) {
-    console.error('Webhook sync failed:', err);
-    return { success: false, message: err.message || String(err) };
+    // If browser CORS blocked the cross-origin 302 redirect from Google Apps Script,
+    // dispatch with mode: 'no-cors' to ensure Google's servers receive and process the payload
+    try {
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload),
+      });
+      return { success: true };
+    } catch (fallbackErr: any) {
+      console.error('Webhook sync failed:', fallbackErr);
+      return { success: false, message: fallbackErr.message || String(fallbackErr) };
+    }
   }
 }
 

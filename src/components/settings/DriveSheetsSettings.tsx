@@ -28,7 +28,9 @@ import {
   DriveFolderInfo,
   SheetInfo,
   DriveSyncConfig,
-  GOOGLE_APPS_SCRIPT_CODE
+  GOOGLE_APPS_SCRIPT_CODE,
+  DEFAULT_WEBHOOK_URL,
+  syncViaWebhook
 } from '@/lib/googleDriveSheets';
 import ConfirmationModal from '../ConfirmationModal';
 
@@ -60,43 +62,55 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [showScriptModal, setShowScriptModal] = useState(false);
-  const [webhookInput, setWebhookInput] = useState(driveSyncConfig?.webhookUrl || '');
+  const [webhookInput, setWebhookInput] = useState(driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL);
   const [isSavingWebhook, setIsSavingWebhook] = useState(false);
 
   const activeToken = accessToken || driveSyncConfig?.activeAccessToken;
-  const isConnected = !!activeToken || !!driveSyncConfig?.webhookUrl;
+  const currentWebhookUrl = driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL;
+  const isConnected = !!activeToken || !!currentWebhookUrl;
 
   const handleManualSyncAll = async () => {
-    if (!activeToken) {
-      showNotification('error', 'Please connect with Google Drive & Sheets first.');
+    if (!activeToken && !currentWebhookUrl) {
+      showNotification('error', 'Please connect with Google Drive & Sheets or save a Webhook URL first.');
       return;
     }
 
     setIsSyncingAll(true);
     try {
-      // 1. Sync all transactions to Google Sheet
-      const sheetRes = await syncAllTransactionsToSheet(activeToken, appData.transactions);
-      // 2. Save full JSON backup to Google Drive folder
-      const backupRes = await saveBackupJsonToDrive(activeToken, appData);
+      let sheetRes: any = null;
+      let backupRes: any = null;
 
-      const timestamp = new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' });
+      // 1. If direct OAuth token is present, sync via Google REST APIs
+      if (activeToken) {
+        sheetRes = await syncAllTransactionsToSheet(activeToken, appData.transactions);
+        backupRes = await saveBackupJsonToDrive(activeToken, appData);
+      }
 
-      if (onUpdateDriveSyncConfig) {
-        await onUpdateDriveSyncConfig({
-          sheetId: sheetRes.sheetId,
-          sheetLink: sheetRes.webViewLink,
-          backupFileId: backupRes.fileId,
-          lastSyncedAt: new Date().toISOString(),
-          lastSyncedBy: user?.email || 'Admin',
-          lastSyncStatus: 'success',
-          lastSyncMessage: `All ${sheetRes.count} records synced`,
+      // 2. If Webhook URL is present, also dispatch to Webhook
+      if (currentWebhookUrl) {
+        await syncViaWebhook(currentWebhookUrl, {
+          action: 'syncAll',
+          transactions: appData.transactions,
+          fullBackup: appData,
         });
       }
 
-      showNotification('success', `Successfully synced ${sheetRes.count} transactions to Google Sheet & updated Drive JSON backup!`);
+      if (onUpdateDriveSyncConfig) {
+        await onUpdateDriveSyncConfig({
+          sheetId: sheetRes?.sheetId || driveSyncConfig?.sheetId,
+          sheetLink: sheetRes?.webViewLink || driveSyncConfig?.sheetLink,
+          backupFileId: backupRes?.fileId || driveSyncConfig?.backupFileId,
+          lastSyncedAt: new Date().toISOString(),
+          lastSyncedBy: user?.email || 'Admin',
+          lastSyncStatus: 'success',
+          lastSyncMessage: `All ${appData.transactions.length} records synced to Google Sheet & Drive JSON backup`,
+        });
+      }
+
+      showNotification('success', `Successfully synced ${appData.transactions.length} transactions to Google Sheet & updated Drive JSON backup!`);
     } catch (err: any) {
       console.error('Manual Drive sync error:', err);
-      showNotification('error', `Drive Sync failed: ${err.message || 'Please re-authenticate with Google.'}`);
+      showNotification('error', `Drive Sync failed: ${err.message || 'Please check connection.'}`);
     } finally {
       setIsSyncingAll(false);
       setShowConfirmModal(false);
@@ -364,15 +378,20 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
             placeholder="https://script.google.com/macros/s/.../exec"
             value={webhookInput}
             onChange={(e) => setWebhookInput(e.target.value)}
-            className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+            className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-blue-500"
           />
           <button
             onClick={handleSaveWebhook}
             disabled={isSavingWebhook}
-            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
+            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 shrink-0"
           >
             {isSavingWebhook ? 'Saving...' : 'Save Webhook'}
           </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50/80 border border-emerald-200/60 p-2.5 rounded-xl">
+          <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
+          <span>Active Webhook Configured: ലോഗിൻ ചെയ്ത എല്ലാ ടീം അംഗങ്ങൾക്കും Google Sheet &amp; Drive JSON ബാക്കപ്പ് തത്സമയം അപ്ഡേറ്റ് ആകും!</span>
         </div>
       </div>
 
