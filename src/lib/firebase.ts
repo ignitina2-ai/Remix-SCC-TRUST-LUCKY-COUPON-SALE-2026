@@ -17,7 +17,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firestore with robust try-catch fallback and long polling enabled
 let firestoreDb;
-const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+const dbId = (firebaseConfig as any).firestoreDatabaseId || '(default)';
 
 try {
   firestoreDb = initializeFirestore(app, {
@@ -45,6 +45,21 @@ export const db = firestoreDb;
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
+// Workspace Scopes for Google Drive and Google Sheets integration
+googleProvider.addScope('https://www.googleapis.com/auth/drive');
+googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+
+// In-memory access token caching (never stored in localStorage or sessionStorage)
+let cachedAccessToken: string | null = null;
+
+export const setCachedAccessToken = (token: string | null) => {
+  cachedAccessToken = token;
+};
+
+export const getCachedAccessToken = (): string | null => {
+  return cachedAccessToken;
+};
+
 
 // Standard handleFirestoreError implementation conforming to the security rules checklist
 export enum OperationType {

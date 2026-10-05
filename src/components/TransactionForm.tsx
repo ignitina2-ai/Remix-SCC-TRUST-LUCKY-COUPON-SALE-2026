@@ -698,6 +698,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             {editingTransaction ? 'Update Sale' : 'Save'}
           </button>
         </div>
+
+        {/* Google Drive & Sheet auto-sync notice */}
+        <div className="flex items-center justify-end px-1">
+          <span className="inline-flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50/70 border border-emerald-100/70 px-2.5 py-1 rounded-lg font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Syncs to Google Sheet (COUPON SALE 2026) & Drive Backup (LUCKY COUPON SALE 2026)
+          </span>
+        </div>
       </form>
 
       {!hideList && (

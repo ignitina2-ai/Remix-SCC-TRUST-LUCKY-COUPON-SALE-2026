@@ -38,7 +38,9 @@ import {
   db, 
   googleProvider, 
   OperationType, 
-  handleFirestoreError 
+  handleFirestoreError,
+  setCachedAccessToken,
+  getCachedAccessToken
 } from './lib/firebase';
 import { 
   collection, 
@@ -52,8 +54,16 @@ import {
   getDocFromServer,
   writeBatch
 } from 'firebase/firestore';
-import { signOut, signInWithPopup } from 'firebase/auth';
+import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { AllowedUser } from './components/settings/AdminSettings';
+import { 
+  recordTransactionAndBackupToDrive, 
+  saveBackupJsonToDrive, 
+  syncAllTransactionsToSheet, 
+  getOrCreateDriveFolder, 
+  getOrCreateCouponSheet,
+  WORKSPACE_SCOPES
+} from './lib/googleDriveSheets';
 
 const STORAGE_KEY = 'coupon_sale_app_data_2026';
 
@@ -77,6 +87,8 @@ export default function App() {
   const [allowedUsers, setAllowedUsers] = useState<AllowedUser[]>([]);
   const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const [firestoreError, setFirestoreError] = useState<string | null>(null);
+  const [driveAccessToken, setDriveAccessToken] = useState<string | null>(() => getCachedAccessToken());
+  const [isDriveAutoSyncEnabled, setIsDriveAutoSyncEnabled] = useState(true);
 
   const [userPermissions, setUserPermissions] = useState({
     canAdd: true,
@@ -476,7 +488,16 @@ export default function App() {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setCachedAccessToken(credential.accessToken);
+        setDriveAccessToken(credential.accessToken);
+        // Pre-create/verify target Google Drive folder and spreadsheet
+        getOrCreateDriveFolder(credential.accessToken).then(folder => {
+          getOrCreateCouponSheet(credential.accessToken, folder.id).catch(console.warn);
+        }).catch(console.warn);
+      }
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         // do nothing or handle quietly
@@ -491,6 +512,8 @@ export default function App() {
 
   const handleGoogleLogout = async () => {
     try {
+      setCachedAccessToken(null);
+      setDriveAccessToken(null);
       const tabSessionId = sessionStorage.getItem('app_session_id');
       if (tabSessionId) {
         await deleteDoc(doc(db, 'activeSessions', tabSessionId)).catch(err => {
@@ -648,6 +671,14 @@ export default function App() {
     try {
       await setDoc(doc(db, 'transactions', transactionId), cleanUndefined(docData));
 
+      // Automated Sync to Google Drive ("LUCKY COUPON SALE 2026") & Google Sheet ("COUPON SALE 2026")
+      const token = getCachedAccessToken() || driveAccessToken;
+      if (token && isDriveAutoSyncEnabled) {
+        recordTransactionAndBackupToDrive(token, docData, appData).catch(err => {
+          console.warn("Drive/Sheet auto-sync notice:", err);
+        });
+      }
+
       if (appData.notificationsEnabled) {
         sendNotification('New Transaction Added', {
           body: `${docData.name} - ₹${docData.totalAmount.toLocaleString('en-IN')}`,
@@ -665,6 +696,18 @@ export default function App() {
     }
     try {
       await updateDoc(doc(db, 'transactions', id), cleanUndefined(updates));
+
+      // Automated Sync to Google Drive & Google Sheet on update
+      const token = getCachedAccessToken() || driveAccessToken;
+      if (token && isDriveAutoSyncEnabled) {
+        const existingTx = appData.transactions.find(t => t.id === id);
+        if (existingTx) {
+          const updatedTx: Transaction = { ...existingTx, ...updates };
+          recordTransactionAndBackupToDrive(token, updatedTx, appData).catch(err => {
+            console.warn("Drive auto-sync on update notice:", err);
+          });
+        }
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
     }
@@ -678,6 +721,14 @@ export default function App() {
     try {
       for (const id of ids) {
         await deleteDoc(doc(db, 'transactions', id));
+      }
+
+      // Automated Sync to Google Drive & Google Sheet on deletion
+      const token = getCachedAccessToken() || driveAccessToken;
+      if (token && isDriveAutoSyncEnabled) {
+        const remainingTx = appData.transactions.filter(t => !ids.includes(t.id));
+        syncAllTransactionsToSheet(token, remainingTx).catch(console.warn);
+        saveBackupJsonToDrive(token, { ...appData, transactions: remainingTx }).catch(console.warn);
       }
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `transactions/${ids.join(',')}`);
@@ -1169,6 +1220,10 @@ export default function App() {
             onGoogleLogout={handleGoogleLogout}
             onSyncLocalToCloud={handleForceSyncLocalToCloud}
             activeSessions={activeSessions}
+            driveAccessToken={driveAccessToken}
+            onConnectDrive={handleGoogleLogin}
+            isDriveAutoSyncEnabled={isDriveAutoSyncEnabled}
+            onToggleDriveAutoSync={(enabled) => setIsDriveAutoSyncEnabled(enabled)}
           />
         );
       default:

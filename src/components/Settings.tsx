@@ -22,6 +22,7 @@ import { PaymentSettings } from './settings/PaymentSettings';
 import { AdminSettings, AllowedUser } from './settings/AdminSettings';
 import { ActiveSessions } from './settings/ActiveSessions';
 import { DangerSettings } from './settings/DangerSettings';
+import { DriveSheetsSettings } from './settings/DriveSheetsSettings';
 import ConfirmationModal from './ConfirmationModal';
 
 interface SettingsProps {
@@ -46,6 +47,10 @@ interface SettingsProps {
   onGoogleLogout?: () => Promise<void>;
   isLoggingIn?: boolean;
   onSyncLocalToCloud?: () => Promise<boolean>;
+  driveAccessToken?: string | null;
+  onConnectDrive?: () => Promise<void>;
+  isDriveAutoSyncEnabled?: boolean;
+  onToggleDriveAutoSync?: (enabled: boolean) => void;
 }
 
 type SettingsTab = 'all' | 'branding' | 'cloud' | 'backup';
@@ -71,7 +76,11 @@ const Settings: React.FC<SettingsProps> = ({
   onGoogleLogin,
   onGoogleLogout,
   isLoggingIn = false,
-  onSyncLocalToCloud
+  onSyncLocalToCloud,
+  driveAccessToken = null,
+  onConnectDrive = async () => {},
+  isDriveAutoSyncEnabled = true,
+  onToggleDriveAutoSync = () => {}
 }) => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [userToRevoke, setUserToRevoke] = useState<string | null>(null);
@@ -342,6 +351,17 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
             )}
           </div>
+
+          {/* Google Drive & Google Sheets Live Synchronization */}
+          <DriveSheetsSettings 
+            appData={appData}
+            user={user}
+            accessToken={driveAccessToken}
+            onConnectDrive={onConnectDrive}
+            isAutoSyncEnabled={isDriveAutoSyncEnabled}
+            onToggleAutoSync={onToggleDriveAutoSync}
+            showNotification={showNotification}
+          />
 
           {/* Admin User Management Center */}
           <AdminSettings 
