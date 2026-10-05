@@ -121,10 +121,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-4 border-t border-slate-800 space-y-3">
             {onLogout && (
               <button
-                onClick={onLogout}
+                onClick={() => {
+                  setIsOpen(false);
+                  onLogout();
+                }}
                 className={cn(
-                  "w-full flex items-center p-2.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all duration-200 border border-transparent hover:border-rose-500/20"
+                  "w-full flex items-center p-2.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all duration-200 border border-transparent hover:border-rose-500/20 cursor-pointer active:scale-95"
                 )}
+                title="Sign out of application"
               >
                 <LogOut size={20} className={isOpen ? "mr-3 shrink-0" : "mx-auto shrink-0"} />
                 {isOpen && <span className="font-semibold text-sm">Sign Out</span>}

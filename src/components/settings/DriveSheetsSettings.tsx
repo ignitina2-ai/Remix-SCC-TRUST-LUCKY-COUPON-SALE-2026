@@ -64,6 +64,7 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [webhookInput, setWebhookInput] = useState(driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL);
   const [isSavingWebhook, setIsSavingWebhook] = useState(false);
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
   const activeToken = accessToken || driveSyncConfig?.activeAccessToken;
   const currentWebhookUrl = driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL;
@@ -127,6 +128,30 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
       showNotification('error', 'Failed to save webhook URL.');
     } finally {
       setIsSavingWebhook(false);
+    }
+  };
+
+  const handleTestWebhook = async () => {
+    const url = (webhookInput || currentWebhookUrl).trim();
+    if (!url) {
+      showNotification('error', 'Please enter a webhook URL first.');
+      return;
+    }
+    setIsTestingWebhook(true);
+    try {
+      const res = await syncViaWebhook(url, {
+        action: 'syncAll',
+        transactions: appData.transactions.slice(0, 1),
+      });
+      if (res.success) {
+        showNotification('success', 'Webhook test successful! Connection to Google Sheet is active.');
+      } else {
+        showNotification('error', `Webhook response: ${res.message || 'Check Apps Script deployment.'}`);
+      }
+    } catch (e: any) {
+      showNotification('error', `Webhook test failed: ${e.message || 'Check network'}`);
+    } finally {
+      setIsTestingWebhook(false);
     }
   };
 
@@ -372,20 +397,29 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
         <p className="text-[11px] text-slate-500 leading-relaxed">
           Google Sheets-ൽ <strong>Extensions &gt; Apps Script</strong> വഴി വെബ് ആപ്പ് ഡിപ്ലോയ് ചെയ്ത് ആ ലിങ്ക് ഇവിടെ നൽകിയാൽ, ലോഗിൻ ടോക്കൺ കാലാവധി തീരാതെ തന്നെ എല്ലാ ടീം അംഗങ്ങൾക്കും 24 മണിക്കൂറും ഇടതടവില്ലാതെ ഷീറ്റും ഡ്രൈവും അപ്ഡേറ്റ് ചെയ്യാം.
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input
             type="url"
             placeholder="https://script.google.com/macros/s/.../exec"
             value={webhookInput}
             onChange={(e) => setWebhookInput(e.target.value)}
-            className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-blue-500"
+            className="flex-1 min-w-[240px] bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-blue-500"
           />
           <button
             onClick={handleSaveWebhook}
             disabled={isSavingWebhook}
-            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 shrink-0"
+            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 shrink-0 shadow-sm"
           >
             {isSavingWebhook ? 'Saving...' : 'Save Webhook'}
+          </button>
+          <button
+            onClick={handleTestWebhook}
+            disabled={isTestingWebhook}
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 shrink-0 border border-slate-200 flex items-center gap-1.5"
+            title="Test sending a test ping to Google Apps Script Webhook"
+          >
+            <RefreshCw size={12} className={isTestingWebhook ? "animate-spin" : ""} />
+            <span>{isTestingWebhook ? 'Testing...' : 'Test Webhook'}</span>
           </button>
         </div>
 

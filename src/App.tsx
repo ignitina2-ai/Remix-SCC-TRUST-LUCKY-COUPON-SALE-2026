@@ -111,9 +111,12 @@ export default function App() {
     hideSecretaryHandover: false,
   });
 
-  const isPrimaryAdmin = 
-    user?.email?.toLowerCase() === 'ignitina2@gmail.com' || 
-    user?.email?.toLowerCase() === 'stcasimircharitabletrust@gmail.com';
+  const isPrimaryAdminEmail = (email?: string | null) => {
+    const e = email?.toLowerCase().trim();
+    return e === 'ignitina2@gmail.com' || e === 'stcasimircharitabletrust@gmail.com';
+  };
+
+  const isPrimaryAdmin = isPrimaryAdminEmail(user?.email);
 
   // Expose setActiveTab on window for sub-components to trigger tab switches easily
   useEffect(() => {
@@ -423,7 +426,7 @@ export default function App() {
         setAllowedUsers(list);
 
         // Dynamically update logged in helper sub-user permissions if modified in real-time
-        if (curUserEmail && curUserEmail !== 'ignitina2@gmail.com') {
+        if (curUserEmail && !isPrimaryAdminEmail(curUserEmail)) {
           if (currentUserFound && currentUserDoc) {
             if (currentUserDoc.status === 'ACTIVE') {
               setUserPermissions({
@@ -610,19 +613,29 @@ export default function App() {
 
   const handleGoogleLogout = async () => {
     try {
+      // 1. Immediately reset React state so UI displays LoginPage instantly
+      setUser(null);
       setCachedAccessToken(null);
       setDriveAccessToken(null);
+      setIsSidebarOpen(false);
+      setLoginError(null);
+
+      // 2. Remove session ID and remove activeSessions in Firestore without blocking UI
       const tabSessionId = sessionStorage.getItem('app_session_id');
+      sessionStorage.removeItem('app_session_id');
       if (tabSessionId) {
-        await deleteDoc(doc(db, 'activeSessions', tabSessionId)).catch(err => {
-          console.warn("Failed to delete active session on logout:", err);
+        deleteDoc(doc(db, 'activeSessions', tabSessionId)).catch(err => {
+          console.warn("Could not delete active session on logout:", err);
         });
-        sessionStorage.removeItem('app_session_id');
       }
+
+      // 3. Complete Firebase Auth sign out
       await signOut(auth);
-      setUser(null);
     } catch (err) {
       console.error("Logout error:", err);
+    } finally {
+      setUser(null);
+      setLoading(false);
     }
   };
 
@@ -1477,6 +1490,14 @@ export default function App() {
           </button>
           
           <div className="flex items-center gap-2">
+            <button 
+              onClick={handleGoogleLogout}
+              className="px-2.5 py-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all flex items-center gap-1 text-[11px] font-bold border border-rose-200 cursor-pointer active:scale-95"
+              title="Sign Out of App"
+            >
+              <LogOut size={13} />
+              <span>Logout</span>
+            </button>
             <button 
               onClick={() => setIsSidebarOpen(true)}
               className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all"
