@@ -553,7 +553,7 @@ export async function syncViaWebhook(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
 
     const res = await fetch(url, {
       method: 'POST',
@@ -576,7 +576,7 @@ export async function syncViaWebhook(
     // dispatch with mode: 'no-cors' so Google's servers receive and process the payload
     try {
       const fallbackController = new AbortController();
-      const fbTimeoutId = setTimeout(() => fallbackController.abort(), 5000);
+      const fbTimeoutId = setTimeout(() => fallbackController.abort(), 4000);
       await fetch(url, {
         method: 'POST',
         mode: 'no-cors',

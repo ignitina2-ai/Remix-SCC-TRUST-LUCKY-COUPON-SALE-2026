@@ -731,9 +731,9 @@ export default function App() {
   };
 
   const handleForceSyncLocalToCloud = async (): Promise<boolean> => {
-    // Multi-collection cloud database synchronization with 3.5s timeout guarantee (NEVER hangs)
+    // Multi-collection cloud database synchronization with 4.5s timeout guarantee (NEVER hangs)
     try {
-      const timeoutPromise = new Promise<void>(resolve => setTimeout(resolve, 3500));
+      const timeoutPromise = new Promise<void>(resolve => setTimeout(resolve, 4500));
 
       // 1. Push settings/global to Firestore
       const globalDocRef = doc(db, 'settings', 'global');
@@ -747,9 +747,36 @@ export default function App() {
         paymentMethodsList: appData.paymentMethodsList || []
       }), { merge: true }).catch(console.warn);
 
-      await Promise.race([pushSettings, timeoutPromise]);
+      // 2. Push any local transactions to Firestore so no sales are lost
+      const pushTransactions = (async () => {
+        if (appData.transactions && appData.transactions.length > 0) {
+          const batch = writeBatch(db);
+          appData.transactions.slice(0, 450).forEach(tx => {
+            batch.set(doc(db, 'transactions', tx.id), cleanUndefined(tx), { merge: true });
+          });
+          await batch.commit().catch(console.warn);
+        }
+      })();
 
-      // 2. Refresh latest snapshots from Firestore server
+      // 3. Trigger Google Sheet full sync via Webhook
+      const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
+      const pushSheet = (async () => {
+        if (webhookUrl && appData.transactions && appData.transactions.length > 0) {
+          await syncViaWebhook(webhookUrl, {
+            action: 'syncAll',
+            transactions: appData.transactions,
+            fullBackup: appData,
+            syncBackup: true,
+          }).catch(console.warn);
+        }
+      })();
+
+      await Promise.race([
+        Promise.all([pushSettings, pushTransactions, pushSheet]),
+        timeoutPromise
+      ]);
+
+      // 4. Refresh latest snapshots from Firestore server
       const fetchPromise = Promise.all([
         getDocs(collection(db, 'transactions')).catch(() => null),
         getDocs(collection(db, 'sponsors')).catch(() => null),
@@ -763,7 +790,7 @@ export default function App() {
         timeoutPromise.then(() => [null, null, null, null, null])
       ]);
 
-      // 3. Update appData with fresh server records if retrieved
+      // 5. Update appData with fresh server records if retrieved
       setAppData(prev => {
         let transactions = prev.transactions;
         let sponsors = prev.sponsors;
@@ -771,7 +798,16 @@ export default function App() {
         let secretaryHandovers = prev.secretaryHandovers;
 
         if (txSnap && !txSnap.empty) {
-          transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+          // Merge server transactions with any existing local transactions
+          const serverList = txSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+          const map = new Map<string, Transaction>();
+          // Keep server items first
+          serverList.forEach((t: Transaction) => map.set(t.id, t));
+          // Add any local items not on server yet
+          prev.transactions.forEach(t => {
+            if (!map.has(t.id)) map.set(t.id, t);
+          });
+          transactions = Array.from(map.values());
         }
         if (spSnap && !spSnap.empty) {
           sponsors = spSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -792,7 +828,7 @@ export default function App() {
         };
       });
 
-      // 4. Update prize collection in localStorage if cloud has data
+      // 6. Update prize collection in localStorage if cloud has data
       if (prizeSnap && prizeSnap.exists()) {
         const pData = prizeSnap.data();
         if (pData?.tracking && Object.keys(pData.tracking).length > 0) {
@@ -874,59 +910,44 @@ export default function App() {
     return clean;
   };
 
-  // Automated live sync to Google Drive & Google Sheet for ANY permitted team member
   // Automated live sync to Google Drive & Google Sheet for ANY permitted team member (Non-blocking background)
   const syncTransactionToDriveAndSheet = (
     action: 'add' | 'update' | 'delete',
     tx: Transaction,
     currentAppData: AppData
   ) => {
-    if (!isDriveAutoSyncEnabled && driveSyncConfig.autoSyncEnabled === false) {
-      return;
-    }
-
     // Run completely in background without blocking UI
     setTimeout(() => {
+      // 1. Direct Webhook sync (Google Apps Script) - ALWAYS triggers to guarantee Google Sheet updates
+      const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
+      if (webhookUrl) {
+        syncViaWebhook(webhookUrl, {
+          action,
+          transaction: tx,
+          transactions: action === 'delete' ? currentAppData.transactions : [tx],
+          syncBackup: false,
+        }).then(res => {
+          if (res.success) {
+            setDriveSyncConfig(prev => ({
+              ...prev,
+              lastSyncedAt: new Date().toISOString(),
+              lastSyncedBy: user?.email || 'Authorized Team Member',
+              lastSyncStatus: 'success',
+              lastSyncMessage: `Transaction ${tx.id || ''} saved to Sheet`,
+            }));
+          }
+        }).catch(err => {
+          console.warn("Webhook transaction sync warning:", err);
+        });
+      }
+
+      // 2. Direct Google Sheets REST API if direct token is active
       const token = getCachedAccessToken() || driveAccessToken || driveSyncConfig.activeAccessToken;
-      
-      // If direct Google Sheets OAuth token is available, use direct Sheets REST API
       if (token) {
         if (action === 'delete') {
           syncAllTransactionsToSheet(token, currentAppData.transactions).catch(console.warn);
         } else {
-          recordOrUpdateTransactionInSheet(token, tx).catch(err => {
-            console.warn("Direct Sheet sync error, using webhook fallback:", err);
-            const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
-            if (webhookUrl) {
-              syncViaWebhook(webhookUrl, {
-                action,
-                transaction: tx,
-                transactions: [tx],
-                syncBackup: false,
-              }).catch(console.warn);
-            }
-          });
-        }
-      } else {
-        // Otherwise, use Webhook sync (Google Apps Script)
-        const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
-        if (webhookUrl) {
-          syncViaWebhook(webhookUrl, {
-            action,
-            transaction: tx,
-            transactions: action === 'delete' ? currentAppData.transactions : [tx],
-            syncBackup: false,
-          }).then(res => {
-            if (res.success) {
-              setDriveSyncConfig(prev => ({
-                ...prev,
-                lastSyncedAt: new Date().toISOString(),
-                lastSyncedBy: user?.email || 'Authorized Team Member',
-                lastSyncStatus: 'success',
-                lastSyncMessage: `Transaction ${tx.id || ''} saved to Sheet`,
-              }));
-            }
-          }).catch(console.warn);
+          recordOrUpdateTransactionInSheet(token, tx).catch(console.warn);
         }
       }
     }, 10);
@@ -945,9 +966,10 @@ export default function App() {
     };
 
     // 1. Instant Optimistic UI Update (0ms delay)
+    const updatedList = [docData, ...appData.transactions.filter(t => t.id !== transactionId)];
     setAppData(prev => ({
       ...prev,
-      transactions: [docData, ...prev.transactions.filter(t => t.id !== transactionId)]
+      transactions: updatedList
     }));
 
     if (appData.notificationsEnabled) {
@@ -958,11 +980,10 @@ export default function App() {
 
     // 2. Background Firestore write
     setDoc(doc(db, 'transactions', transactionId), cleanUndefined(docData)).catch(err => {
-      handleFirestoreError(err, OperationType.CREATE, `transactions/${transactionId}`);
+      console.warn("Firestore transactions write notice:", err);
     });
 
     // 3. Background non-blocking Google Drive & Google Sheet sync
-    const updatedList = [docData, ...appData.transactions.filter(t => t.id !== transactionId)];
     syncTransactionToDriveAndSheet('add', docData, { ...appData, transactions: updatedList });
   };
 
@@ -986,7 +1007,7 @@ export default function App() {
 
     // 2. Background Firestore update
     updateDoc(doc(db, 'transactions', id), cleanUndefined(updates)).catch(err => {
-      handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
+      console.warn("Firestore transactions update notice:", err);
     });
 
     // 3. Background Google Drive & Sheet sync
@@ -1011,7 +1032,7 @@ export default function App() {
     // 2. Background Firestore delete
     for (const id of ids) {
       deleteDoc(doc(db, 'transactions', id)).catch(err => {
-        handleFirestoreError(err, OperationType.DELETE, `transactions/${id}`);
+        console.warn("Firestore transactions delete notice:", err);
       });
     }
 
@@ -1048,7 +1069,7 @@ export default function App() {
       paidToTreasurer,
       treasurerPaidDate
     })).catch(err => {
-      handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
+      console.warn("Firestore transactions treasurer notice:", err);
     });
 
     // 3. Background Google Drive & Sheet sync
