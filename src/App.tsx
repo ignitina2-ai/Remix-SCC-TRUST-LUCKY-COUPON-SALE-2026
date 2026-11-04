@@ -11,6 +11,7 @@ import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
 import CreditManagement from './components/CreditManagement';
 import SponsorsList from './components/SponsorsList';
+import PrizeCollection from './components/PrizeCollection';
 import IncomeExpenseManagement from './components/IncomeExpenseManagement';
 import TreasuryHandoverManagement from './components/TreasuryHandoverManagement';
 import Settings from './components/Settings';
@@ -1330,6 +1331,8 @@ export default function App() {
             permissions={userPermissions}
           />
         );
+      case 'prize-collection':
+        return <PrizeCollection />;
       case 'sponsors':
         return (
           <SponsorsList 

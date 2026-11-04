@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>St. Casimir Charitable Trust — Lucky Draw 2026 Dashboard</title>
+  <!-- PWA Manifest & Meta -->
+  <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22St.%20Casimir%20Lucky%20Draw%202026%22%2C%22short_name%22%3A%22LuckyDraw2026%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F4F7F4%22%2C%22theme_color%22%3A%22%231B5E20%22%2C%22icons%22%3A%5B%5D%7D">
+  <meta name="theme-color" content="#1B5E20">
+  
+  <!-- Fonts: Inter & Anek Malayalam -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Local Offline CSS & FontAwesome First -->
+  <link rel="stylesheet" href="css/all.min.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <!-- CDN Fallbacks -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Local Offline Scripts First -->
+  <script src="js/tailwindcss.js"></script>
+  <script src="js/html2pdf.bundle.min.js"></script>
+  <!-- CDN Fallbacks -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script>
+    if (window.tailwind) {
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#1B5E20',
+              secondary: '#2E7D32',
+              accent: '#4CAF50',
+              bgLight: '#F4F7F4',
+              cardBg: '#FFFFFF',
+              borderColor: '#C8E6C9'
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              malayalam: ['Anek Malayalam', 'sans-serif']
+            }
+          }
+        }
+      };
+    }
+  </script>
+  <style>
+    /* Critical Native Offline CSS Stylesheet */
+    @font-face {
+      font-family: 'Anek Malayalam';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('fonts/anek_malayalam.woff2') format('woff2'),
+           url('fonts/anek_malayalam.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Anek Malayalam';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url('fonts/anek_malayalam.woff2') format('woff2'),
+           url('fonts/anek_malayalam.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Anek Malayalam';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url('fonts/anek_malayalam.woff2') format('woff2'),
+           url('fonts/anek_malayalam.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Anek Malayalam';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('fonts/anek_malayalam.woff2') format('woff2'),
+           url('fonts/anek_malayalam.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Anek Malayalam';
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url('fonts/anek_malayalam.woff2') format('woff2'),
+           url('fonts/anek_malayalam.ttf') format('truetype');
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Anek Malayalam', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #F4F7F4; color: #1f2937; line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column; }
+    .malayalam-text, [lang="ml"], .font-malayalam { font-family: 'Anek Malayalam', -apple-system, sans-serif !important; }
+
+    /* Layout & Flex */
+    .min-h-screen { min-height: 100vh; }
+    .flex { display: flex; }
+    .inline-flex { display: inline-flex; }
+    .flex-col { flex-direction: column; }
+    .flex-grow { flex-grow: 1; }
+    .shrink-0 { flex-shrink: 0; }
+    .items-center { align-items: center; }
+    .items-baseline { align-items: baseline; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .justify-end { justify-content: flex-end; }
+
+    /* Grid */
+    .grid { display: grid; }
+    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (min-width: 640px) {
+      .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sm\:space-y-0 > * + * { margin-top: 0; }
+      .sm\:flex { display: flex; }
+      .sm\:items-center { align-items: center; }
+      .sm\:justify-between { justify-content: space-between; }
+      .sm\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+      .sm\:pb-0 { padding-bottom: 0; }
+      .sm\:text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+      .sm\:text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+    }
+    @media (min-width: 768px) {
+      .md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @media (min-width: 1024px) {
+      .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .lg\:px-8 { padding-left: 2rem; padding-right: 2rem; }
+    }
+    .gap-4 { gap: 1rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-1\.5 { gap: 0.375rem; }
+
+    /* Spacing */
+    .space-x-1 > * + * { margin-left: 0.25rem; }
+    .space-x-1\.5 > * + * { margin-left: 0.375rem; }
+    .space-x-2 > * + * { margin-left: 0.5rem; }
+    .space-x-3 > * + * { margin-left: 0.75rem; }
+    .space-y-1 > * + * { margin-top: 0.25rem; }
+    .space-y-1\.5 > * + * { margin-top: 0.375rem; }
+    .space-y-2 > * + * { margin-top: 0.5rem; }
+    .space-y-3 > * + * { margin-top: 0.75rem; }
+    .space-y-4 > * + * { margin-top: 1rem; }
+    .space-y-6 > * + * { margin-top: 1.5rem; }
+
+    .p-1 { padding: 0.25rem; }
+    .p-1\.5 { padding: 0.375rem; }
+    .p-2 { padding: 0.5rem; }
+    .p-2\.5 { padding: 0.625rem; }
+    .p-3 { padding: 0.75rem; }
+    .p-4 { padding: 1rem; }
+    .p-6 { padding: 1.5rem; }
+    .p-8 { padding: 2rem; }
+    .px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+    .px-1\.5 { padding-left: 0.375rem; padding-right: 0.375rem; }
+    .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+    .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .px-4 { padding-left: 1rem; padding-right: 1rem; }
+    .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+    .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+    .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+    .py-16 { padding-top: 4rem; padding-bottom: 4rem; }
+    .pl-10 { padding-left: 2.5rem; }
+    .pr-4 { padding-right: 1rem; }
+    .pr-1 { padding-right: 0.25rem; }
+    .pb-1 { padding-bottom: 0.25rem; }
+    .pt-1\.5 { padding-top: 0.375rem; }
+    .pt-2 { padding-top: 0.5rem; }
+
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .mx-2 { margin-left: 0.5rem; margin-right: 0.5rem; }
+    .mx-4 { margin-left: 1rem; margin-right: 1rem; }
+    .mr-1 { margin-right: 0.25rem; }
+    .mt-1 { margin-top: 0.25rem; }
+    .mt-2 { margin-top: 0.5rem; }
+    .mt-4 { margin-top: 1rem; }
+    .mt-12 { margin-top: 3rem; }
+    .mb-0\.5 { margin-bottom: 0.125rem; }
+    .mb-1 { margin-bottom: 0.25rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-3 { margin-bottom: 0.75rem; }
+
+    /* Dimensions */
+    .w-full { width: 100%; }
+    .w-16 { width: 4rem; }
+    .w-4 { width: 1rem; }
+    .h-16 { height: 4rem; }
+    .h-4 { height: 1rem; }
+    .h-2 { height: 0.5rem; }
+    .max-w-7xl { max-width: 80rem; }
+    .max-w-sm { max-width: 24rem; }
+    .max-w-md { max-width: 28rem; }
+    .max-w-xs { max-width: 20rem; }
+    .max-w-\[180px\] { max-width: 180px; }
+    .max-h-48 { max-height: 12rem; }
+
+    /* Colors */
+    .bg-primary { background-color: #1B5E20 !important; }
+    .bg-secondary { background-color: #2E7D32 !important; }
+    .bg-secondary\/80 { background-color: rgba(46, 125, 50, 0.8) !important; }
+    .bg-accent { background-color: #4CAF50 !important; }
+    .bg-bgLight { background-color: #F4F7F4 !important; }
+    .bg-cardBg { background-color: #FFFFFF !important; }
+    .bg-white { background-color: #FFFFFF !important; }
+    .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1) !important; }
+    .bg-white\/80 { background-color: rgba(255, 255, 255, 0.8) !important; }
+    .bg-gray-50 { background-color: #f9fafb !important; }
+    .bg-gray-50\/50 { background-color: rgba(249, 250, 251, 0.5) !important; }
+    .bg-gray-100 { background-color: #f3f4f6 !important; }
+    .bg-gray-200 { background-color: #e5e7eb !important; }
+    .bg-emerald-50 { background-color: #ecfdf5 !important; }
+    .bg-emerald-50\/60 { background-color: rgba(236, 253, 245, 0.6) !important; }
+    .bg-emerald-50\/70 { background-color: rgba(236, 253, 245, 0.7) !important; }
+    .bg-emerald-100 { background-color: #d1fae5 !important; }
+    .bg-emerald-600 { background-color: #059669 !important; }
+    .bg-emerald-800 { background-color: #065f46 !important; }
+    .bg-emerald-900 { background-color: #064e3b !important; }
+    .bg-amber-50 { background-color: #fffbeb !important; }
+    .bg-amber-100 { background-color: #fef3c7 !important; }
+    .bg-blue-50 { background-color: #eff6ff !important; }
+    .bg-blue-50\/50 { background-color: rgba(239, 246, 255, 0.5) !important; }
+    .bg-blue-50\/70 { background-color: rgba(239, 246, 255, 0.7) !important; }
+    .bg-blue-50\/80 { background-color: rgba(239, 246, 255, 0.8) !important; }
+    .bg-blue-50\/90 { background-color: rgba(239, 246, 255, 0.9) !important; }
+    .bg-blue-100 { background-color: #dbeafe !important; }
+    .bg-blue-600 { background-color: #2563eb !important; }
+    .bg-blue-700 { background-color: #1d4ed8 !important; }
+    .bg-red-50 { background-color: #fef2f2 !important; }
+    .bg-red-50\/60 { background-color: rgba(254, 242, 242, 0.6) !important; }
+    .bg-red-100 { background-color: #fee2e2 !important; }
+    .bg-red-600 { background-color: #dc2626 !important; }
+    .bg-purple-50 { background-color: #faf5ff !important; }
+    .bg-black\/50 { background-color: rgba(0, 0, 0, 0.5) !important; }
+    .bg-black\/60 { background-color: rgba(0, 0, 0, 0.6) !important; }
+
+    /* Text Colors */
+    .text-primary { color: #1B5E20 !important; }
+    .text-secondary { color: #2E7D32 !important; }
+    .text-accent { color: #4CAF50 !important; }
+    .text-white { color: #FFFFFF !important; }
+    .text-green-200 { color: #bbf7d0 !important; }
+    .text-emerald-100 { color: #d1fae5 !important; }
+    .text-emerald-200 { color: #a7f3d0 !important; }
+    .text-emerald-400 { color: #34d399 !important; }
+    .text-emerald-600 { color: #059669 !important; }
+    .text-emerald-700 { color: #047857 !important; }
+    .text-emerald-800 { color: #065f46 !important; }
+    .text-emerald-900 { color: #064e3b !important; }
+    .text-blue-600 { color: #2563eb !important; }
+    .text-blue-700 { color: #1d4ed8 !important; }
+    .text-blue-800 { color: #1e40af !important; }
+    .text-blue-900 { color: #1e3a8a !important; }
+    .text-amber-600 { color: #d97706 !important; }
+    .text-amber-700 { color: #b45309 !important; }
+    .text-amber-800 { color: #92400e !important; }
+    .text-red-600 { color: #dc2626 !important; }
+    .text-red-700 { color: #b91c1c !important; }
+    .text-red-800 { color: #991b1b !important; }
+    .text-purple-600 { color: #9333ea !important; }
+    .text-purple-700 { color: #7e22ce !important; }
+    .text-purple-900 { color: #581c87 !important; }
+    .text-gray-400 { color: #9ca3af !important; }
+    .text-gray-500 { color: #6b7280 !important; }
+    .text-gray-600 { color: #4b5563 !important; }
+    .text-gray-700 { color: #374151 !important; }
+    .text-gray-800 { color: #1f2937 !important; }
+    .text-gray-900 { color: #111827 !important; }
+
+    /* Typography */
+    .text-xs { font-size: 0.75rem; line-height: 1rem; }
+    .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+    .text-base { font-size: 1rem; line-height: 1.5rem; }
+    .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+    .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+    .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+    .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+    .text-\[11px\] { font-size: 11px; }
+    .text-\[10px\] { font-size: 10px; }
+    .text-\[9px\] { font-size: 9px; }
+
+    .font-light { font-weight: 300; }
+    .font-normal { font-weight: 400; }
+    .font-medium { font-weight: 500; }
+    .font-semibold { font-weight: 600; }
+    .font-bold { font-weight: 700; }
+
+    .uppercase { text-transform: uppercase; }
+    .tracking-wider { letter-spacing: 0.05em; }
+    .tracking-wide { letter-spacing: 0.025em; }
+    .leading-tight { line-height: 1.25; }
+    .leading-relaxed { line-height: 1.625; }
+    .text-center { text-align: center; }
+    .text-left { text-align: left; }
+    .underline { text-decoration: underline; }
+
+    /* Borders & Rounding */
+    .rounded-xl { border-radius: 0.75rem; }
+    .rounded-lg { border-radius: 0.5rem; }
+    .rounded-md { border-radius: 0.375rem; }
+    .rounded-full { border-radius: 9999px; }
+    .rounded { border-radius: 0.25rem; }
+
+    .border { border: 1px solid #C8E6C9; }
+    .border-b { border-bottom: 1px solid #C8E6C9; }
+    .border-t { border-top: 1px solid #C8E6C9; }
+    .border-borderColor { border-color: #C8E6C9 !important; }
+    .border-borderColor\/60 { border-color: rgba(200, 230, 201, 0.6) !important; }
+    .border-emerald-200 { border-color: #a7f3d0 !important; }
+    .border-emerald-300 { border-color: #6ee7b7 !important; }
+    .border-emerald-800 { border-color: #065f46 !important; }
+    .border-amber-200 { border-color: #fde68a !important; }
+    .border-amber-300 { border-color: #fcd34d !important; }
+    .border-blue-200 { border-color: #bfdbfe !important; }
+    .border-blue-300 { border-color: #93c5fd !important; }
+    .border-blue-500 { border-color: #3b82f6 !important; }
+    .border-red-200 { border-color: #fecaca !important; }
+    .border-red-300 { border-color: #fca5a5 !important; }
+    .border-purple-200 { border-color: #e9d5ff !important; }
+    .border-purple-300 { border-color: #d8b4fe !important; }
+    .border-gray-100 { border-color: #f3f4f6 !important; }
+    .border-gray-200 { border-color: #e5e7eb !important; }
+    .border-collapse { border-collapse: collapse; }
+    .divide-y > * + * { border-top: 1px solid #f3f4f6; }
+
+    .ring-1 { box-shadow: 0 0 0 1px #6ee7b7; }
+    .ring-emerald-300 { box-shadow: 0 0 0 1px #6ee7b7; }
+    .ring-blue-300 { box-shadow: 0 0 0 1px #93c5fd; }
+    .ring-red-300 { box-shadow: 0 0 0 1px #fca5a5; }
+    .ring-purple-300 { box-shadow: 0 0 0 1px #d8b4fe; }
+    .font-extrabold { font-weight: 800; }
+
+    /* Shadows */
+    .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+    .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+    .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+    .shadow-2xs { box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.03); }
+
+    /* Positioning & Interaction */
+    .sticky { position: -webkit-sticky; position: sticky; }
+    .top-0 { top: 0; }
+    .relative { position: relative; }
+    .absolute { position: absolute; }
+    .fixed { position: fixed; }
+    .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+    .inset-y-0 { top: 0; bottom: 0; }
+    .left-0 { left: 0; }
+    .right-0 { right: 0; }
+    .z-40 { z-index: 40; }
+    .z-50 { z-index: 50; }
+
+    .cursor-pointer { cursor: pointer; }
+    .overflow-hidden { overflow: hidden; }
+    .overflow-x-auto { overflow-x: auto; }
+    .overflow-y-auto { overflow-y: auto; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .whitespace-nowrap { white-space: nowrap; }
+    .hidden { display: none !important; }
+    .block { display: block; }
+
+    .opacity-0 { opacity: 0; }
+    .opacity-50 { opacity: 0.5; }
+    .opacity-75 { opacity: 0.75; }
+    .opacity-80 { opacity: 0.8; }
+    .pointer-events-none { pointer-events: none; }
+
+    .transform { transform: translateX(0); }
+    .translate-x-full { transform: translateX(100%); }
+    .transition { transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); }
+    .transition-all { transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); }
+    .transition-transform { transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1); }
+    .transition-opacity { transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); }
+    .duration-200 { transition-duration: 200ms; }
+    .duration-300 { transition-duration: 300ms; }
+    .duration-500 { transition-duration: 500ms; }
+
+    /* Inputs */
+    input[type="text"], select {
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: #374151;
+      background-color: rgba(249, 250, 251, 0.7);
+      border: 1px solid #C8E6C9;
+      border-radius: 0.5rem;
+      outline: none;
+    }
+    input[type="text"]:focus, select:focus {
+      border-color: #4CAF50;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+    }
+    button { cursor: pointer; font-family: inherit; }
+    .accent-primary { accent-color: #1B5E20; }
+
+    /* Ticker Animation */
+    @keyframes ticker {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-ticker {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: ticker linear infinite;
+    }
+    .ticker-container:hover .animate-ticker {
+      animation-play-state: paused;
+    }
+
+    /* Scrollbar */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Sticky Top Section (Header + Ticker combined) -->
+  <div class="sticky top-0 z-40 shadow-md">
+    <!-- Top Header -->
+    <header class="bg-primary text-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <button onclick="toggleSettingsDrawer(true)" class="order-first mr-3 p-2 rounded-lg bg-secondary/80 hover:bg-secondary text-white transition focus:outline-none focus:ring-2 focus:ring-white/50" aria-label="Open Settings">
+          <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+        <div class="flex items-center space-x-3">
+          <div class="bg-white/10 p-2 rounded-lg">
+            <i class="fa-solid fa-ticket text-accent text-xl"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-base sm:text-lg tracking-wide leading-tight">St. Casimir Charitable Trust</h1>
+            <p class="text-xs text-green-200 font-medium">Kadavoor, Kollam, Kerala — Lucky Draw 2026</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Live Scrolling Ticker (Sticky with Header) -->
+    <div class="bg-emerald-900 text-emerald-100 text-xs sm:text-sm py-2 overflow-hidden border-b border-emerald-800 ticker-container relative">
+      <div id="tickerTrack" class="animate-ticker" style="animation-duration: 35s;">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Dashboard Summary Cards -->
+    <section class="grid grid-cols-3 gap-1.5 sm:gap-4">
+      <div class="bg-cardBg p-2 sm:p-4 rounded-lg sm:rounded-xl border border-borderColor shadow-sm flex flex-col justify-between min-w-0">
+        <div class="flex items-center justify-between text-gray-500 text-[9px] sm:text-xs font-semibold uppercase tracking-wider">
+          <span>Total</span>
+          <i class="fa-solid fa-gift text-primary text-base"></i>
+        </div>
+        <div class="mt-1 sm:mt-2 flex items-baseline justify-between">
+          <span id="statTotal" class="text-lg sm:text-3xl font-bold text-primary">111</span>
+          <span class="hidden sm:inline text-xs text-gray-500 font-medium">100% Items</span>
+        </div>
+      </div>
+
+      <div class="bg-cardBg p-2 sm:p-4 rounded-lg sm:rounded-xl border border-borderColor shadow-sm flex flex-col justify-between min-w-0">
+        <div class="flex items-center justify-between text-gray-500 text-[9px] sm:text-xs font-semibold uppercase tracking-wider">
+          <span>Collected</span>
+          <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+        </div>
+        <div class="mt-1 sm:mt-2">
+          <div class="flex items-baseline justify-between">
+            <span id="statCollected" class="text-lg sm:text-3xl font-bold text-emerald-600">0</span>
+            <span id="statCollectedSub" class="text-[9px] sm:text-xs text-emerald-700 font-medium">0%</span>
+          </div>
+          <div id="statCollectedBreakdown" class="text-[10px] text-gray-500 mt-0.5 truncate">0 Sponsor &bull; 0 Trust</div>
+        </div>
+      </div>
+
+      <div class="bg-cardBg p-2 sm:p-4 rounded-lg sm:rounded-xl border border-borderColor shadow-sm flex flex-col justify-between min-w-0">
+        <div class="flex items-center justify-between text-gray-500 text-[9px] sm:text-xs font-semibold uppercase tracking-wider">
+          <span>Pending</span>
+          <i class="fa-solid fa-clock text-red-600 text-base"></i>
+        </div>
+        <div class="mt-1 sm:mt-2 flex items-baseline justify-between">
+          <span id="statPending" class="text-lg sm:text-3xl font-bold text-red-600">111</span>
+          <span id="statPendingSub" class="text-[9px] sm:text-xs text-red-700 font-medium">100%</span>
+        </div>
+      </div>
+
+      <!-- Trust Purchase Expense Card (Reflects Trust Purchase Amount) -->
+      <div class="bg-cardBg p-2 sm:p-4 rounded-lg sm:rounded-xl border border-emerald-200 shadow-sm flex flex-col justify-between ring-1 ring-emerald-300 min-w-0">
+        <div class="flex items-center justify-between text-emerald-900 text-[9px] sm:text-xs font-semibold uppercase tracking-wider">
+          <span>Trust Expense</span>
+          <i class="fa-solid fa-cart-shopping text-emerald-600 text-base"></i>
+        </div>
+        <div class="mt-1 sm:mt-2">
+          <div class="flex items-baseline justify-between gap-1">
+            <span id="statTrustAmount" class="text-base sm:text-2xl font-extrabold text-emerald-700 truncate">₹0</span>
+            <span class="hidden sm:inline text-[11px] text-emerald-800 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">0 Items</span>
+          </div>
+          <div class="text-[9px] sm:text-[10px] text-emerald-600 mt-0.5 font-medium truncate">Trust Purchased</div>
+        </div>
+      </div>
+
+      <div class="bg-cardBg p-2 sm:p-4 rounded-lg sm:rounded-xl border border-blue-200 shadow-sm flex flex-col justify-between ring-1 ring-blue-300 min-w-0">
+        <div class="flex items-center justify-between text-gray-500 text-[9px] sm:text-xs font-semibold uppercase tracking-wider">
+          <span>Received Amount</span>
+          <i class="fa-solid fa-hand-holding-dollar text-blue-600 text-base"></i>
+        </div>
+        <div class="mt-1 sm:mt-2">
+          <span id="statReceivedAmount" class="text-base sm:text-2xl font-extrabold text-blue-700 truncate block">₹0</span>
+          <div id="statReceivedCount" class="text-[9px] sm:text-[10px] text-blue-600 mt-0.5 font-medium truncate">0 Entries</div>
+        </div>
+      </div>
+
+      <div class="bg-cardBg p-2 sm:p-4 rounded-lg sm:rounded-xl border border-purple-200 shadow-sm flex flex-col justify-between ring-1 ring-purple-300 min-w-0">
+        <div class="flex items-center justify-between text-purple-900 text-[9px] sm:text-xs font-semibold uppercase tracking-wider">
+          <span>Balance</span>
+          <i class="fa-solid fa-scale-balanced text-purple-600 text-base"></i>
+        </div>
+        <div class="mt-1 sm:mt-2">
+          <span id="statBalanceAmount" class="text-base sm:text-2xl font-extrabold text-purple-700 truncate block">₹0</span>
+          <div class="text-[9px] sm:text-[10px] text-purple-600 mt-0.5 font-medium truncate">Received - Trust Expense</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Category Specific Summary Banner (Conditional) -->
+    <div id="categorySummaryBanner" class="hidden bg-emerald-50 border border-emerald-200 p-3 rounded-lg text-sm text-emerald-900 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-filter text-primary"></i>
+        <span class="font-semibold" id="activeCategoryText">Category View</span>
+      </div>
+      <div id="categorySummaryCounts" class="text-xs font-medium bg-white px-3 py-1 rounded-md border border-emerald-200 shadow-sm">
+        Collected: 0 / Total: 0
+      </div>
+    </div>
+
+    <!-- Search, Filters, and View Switcher Bar -->
+    <section class="bg-cardBg p-3 sm:p-4 rounded-xl border border-borderColor shadow-sm space-y-2.5">
+      <!-- Search Input -->
+      <div class="relative w-full">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <i class="fa-solid fa-magnifying-glass text-xs sm:text-sm"></i>
+        </span>
+        <input type="text" id="searchInput" placeholder="Search by prize name, number, display or original sponsor..." class="w-full pl-9 pr-3 py-2 border border-borderColor rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent bg-gray-50/60">
+      </div>
+
+      <!-- Filters & View Toggles (Single Row Perfectly Aligned on Mobile) -->
+      <div class="flex items-center gap-1.5 w-full">
+        <!-- Category Dropdown -->
+        <div class="flex-1 min-w-0">
+          <select id="categoryFilter" class="w-full border border-borderColor bg-gray-50/80 rounded-lg px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent text-gray-700 font-medium truncate">
+            <option value="ALL">All Categories</option>
+          </select>
+        </div>
+
+        <!-- Status Dropdown -->
+        <div class="flex-1 min-w-0">
+          <select id="statusFilter" class="w-full border border-borderColor bg-gray-50/80 rounded-lg px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent text-gray-700 font-medium truncate">
+            <option value="ALL">All Status</option>
+            <option value="PENDING">Pending Only</option>
+            <option value="COLLECTED">Collected (All)</option>
+            <option value="SPONSOR">Own / Sponsor</option>
+            <option value="TRUST">Trust Purchase</option>
+          </select>
+        </div>
+
+        <!-- View Switcher (Grid & Table) -->
+        <div class="shrink-0 flex items-center bg-gray-100 p-0.5 rounded-lg border border-borderColor">
+          <button id="gridViewBtn" onclick="switchView('grid')" class="px-2 py-1.5 rounded-md text-xs font-semibold bg-white text-primary shadow-xs transition flex items-center justify-center gap-1" title="Grid View">
+            <i class="fa-solid fa-grip text-xs"></i>
+            <span class="hidden sm:inline">Grid</span>
+          </button>
+          <button id="tableViewBtn" onclick="switchView('table')" class="px-2 py-1.5 rounded-md text-xs font-semibold text-gray-600 hover:text-primary transition flex items-center justify-center gap-1" title="Table View">
+            <i class="fa-solid fa-table text-xs"></i>
+            <span class="hidden sm:inline">Table</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Info Bar -->
+    <div class="flex items-center justify-between text-xs text-gray-500 px-1">
+      <span id="resultsCount">Showing 111 of 111 prizes</span>
+      <span id="collectedInViewCount">Collected in current view: 0</span>
+    </div>
+
+    <!-- Prize Display Views -->
+    <section>
+      <!-- Grid View Container -->
+      <div id="prizeGridView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Dynamically Rendered Cards -->
+      </div>
+
+      <!-- Table View Container -->
+      <div id="prizeTableView" class="hidden bg-cardBg rounded-xl border border-borderColor shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-gray-50 border-b border-borderColor text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th class="py-3 px-4">Prize No.</th>
+                <th class="py-3 px-4">Prize Item</th>
+                <th class="py-3 px-4">Display Sponsor</th>
+                <th class="py-3 px-4">Original Sponsor</th>
+                <th class="py-3 px-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="prizeTableBody" class="divide-y divide-gray-100">
+              <!-- Dynamically Rendered Rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden py-16 text-center">
+        <div class="bg-emerald-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-primary text-2xl">
+          <i class="fa-solid fa-face-sad-tear"></i>
+        </div>
+        <h3 class="text-base font-bold text-gray-700">No prizes found</h3>
+        <p class="text-xs text-gray-500 mt-1">Try adjusting your search terms or filter selections.</p>
+        <button onclick="resetAllFilters()" class="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-xs font-medium hover:bg-secondary transition">Reset Filters</button>
+      </div>
+    </section>
+
+    <!-- Received Amounts -->
+    <section class="bg-cardBg p-4 rounded-xl border border-borderColor shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-bold text-sm text-gray-800">
+          <i class="fa-solid fa-money-bill-transfer text-blue-600 mr-1"></i>Received Amount
+        </h2>
+        <span id="receivedAmountTotal" class="text-sm font-bold text-blue-700">Total: ₹0</span>
+      </div>
+      <form onsubmit="addReceivedAmount(event)" class="space-y-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input id="receivedNameInput" type="text" required maxlength="100" placeholder="Name" class="w-full px-3 py-2 border border-borderColor rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input id="receivedAmountInput" type="number" required min="0" step="any" placeholder="Amount" class="w-full px-3 py-2 border border-borderColor rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button type="submit" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition">
+          <i class="fa-solid fa-plus mr-1"></i>Add Received Amount
+        </button>
+      </form>
+      <div id="receivedAmountsList" class="space-y-1.5"></div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-borderColor mt-12 py-6 text-center text-xs text-gray-500">
+    <div class="max-w-7xl mx-auto px-4 space-y-1">
+      <p class="font-semibold text-gray-700">St. Casimir Charitable Trust, Kadavoor, Kollam, Kerala</p>
+      <p>Lucky Draw 2026 Dashboard &bull; Premium PWA Edition</p>
+    </div>
+  </footer>
+
+  <!-- Sliding Settings & Actions Drawer -->
+  <div id="settingsDrawerBackdrop" class="fixed inset-0 bg-black/50 z-50 hidden transition-opacity opacity-0" onclick="toggleSettingsDrawer(false)"></div>
+  <div id="settingsDrawer" class="fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-4 bg-primary text-white flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-gear"></i>
+        <h2 class="font-bold text-base">Dashboard Menu</h2>
+      </div>
+      <button onclick="toggleSettingsDrawer(false)" class="p-1.5 rounded-lg hover:bg-secondary text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <div class="flex-grow overflow-y-auto p-4 space-y-6 text-sm">
+     
+
+      <!-- Ticker Speed Setting -->
+      <div class="space-y-2">
+        <label class="font-semibold text-gray-700 flex items-center justify-between">
+          <span>Ticker Scroll Speed</span>
+          <span id="speedValueLabel" class="text-xs text-primary font-bold">35s</span>
+        </label>
+        <input type="range" id="tickerSpeedRange" min="5" max="90" value="35" class="w-full accent-primary cursor-pointer" oninput="updateTickerSpeed(this.value)">
+        <p class="text-xs text-gray-500">Adjust ticker animation speed (5s = fast, 90s = slow).</p>
+      </div>
+
+      <hr class="border-borderColor">
+
+      <!-- Item-wise Summary -->
+      <div class="space-y-2">
+        <h3 class="font-semibold text-gray-700 flex items-center justify-between">
+          <span>Category Collected Summary</span>
+          <button onclick="toggleCategorySummaryView()" class="text-xs text-primary underline font-medium">View All</button>
+        </h3>
+        <div id="categorySummaryDrawerList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs text-gray-600">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <hr class="border-borderColor">
+
+      <!-- PDF Reports Export -->
+      <div class="space-y-2">
+        <h3 class="font-semibold text-gray-700">Export PDF Reports</h3>
+        <div class="grid grid-cols-1 gap-2">
+          <button onclick="generatePDFReport('collected')" class="w-full flex items-center justify-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-2 rounded-lg font-medium text-xs transition">
+            <i class="fa-solid fa-file-pdf text-emerald-600"></i><span>Export Collected Items PDF</span>
+          </button>
+          <button onclick="generatePDFReport('pending')" class="w-full flex items-center justify-center space-x-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 py-2 rounded-lg font-medium text-xs transition">
+            <i class="fa-solid fa-file-pdf text-amber-600"></i><span>Export Pending Items PDF</span>
+          </button>
+          <button onclick="generatePDFReport('full')" class="w-full flex items-center justify-center space-x-2 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-borderColor py-2 rounded-lg font-medium text-xs transition">
+            <i class="fa-solid fa-file-pdf text-primary"></i><span>Export Full Report (111 Prizes) PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="border-borderColor">
+
+      <!-- Backup & Restore -->
+      <div class="space-y-2">
+        <h3 class="font-semibold text-gray-700">Data Management</h3>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportJSONBackup()" class="flex items-center justify-center space-x-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg font-medium text-xs transition">
+            <i class="fa-solid fa-download"></i><span>Backup JSON</span>
+          </button>
+          <button onclick="document.getElementById('restoreFileElem').click()" class="flex items-center justify-center space-x-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg font-medium text-xs transition">
+            <i class="fa-solid fa-upload"></i><span>Restore JSON</span>
+          </button>
+          <input type="file" id="restoreFileElem" accept=".json" class="hidden" onchange="importJSONBackup(event)">
+        </div>
+        <button onclick="confirmResetCollection()" class="w-full mt-2 flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 py-2 rounded-lg font-medium text-xs transition">
+          <i class="fa-solid fa-rotate-left"></i><span>Reset All Collection Records</span>
+        </button>
+      </div>
+
+      <hr class="border-borderColor">
+
+      <!-- App Info -->
+      <div class="space-y-1 text-xs text-gray-500 pt-2">
+        <p class="font-semibold text-gray-700">St. Casimir Lucky Draw Dashboard v2.6</p>
+        <p>Devoloped By. Ignatious Joshua</p>
+        <p class="text-primary font-medium">111 Official Prize Records Loaded.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Dialog Modal -->
+  <div id="confirmModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
+      <div class="flex items-center space-x-3 text-red-600">
+        <div class="bg-red-50 p-3 rounded-full text-xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <h3 id="confirmModalTitle" class="font-bold text-lg text-gray-800">Confirm Action</h3>
+      </div>
+      <p id="confirmModalDesc" class="text-sm text-gray-600">Are you sure you want to perform this action?</p>
+      <div class="flex justify-end space-x-3 pt-2">
+        <button onclick="closeConfirmModal(false)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition">Cancel</button>
+        <button id="confirmModalActionBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Printable Report Container for PDF Generation -->
+  <div id="pdfReportContainer" class="hidden bg-white text-gray-900 p-8"></div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    // Complete 111 Official Prize Records Dataset
+    const prizesData = [
+      {"prize_no": "1st Prize", "prize_item": "SCOOTER (HONDA ACTIVA)", "display_sponsor": "പരേതനായ കമ്പട്ടിക്കൽ വിൻസെന്റിന്റെയും ജനോവ വിൻസെന്റിന്റെയും സ്മരണയ്ക്കായി മക്കളും ചെറുമക്കളും", "origin_sponsor": "പരേതനായ കമ്പട്ടിക്കൽ വിൻസെന്റിന്റെ ജനോവ വിൻസെന്റിന്റെയും സ്മരണയ്ക്കായി മക്കളും ചെറുമക്കളും"},
+      {"prize_no": "2nd Prize", "prize_item": "1 TON SPLIT A/C", "display_sponsor": "VASFA SEA FOODS, ശക്തികുളങ്ങര", "origin_sponsor": "VASFA SEA FOODS, ശക്തികുളങ്ങര"},
+      {"prize_no": "3rd Prize", "prize_item": "32\" LED SMART TV", "display_sponsor": "LIXON BETHEL FUELS, കുരീപ്പുഴ", "origin_sponsor": "C/O EDISON"},
+      {"prize_no": "4th Prize", "prize_item": "WASHING MACHINE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "കോട്ടക്കുന്നിൽ പരേതനായ K A ഫ്രാൻസിസിന്റെ സ്മരണയ്ക്കായ് ടെറൻസ് ഫ്രാൻസിസ്"},
+      {"prize_no": "5th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീമതി. ഗ്രയ്ന മേരിജോൺ, എയ്മി മേരിജോൺ മേലയിൽ", "origin_sponsor": "ശ്രീമതി. ഗ്രയ്ന മേരിജോൺ, എയ്മി മേരിജോൺ മേലയിൽ"},
+      {"prize_no": "6th Prize", "prize_item": "WASHING MACHINE", "display_sponsor": "ശ്രീ. യേശുദാസ് സേവിയർ കാട്ടുവിള", "origin_sponsor": "ശ്രീ. യേശുദാസ് സേവിയർ, കാട്ടുവിള"},
+      {"prize_no": "7th Prize", "prize_item": "MIXER GRINDER", "display_sponsor": "ശ്രീ. ജോയിഡ് കസ്മേൽ, ചിറക്കര സ്റ്റോർ, മതിലിൽ", "origin_sponsor": "ശ്രീ. ജോയിഡ് കസ്മേൽ, ചിറക്കര സ്റ്റോർ, മതിലിൽ"},
+      {"prize_no": "8th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ജോർജ്ജ് ആന്റണി കിഴക്കേവിള", "origin_sponsor": "ശ്രീ. ജോർജ്ജ് ആന്റണി കിഴക്കേവിള"},
+      {"prize_no": "9th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "മോർണിംഗ് സ്റ്റാർ, പെയിന്റിംഗ് സർവീസ് കടവൂർ", "origin_sponsor": "മോർണിംഗ് സ്റ്റാർ, പെയിന്റിംഗ് സർവീസ് കടവൂർ"},
+      {"prize_no": "10th Prize", "prize_item": "GIFT BOX", "display_sponsor": "തങ്കച്ചൻ മേലയിൽ, V.G INDUSTRIES, KUREEPUZHA, KOLLAM", "origin_sponsor": "THANKACHAN MELAYIL"},
+      {"prize_no": "11th Prize", "prize_item": "GRINDER", "display_sponsor": "ശ്രീ. ക്രിസ്റ്റഫർ ദാസൻ, കൊച്ചു പോച്ചയിൽ", "origin_sponsor": "ശ്രീ. ക്രിസ്റ്റഫർ ദാസൻ, കൊച്ചു പോച്ചയിൽ"},
+      {"prize_no": "12th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീ. ഡോമിനിക്ക്, നിയാമോൾ ട്രാവൽസ് കോട്ടയത്തുകടവ്", "origin_sponsor": "ശ്രീ. ഡോമിനിക്ക്, നിയാമോൾ ട്രാവൽസ് കോട്ടയത്തുകടവ്"},
+      {"prize_no": "13th Prize", "prize_item": "AIR FRYER", "display_sponsor": "ശ്രീ. V N നെപ്പോളിയൻ കമ്പനികട", "origin_sponsor": "ശ്രീ. V N നെപ്പോളിയൻ, കമ്പനികട"},
+      {"prize_no": "14th Prize", "prize_item": "THERMAL COOKER", "display_sponsor": "ശ്രീ. മൈക്കിൾ ജോസഫ്, സെന്റ് ജോസഫ് കോട്ടേജ് മതിലിൽ", "origin_sponsor": "ശ്രീ. മൈക്കിൾ ജോസഫ്, സെന്റ് ജോസഫ് കോട്ടേജ് മതിലിൽ"},
+      {"prize_no": "15th Prize", "prize_item": "CYCLE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "സിറോഷ് അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "16th Prize", "prize_item": "CEILING FAN", "display_sponsor": "ശ്രീ. നിസാം ഡെയ്‌ലി ഫ്രഷ് വെജിറ്റബിൾസ് കോട്ടയത്ത് കടവ്", "origin_sponsor": "ശ്രീ. നിസാം ഡെയ്‌ലി ഫ്രഷ്, കോട്ടയത്ത് കടവ്"},
+      {"prize_no": "17th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ഗോൾഡി തങ്കച്ചൻ, മേലയിൽ കടയിൽ", "origin_sponsor": "ശ്രീ. ഗോൾഡി തങ്കച്ചൻ, മേലയിൽ കടയിൽ"},
+      {"prize_no": "18th Prize", "prize_item": "CEILING FAN", "display_sponsor": "ശ്രീ. എഡിസൺ കാട്ടുവിള", "origin_sponsor": "ശ്രീ. എഡിസൺ കാട്ടുവിള"},
+      {"prize_no": "19th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. എഡിസൺ വിൻസെൻറ് മണ്ണുക്കുഴി സ്നേഹധാര", "origin_sponsor": "ശ്രീ. എഡിസൺ വിൻസെൻറ് മണ്ണുക്കുഴി സ്നേഹധാര"},
+      {"prize_no": "20th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ജോസഫ് പൗളിൻ, ജോസ് വില്ല കുരീപ്പുഴ", "origin_sponsor": "ശ്രീ. ജോസഫ് പൗളിൻ, ജോസ് വില്ല കുരീപ്പുഴ"},
+      {"prize_no": "21st Prize", "prize_item": "GAS STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Shibu Joseph (Fathima College) അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "22nd Prize", "prize_item": "BP APPARATUS & GLUCOMETER", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "ട്രസ്റ്റ് മെംബേഴ്സ് (Pend. Prize)"},
+      {"prize_no": "23rd Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "കിഴക്കേവിള പുതുവലിൽ പരേതനായ ആന്റണി ലൂക്കോസിന്റെ സ്മരണയ്ക്കായ് ശ്രീ. റൊണാൾഡോ ജോസഫ്", "origin_sponsor": "കിഴക്കേവിള പുതുവലിൽ പരേതനായ ആന്റണി ലൂക്കോസിന്റെ സ്മരണയ്ക്കായ് ശ്രീ. റൊണാൾഡോ ജോസഫ്"},
+      {"prize_no": "24th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ഹയറിക് വാൾട്ടർ മേലയിൽ", "origin_sponsor": "ശ്രീ. ഹയറിക് വാൾട്ടർ, മേലയിൽ"},
+      {"prize_no": "25th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. ഇന്നസെന്റ് ജോഷ്വാ സെന്റ് ജോർജ് ഫിഷ് സ്റ്റാൾ, കടവൂർ", "origin_sponsor": "ശ്രീ. ഇന്നസെന്റ് ജോഷ്വാ സെന്റ് ജോർജ് ഫിഷ് സ്റ്റാൾ, കടവൂർ"},
+      {"prize_no": "26th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീ. യേശുദാസൻ ഡൊമിനിക്ക് ഹോളി വില്ല അരിക്കാകുഴി", "origin_sponsor": "ശ്രീ. യേശുദാസൻ ഡൊമിനിക്ക്, ഹോളി വില്ല അരിക്കാകുഴി"},
+      {"prize_no": "27th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "പള്ളിമുറ്റം ബ്രദേഴ്സ്", "origin_sponsor": "പള്ളിമുറ്റം ബ്രദേഴ്സ്"},
+      {"prize_no": "28th Prize", "prize_item": "MIXER GRINDER", "display_sponsor": "ശ്രീ. ലാൽ വർഗീസ് ഷിലോ ഭവൻ", "origin_sponsor": "ശ്രീ. ലാൽ വർഗീസ് ഷിലോ ഭവൻ"},
+      {"prize_no": "29th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീ. ക്രിസ്റ്റഫർ ജോൺ ആരോൺ ലാന്റ്", "origin_sponsor": "ശ്രീ. ക്രിസ്റ്റി ജോൺ, ആരോൺ ലാന്റ്"},
+      {"prize_no": "30th Prize", "prize_item": "MICROWAVE OVEN", "display_sponsor": "ശ്രീമതി. ഡോണ മേരി ആന്റണി. അരോമ ഭവൻ", "origin_sponsor": "ശ്രീമതി. ഡോണ മേരി ആന്റണി. അരോമ ഭവൻ"},
+      {"prize_no": "31st Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീ. വിൽസൺ K P നിവാസ്, മതിലിൽ", "origin_sponsor": "ശ്രീ. വിൽസൺ K P നിവാസ്, മതിലിൽ"},
+      {"prize_no": "32nd Prize", "prize_item": "5 LTRS PRESSURE COOKER", "display_sponsor": "ശ്രീ. ജേക്കബ് ജോക്കിൻ മുതിരവിള", "origin_sponsor": "ശ്രീ. ജേക്കബ് ജോക്കിൻ, മുതിരവിള"},
+      {"prize_no": "33rd Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Igni's"},
+      {"prize_no": "34th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ജോസ് ഗബ്രിയേൽ ജോസ് ഭവൻ", "origin_sponsor": "ശ്രീ. ജോസ് ഗബ്രിയേൽ ജോസ് ഭവൻ"},
+      {"prize_no": "35th Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Agnal das. Kanayil അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "36th Prize", "prize_item": "GAS STOVE", "display_sponsor": "ശ്രീ. ചാൾസ് ആന്റപ്പൻ, ചാൾസ് സൗണ്ട്, കടവൂർ", "origin_sponsor": "ശ്രീ. ചാൾസ് ആന്റപ്പൻ, ചാൾസ് സൗണ്ട് കടവൂർ"},
+      {"prize_no": "37th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ലൗഷോർ ഹോം സ്റ്റേ, കുരീപ്പുഴ", "origin_sponsor": "ലൗഷോർ ഹോം സ്റ്റേ, കുരീപ്പുഴ"},
+      {"prize_no": "38th Prize", "prize_item": "CYCLE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "കോട്ടക്കുന്നിൽ പരേതനായ K A ഫ്രാൻസിസിന്റെ സ്മരണയ്ക്കായ് ടെറൻസ് ഫ്രാൻസിസ്"},
+      {"prize_no": "39th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "കിഴക്കേവിള പരേതനായ ജോൺ ചാർളിയുടെ സ്മരണക്കായ് മകൾ ഡയാന", "origin_sponsor": "കിഴക്കേവിള പരേതനായ ജോൺ ചാർലിയുടെ സ്മരണക്കായ് മകൾ ഡയാന"},
+      {"prize_no": "40th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീ. ആന്റണി ചാക്കോ", "origin_sponsor": "ശ്രീ. ആന്റണി ചാക്കോ"},
+      {"prize_no": "41st Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. അലക്സ് പാസ്ക്കൽ കാട്ടുവിള", "origin_sponsor": "ശ്രീ. അലക്സ് പാസ്ക്കൽ കാട്ടുവിള"},
+      {"prize_no": "42nd Prize", "prize_item": "MIXER GRINDER", "display_sponsor": "ശ്രീ. ജോയി സെബാസ്റ്റ്യൻ കല്ലൂർവിള കിഴക്കതിൽ", "origin_sponsor": "ശ്രീ. ജോയി സെബാസ്റ്റ്യൻ, കല്ലൂർവിള കിഴക്കതിൽ"},
+      {"prize_no": "43rd Prize", "prize_item": "GAS STOVE", "display_sponsor": "ഡോ. ജോർജ്ജ് അലോഷ്യസ് മേലയിൽ", "origin_sponsor": "ഡോ. ജോർജ്ജ് അലോഷ്യസ്, മേലയിൽ"},
+      {"prize_no": "44th Prize", "prize_item": "CEILING FAN", "display_sponsor": "ശ്രീമതി. ലീലാമ്മ ജോയി ലീലാ ഭവനം", "origin_sponsor": "ശ്രീമതി. ലീലാമ്മ ജോയി, ലീലാ ഭവനം"},
+      {"prize_no": "45th Prize", "prize_item": "ELECTRIC KETTLE", "display_sponsor": "ശ്രീ. എബിൻ എഡിസൺ വലിയാട്ടുവിള", "origin_sponsor": "ശ്രീ. എബിൻ എഡിസൺ വലിയാട്ടുവിള"},
+      {"prize_no": "46th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. ആൽവിൻ ഫിലിപ്പ് റീന ഭവൻ", "origin_sponsor": "ശ്രീ. ആൽവിൻ ഫിലിപ്പ് ഇമ്മാനുവെൽ കോട്ടേജ്"},
+      {"prize_no": "47th Prize", "prize_item": "GAS STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "ജയൻ ജോൺ അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "48th Prize", "prize_item": "GIFT BOX", "display_sponsor": "തങ്കച്ചൻ മേലയിൽ, V.G INDUSTRIES, KUREEPUZHA, KOLLAM", "origin_sponsor": "THANKACHAN MELAYIL"},
+      {"prize_no": "49th Prize", "prize_item": "MICROWAVE OVEN", "display_sponsor": "ശ്രീ. നോർബൻ കാട്ടുവിള", "origin_sponsor": "ശ്രീ. നോർബൻ, കാട്ടുവിള"},
+      {"prize_no": "50th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "കെ ആർ ട്രേഡേഴ്സ് & സൂപ്പർ മാർക്കറ്റ് കോട്ടയത്ത് കടവ്", "origin_sponsor": "കെ ആർ ട്രേഡേഴ്സ് & സൂപ്പർ മാർക്കറ്റ്, കോട്ടയത്ത് കടവ്"},
+      {"prize_no": "51st Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. സാംസൺ ഡമാസിസ് ഹോളി ഫാമിലി സ്റ്റുഡിയോ കാവനാട്", "origin_sponsor": "ശ്രീ. സാംസൺ ഡമാസിസ് ഹോളി ഫാമിലി സ്റ്റുഡിയോ കാവനാട്"},
+      {"prize_no": "52nd Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. ഫ്രാങ്ക്ളിൻ, സ്റ്റീഫൻ ഫ്രാങ്ക് ഡേൽ", "origin_sponsor": "ശ്രീ. ഫ്രാങ്ക്ലിൻ, സ്റ്റീഫൻ ഫ്രാങ്ക് ഡേൽ"},
+      {"prize_no": "53rd Prize", "prize_item": "GAS STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Shibu Joseph (Fathima College) അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "54th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ജോണി ജോസഫ്, ജോണിസ് ഇവന്റ്സ്, കടവൂർ", "origin_sponsor": "ശ്രീ. ജോണി ജോസഫ്, ജോണി ഇവന്റ്സ് കടവൂർ"},
+      {"prize_no": "55th Prize", "prize_item": "GAS STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Fijo അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "56th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീമതി. രജനി നീക്സൺ റീന ഭവൻ", "origin_sponsor": "ശ്രീമതി. രജനി നീക്സൺ, റീന ഭവൻ"},
+      {"prize_no": "57th Prize", "prize_item": "GAS STOVE", "display_sponsor": "തീരം കേറ്ററിംഗ് അഷ്ടമുടി", "origin_sponsor": "തീരം കേറ്ററിംഗ് , അഷ്ടമുടി"},
+      {"prize_no": "58th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. വില്യംസ് ജെ നെറ്റോ ശക്തികുളങ്ങര", "origin_sponsor": "ശ്രീ. വില്യംസ് ജെ നെറ്റോ ശക്തികുളങ്ങര"},
+      {"prize_no": "59th Prize", "prize_item": "GAS STOVE", "display_sponsor": "ശ്രീ. ജായി ഉനിയാസ് സിയോൺ വില്ല", "origin_sponsor": "ശ്രീ. ജായി ഉനിയാസ്, സിയോൺ വില്ല"},
+      {"prize_no": "60th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. സജി ഭാർഗവൻ സരോജം മതിലിൽ", "origin_sponsor": "ശ്രീ. സജി ഭാർഗവൻ, സരോജം മതിലിൽ"},
+      {"prize_no": "61st Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "പള്ളിമുറ്റം ബ്രദേഴ്സ്", "origin_sponsor": "പള്ളിമുറ്റം ബ്രദേഴ്സ്"},
+      {"prize_no": "62nd Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Agnal das. Kanayil അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "63rd Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. വിനോദ് ബ്രൌൺ വിനോദ് ഭവൻ കുരിപ്പുഴ", "origin_sponsor": "ശ്രീ. വിനോദ് ബ്രൌൺ , വിനോദ് ഭവൻ കുരിപ്പുഴ"},
+      {"prize_no": "64th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീ. ഗോഡ് വിൻ വിൽസൺ മുതിരവിളയിൽ", "origin_sponsor": "ശ്രീ. ഗോഡ് വിൻ വിൽസൺ മുതിരവിളയിൽ"},
+      {"prize_no": "65th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ഷാജി ആൽബർട്ട്, ചക്കിയഴികം", "origin_sponsor": "ശ്രീ. ഷാജി ആൽബർട്ട്, ചക്കിയഴികം"},
+      {"prize_no": "66th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. ആന്റണി കസ്മേൽ മതിലിൽ", "origin_sponsor": "ശ്രീ. ആന്റണി കസ്മേൽ, മതിലിൽ"},
+      {"prize_no": "67th Prize", "prize_item": "CYCLE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Sathya Prakash അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "68th Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "പരേതനായ പരപ്പത്ത് ജോർജിന്റെ സ്മരണയ്ക്ക് കുടുംബാംഗങ്ങൾ", "origin_sponsor": "ട്രസ്റ്റ് മെംബേഴ്സ് Pauline"},
+      {"prize_no": "69th Prize", "prize_item": "INDUCTION STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "മേരി ദാസൻ കലാടിയം കടവൂർ അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "70th Prize", "prize_item": "GAS STOVE", "display_sponsor": "ശ്രീ. അലക്സ് തിമോത്തിയോസ് ലേക് ഓഫ് അൽ സൈമ, മതിലിൽ", "origin_sponsor": "ശ്രീ. അലക്സ് തിമോത്തിയോസ് ലേക് ഓഫ് അൽ സൈമ, മതിലിൽ"},
+      {"prize_no": "71st Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. സുനു ഗ്രിഗറി, മേലയിൽ", "origin_sponsor": "ശ്രീ. സുനു ഗ്രിഗറി, മേലയിൽ"},
+      {"prize_no": "72nd Prize", "prize_item": "3 BURNER GAS STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "ശ്രീ. സെബാസ്റ്റ്യൻ തോമസ് അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "73rd Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. ലാൽ ഹെൻറി, ലാബ് റേയ്സ് കോട്ടയത്തുകടവ്", "origin_sponsor": "ശ്രീ. ലാൽ ഹെൻറി, ലാബ് റേയ്സ് കോട്ടയത്തുകടവ്"},
+      {"prize_no": "74th Prize", "prize_item": "WASHING MACHINE", "display_sponsor": "ചക്കിയഴികത്ത് പരേതനായ ജെയിംസിന്റെ സ്മരണയ്ക്കായ് കുടുംബാംഗങ്ങൾ", "origin_sponsor": "ചക്കിയഴികത്ത് പരേതനായ ജെയിംസിന്റെ സ്മരണയ്ക്കായ് കുടുംബാംഗങ്ങൾ"},
+      {"prize_no": "75th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. റോയി ടൈറ്റസ് വിളയിൽ കിഴക്കേതിൽ", "origin_sponsor": "ശ്രീ. റോയി ടൈറ്റസ് വിലയിൽ കിഴക്കേതിൽ"},
+      {"prize_no": "76th Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "മരിയ കുടുംബശ്രീ കോട്ടയത്ത് കടവ്", "origin_sponsor": "മരിയ കുടുംബശ്രീ, കോട്ടയത്ത് കടവ്"},
+      {"prize_no": "77th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. ജോസ് മണ്ണ്കുഴി JK Catering Service Mathilil", "origin_sponsor": "ശ്രീ. ജോസ് മണ്ണ്കുഴി JK Catering Service"},
+      {"prize_no": "78th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീമതി. കലാ ജെർലിൻ, ജിജോ ഡെയ്ൽ", "origin_sponsor": "ശ്രീമതി. കലാ ജെർലിൻ, ജിജോ ഡെയ്ൽ"},
+      {"prize_no": "79th Prize", "prize_item": "CEILING FAN", "display_sponsor": "ശ്രീ. അശോകൻ, ന്യൂ ലൈറ്റ് ഇലക്ട്രിക്കൽസ്, മതിലിൽ", "origin_sponsor": "ശ്രീ. അശോകൻ, ന്യൂ ലൈറ്റ് ഇലക്ട്രിക്കൽസ് മതിലിൽ"},
+      {"prize_no": "80th Prize", "prize_item": "GAS STOVE", "display_sponsor": "ശ്രീ. കെവിൻ ഐസക്ക് പോൾ കണ്ടച്ചംകുളം", "origin_sponsor": "പോൾ അലോഷ്യസ് അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "81st Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. അലക്സ് തിമോത്തിയോസ് ലേക് ഓഫ് അൽ സൈമ, മതിലിൽ", "origin_sponsor": "ശ്രീ. അലക്സ് തിമോത്തിയോസ് ലേക് ഓഫ് അൽ സൈമ, മതിലിൽ"},
+      {"prize_no": "82nd Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീമതി. ഗ്രയ്ന മേരിജോൺ, എയ്മി മേരിജോൺ മേലയിൽ", "origin_sponsor": "ശ്രീമതി. ഗ്രയ്ന മേരിജോൺ, എയ്മി മേരിജോൺ മേലയിൽ"},
+      {"prize_no": "83rd Prize", "prize_item": "GAS STOVE", "display_sponsor": "ട്രസ്റ്റ് മെമ്പർ", "origin_sponsor": "ശ്രീ. അഭയൻ ക്ലീറ്റ്സ് തൈവിളയിൽ"},
+      {"prize_no": "84th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. റോമാൻ തോബിയാസ് PWD പുതുവൽ", "origin_sponsor": "ശ്രീ. റോമാൻ തോബിയാസ് PWD പുതുവൽ"},
+      {"prize_no": "85th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീമതി. കലാ ജോർജ് ചരുവിള വീട്", "origin_sponsor": "ശ്രീമതി. കലാ ജോർജ് ചരുവിള വീട്"},
+      {"prize_no": "86th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "മന്ന സ്റ്റോർ, കോട്ടയത്ത് കടവ്", "origin_sponsor": "മന്ന സ്റ്റോർ, കോട്ടയത്ത് കടവ്"},
+      {"prize_no": "87th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ഡാനി യേശുദാസ് ചാരുംമൂട്", "origin_sponsor": "ശ്രീ. ഡാനി യേശുദാസ്, ചാരുംമൂട്"},
+      {"prize_no": "88th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീ. ആന്റണി നിക്കോളാസ് കല്ലുവിളയിൽ, പ്രാക്കുളം", "origin_sponsor": "ശ്രീ. ആന്റണി നിക്കോളാസ് കല്ലുവിളയിൽ . പ്രാക്കുളം"},
+      {"prize_no": "89th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ജോയി സിറിൽ, അനുഗ്രഹ ഭവൻ", "origin_sponsor": "ശ്രീ. ജോയി സിറിൽ, അനുഗ്രഹ ഭവൻ"},
+      {"prize_no": "90th Prize", "prize_item": "INDUCTION STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "ജയൻ ജോൺ അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "91st Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീമതി. മഞ്ജു സന്തോഷ്, ഏയ്ഞ്ചൽസ് ബ്യൂട്ടി പാർലർ കോൺഗ്രസ് ഭവനു സമീപം കൊല്ലം", "origin_sponsor": "ശ്രീമതി. മഞ്ജു സന്തോഷ്, ഏയ്ഞ്ചൽസ് ബ്യൂട്ടി പാർലർ കോൺഗ്രസ് ഭവനു സമീപം കൊല്ലം"},
+      {"prize_no": "92nd Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീമതി. എൽസാ സാമുവൽ മേലയിൽ കടയിൽ", "origin_sponsor": "ശ്രീമതി. എൽസാ സാമുവൽ, മേലയിൽ കടയിൽ"},
+      {"prize_no": "93rd Prize", "prize_item": "CEILING FAN", "display_sponsor": "ശ്രീ. ബെർണാഡ് വിൻസെന്റ് സണ്ണി ഡെയിൽ", "origin_sponsor": "ശ്രീ. ബെർണാഡ് വിൻസെന്റ്, സണ്ണി ഡെയിൽ"},
+      {"prize_no": "94th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. മനു ഫ്രാൻസിസ് കിഴക്കേവിള പുതുവൽ", "origin_sponsor": "ശ്രീ. മനു ഫ്രാൻസിസ്, കിഴക്കേവിള പുതുവൽ"},
+      {"prize_no": "95th Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "Agnal das. Kanayil അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "96th Prize", "prize_item": "CYCLE", "display_sponsor": "പരേതയായ റീത്താ ക്രിസ്സിയുടെ സ്മരണയ്ക്കായ് ചക്കിയഴികത്ത് രാജിഭവനിൽ കുടുംബാംഗങ്ങൾ", "origin_sponsor": "പരേതയായ റീത്താ ക്രിസ്സിയുടെ സ്മരണയ്ക്കായ് ചക്കിയഴികത്ത് രാജിഭവനിൽ കുടുംബാംഗങ്ങൾ"},
+      {"prize_no": "97th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ഇമ്മാനുവൽ കോട്ടേജിൽ ജോൺസന്റെ സ്മരണയ്ക്കായി ബിനോയ് ജോൺസൺ", "origin_sponsor": "ശ്രീ. ബിനോയി ജോൺസൺ, ഇമ്മാനുവെൽ കോട്ടേജ്"},
+      {"prize_no": "98th Prize", "prize_item": "PEDESTAL FAN", "display_sponsor": "ശ്രീ. ബെൻസൺ വിൽഫ്രഡ് സങ്കീർത്തനം", "origin_sponsor": "ശ്രീ. ബെൻസൺ വിൽഫ്രഡ്, സങ്കീർത്തനം"},
+      {"prize_no": "99th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീമതി. ഗ്രയ്ന മേരിജോൺ, എയ്മി മേരിജോൺ മേലയിൽ", "origin_sponsor": "ശ്രീമതി. ഗ്രയ്ന മേരിജോൺ, എയ്മി മേരിജോൺ മേലയിൽ"},
+      {"prize_no": "100th Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "ശ്രീമതി. ഷേർളി ജോസഫ് ജ്വാലാസ് പതിനെട്ടാംപടി", "origin_sponsor": "ശ്രീമതി. ഷേർളി ജോസഫ് ജ്വാലാസ് പതിനെട്ടാംപടി"},
+      {"prize_no": "101st Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. വിൽസൺ ജോൺ കല്ലറയ്ക്കൽ", "origin_sponsor": "ശ്രീ. വിൽസൺ ജോൺ കല്ലറയ്ക്കൽ"},
+      {"prize_no": "102nd Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "കിഴക്കേവിള പുതുവലിൽ പരേതനായ ദാവീദ് ജോസെഫിന്റെ സ്മരണയ്ക്കായ് ശ്രീ റോമാരിയോ ജോസഫ്", "origin_sponsor": "കിഴക്കേവിള പുതുവലിൽ പരേതനായ ദാവീദ് ജോസെഫിന്റെ സ്മരണയ്ക്കായ് ശ്രീ റോമാരിയോ ജോസഫ്"},
+      {"prize_no": "103rd Prize", "prize_item": "1 BAG RICE (50 Kg)", "display_sponsor": "പള്ളിമുറ്റം ബ്രദേഴ്സ്", "origin_sponsor": "പള്ളിമുറ്റം ബ്രദേഴ്സ്"},
+      {"prize_no": "104th Prize", "prize_item": "INDUCTION STOVE", "display_sponsor": "ശ്രീ. ഹന്ന രൂപ് മെൽവിൻ പാദുവാ", "origin_sponsor": "ശ്രീ. ഹന്ന രൂപ് മെൽവിൻ പാദുവാ"},
+      {"prize_no": "105th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. ജോൺസൺ വിൽഫ്രഡ് ജെ എം ജെ വില്ല.", "origin_sponsor": "ശ്രീ. ജോൺസൺ വിൽഫ്രഡ് ജെ എം ജെ വില്ല."},
+      {"prize_no": "106th Prize", "prize_item": "INDUCTION STOVE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "മേരി ദാസൻ കലാടിയം കടവൂർ അഭ്യുദകാംക്ഷി"},
+      {"prize_no": "107th Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "ട്രസ്റ്റ് മെംബേഴ്സ് Pauline"},
+      {"prize_no": "108th Prize", "prize_item": "ELECTRIC KETTLE", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "UNKNOWN TRUST"},
+      {"prize_no": "109th Prize", "prize_item": "TROLLEY BAG", "display_sponsor": "ഒരു അഭ്യുദയകാംക്ഷി", "origin_sponsor": "ട്രസ്റ്റ് മെംബേഴ്സ് Pauline"},
+      {"prize_no": "110th Prize", "prize_item": "CYCLE", "display_sponsor": "ശ്രീ. മാനുവൽ പത്രോസ് മണിമന്ദിരം", "origin_sponsor": "ശ്രീ. മാനുവൽ പത്രോസ് മണിമന്ദിരം"},
+      {"prize_no": "111th Prize", "prize_item": "FRIDGE (DOUBLE DOOR)", "display_sponsor": "ശ്രീ. ബിജു ഗ്രിഗറി, മേലയിൽ", "origin_sponsor": "ശ്രീ. ബിജു ഗ്രിഗറി, മേലയിൽ"},
+    ];
+
+    // Application State
+    let prizeTracking = {}; // Format: { prize_no: { status: 'PENDING' | 'SPONSOR' | 'TRUST', amount: number } }
+    let collectedPrizes = {}; // Format: { prize_no: true/false } (kept in sync for legacy compatibility)
+    let currentView = 'grid'; // 'grid' or 'table'
+    let deferredInstallPrompt = null;
+    let receivedAmounts = [];
+
+    function getPrizeTracking(prizeNo) {
+      if (!prizeTracking[prizeNo]) {
+        const isLegacy = !!collectedPrizes[prizeNo];
+        prizeTracking[prizeNo] = {
+          status: isLegacy ? 'SPONSOR' : 'PENDING',
+          amount: 0
+        };
+      }
+      return prizeTracking[prizeNo];
+    }
+
+    // Local Storage & Migration
+    function loadSavedCollectionState() {
+      try {
+        const savedTracking = localStorage.getItem('stCasimirLuckyDraw2026_tracking');
+        const legacyData = localStorage.getItem('luckyDrawCollectedPrizesV11');
+        const currentData = localStorage.getItem('stCasimirLuckyDraw2026_collected');
+        const savedReceivedAmounts = localStorage.getItem('stCasimirLuckyDraw2026_receivedAmounts');
+
+        if (currentData) {
+          collectedPrizes = JSON.parse(currentData);
+        } else if (legacyData) {
+          collectedPrizes = JSON.parse(legacyData);
+          localStorage.setItem('stCasimirLuckyDraw2026_collected', JSON.stringify(collectedPrizes));
+        } else {
+          collectedPrizes = {};
+        }
+
+        if (savedTracking) {
+          prizeTracking = JSON.parse(savedTracking);
+        } else {
+          prizeTracking = {};
+          // Migrate legacy collected prizes into SPONSOR status
+          Object.keys(collectedPrizes).forEach(k => {
+            if (collectedPrizes[k]) {
+              prizeTracking[k] = { status: 'SPONSOR', amount: 0 };
+            }
+          });
+        }
+
+        if (savedReceivedAmounts) {
+          receivedAmounts = JSON.parse(savedReceivedAmounts);
+        }
+
+        // Ensure collectedPrizes is strictly in sync with prizeTracking
+        Object.keys(prizeTracking).forEach(k => {
+          const status = prizeTracking[k].status;
+          collectedPrizes[k] = (status === 'SPONSOR' || status === 'TRUST');
+        });
+
+        const savedSpeed = localStorage.getItem('stCasimirLuckyDraw2026_tickerSpeed');
+        if (savedSpeed) {
+          document.getElementById('tickerSpeedRange').value = savedSpeed;
+          updateTickerSpeed(savedSpeed, false);
+        }
+      } catch (e) {
+        console.error('Error loading saved state:', e);
+        collectedPrizes = {};
+        prizeTracking = {};
+        receivedAmounts = [];
+      }
+    }
+
+    function saveCollectionState() {
+      try {
+        localStorage.setItem('stCasimirLuckyDraw2026_tracking', JSON.stringify(prizeTracking));
+        localStorage.setItem('stCasimirLuckyDraw2026_collected', JSON.stringify(collectedPrizes));
+        localStorage.setItem('stCasimirLuckyDraw2026_receivedAmounts', JSON.stringify(receivedAmounts));
+      } catch (e) {
+        console.error('Error saving collection state:', e);
+      }
+    }
+
+    // Initialization
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.fonts) {
+        document.fonts.load('16px "Anek Malayalam"').then(() => {
+          console.log('Anek Malayalam font active');
+        }).catch(e => console.warn('Font load:', e));
+      }
+      loadSavedCollectionState();
+      validateDatabase();
+      populateCategoryDropdown();
+      setupEventListeners();
+      renderDashboard();
+      renderReceivedAmounts();
+      renderPrizes();
+      renderTicker();
+      renderCategorySummaryDrawer();
+      checkStandaloneMode();
+    });
+
+    function validateDatabase() {
+      if (prizesData.length !== 111) {
+        console.warn(`Warning: Expected 111 prizes, but found ${prizesData.length}`);
+      }
+    }
+
+    function populateCategoryDropdown() {
+      const categorySet = new Set();
+      prizesData.forEach(p => categorySet.add(normalizeCategory(p.prize_item)));
+      const select = document.getElementById('categoryFilter');
+      categorySet.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+      });
+    }
+
+    function normalizeCategory(itemName) {
+      return itemName.trim().toUpperCase();
+    }
+
+    function setupEventListeners() {
+      document.getElementById('searchInput').addEventListener('input', () => {
+        renderPrizes();
+      });
+      document.getElementById('categoryFilter').addEventListener('change', () => {
+        updateCategoryBanner();
+        renderPrizes();
+      });
+      document.getElementById('statusFilter').addEventListener('change', () => {
+        renderPrizes();
+      });
+    }
+
+    function resetAllFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('categoryFilter').value = 'ALL';
+      document.getElementById('statusFilter').value = 'ALL';
+      updateCategoryBanner();
+      renderPrizes();
+    }
+
+    // Update Tracking Status (Pending, Sponsor, Trust)
+    function updatePrizeStatus(prizeNo, newStatus) {
+      const track = getPrizeTracking(prizeNo);
+      track.status = newStatus;
+      collectedPrizes[prizeNo] = (newStatus === 'SPONSOR' || newStatus === 'TRUST');
+      saveCollectionState();
+      renderDashboard();
+      renderPrizes();
+      renderTicker();
+      renderCategorySummaryDrawer();
+    }
+
+    // Update Trust Purchase Amount (Immediate reflection in dashboard without input re-render)
+    function updateTrustAmount(prizeNo, amountVal) {
+      const track = getPrizeTracking(prizeNo);
+      const num = parseFloat(amountVal);
+      track.amount = isNaN(num) || num < 0 ? 0 : num;
+      saveCollectionState();
+      renderDashboard();
+    }
+
+    // View Switcher
+    function switchView(view) {
+      currentView = view;
+      const gridElem = document.getElementById('prizeGridView');
+      const tableElem = document.getElementById('prizeTableView');
+      const gridBtn = document.getElementById('gridViewBtn');
+      const tableBtn = document.getElementById('tableViewBtn');
+
+      if (view === 'grid') {
+        gridElem.classList.remove('hidden');
+        tableElem.classList.add('hidden');
+        gridBtn.className = "px-2 py-1.5 rounded-md text-xs font-semibold bg-white text-primary shadow-xs transition flex items-center justify-center gap-1";
+        tableBtn.className = "px-2 py-1.5 rounded-md text-xs font-semibold text-gray-600 hover:text-primary transition flex items-center justify-center gap-1";
+      } else {
+        gridElem.classList.add('hidden');
+        tableElem.classList.remove('hidden');
+        tableBtn.className = "px-2 py-1.5 rounded-md text-xs font-semibold bg-white text-primary shadow-xs transition flex items-center justify-center gap-1";
+        gridBtn.className = "px-2 py-1.5 rounded-md text-xs font-semibold text-gray-600 hover:text-primary transition flex items-center justify-center gap-1";
+      }
+    }
+
+    // Render Dashboard Stats (Includes Trust Purchase Amount)
+    function renderDashboard() {
+      const total = prizesData.length;
+      let collected = 0;
+      let sponsorCount = 0;
+      let trustCount = 0;
+      let trustTotalAmount = 0;
+
+      prizesData.forEach(p => {
+        const track = getPrizeTracking(p.prize_no);
+        if (track.status === 'SPONSOR') {
+          collected++;
+          sponsorCount++;
+        } else if (track.status === 'TRUST') {
+          collected++;
+          trustCount++;
+          trustTotalAmount += (Number(track.amount) || 0);
+        }
+      });
+
+      const pending = total - collected;
+      const percent = total > 0 ? Math.round((collected / total) * 100) : 0;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statCollected').textContent = collected;
+      document.getElementById('statCollectedSub').textContent = `${percent}%`;
+      const breakdownElem = document.getElementById('statCollectedBreakdown');
+      if (breakdownElem) {
+        breakdownElem.innerHTML = `${sponsorCount} Sponsor &bull; ${trustCount} Trust`;
+      }
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statPendingSub').textContent = `${100 - percent}%`;
+
+      // Trust Expense Card
+      const trustAmountElem = document.getElementById('statTrustAmount');
+      const trustCountElem = document.getElementById('statTrustCount');
+      if (trustAmountElem) {
+        trustAmountElem.textContent = `₹${trustTotalAmount.toLocaleString('en-IN')}`;
+      }
+      if (trustCountElem) {
+        trustCountElem.textContent = `${trustCount} Items`;
+      }
+
+      const receivedTotal = receivedAmounts.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+      const receivedAmountElem = document.getElementById('statReceivedAmount');
+      const receivedCountElem = document.getElementById('statReceivedCount');
+      if (receivedAmountElem) receivedAmountElem.textContent = `₹${receivedTotal.toLocaleString('en-IN')}`;
+      if (receivedCountElem) receivedCountElem.textContent = `${receivedAmounts.length} Entries`;
+      const balanceAmountElem = document.getElementById('statBalanceAmount');
+      if (balanceAmountElem) {
+        balanceAmountElem.textContent = `₹${(receivedTotal - trustTotalAmount).toLocaleString('en-IN')}`;
+      }
+    }
+
+    function renderReceivedAmounts() {
+      const total = receivedAmounts.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+      document.getElementById('receivedAmountTotal').textContent = `Total: ₹${total.toLocaleString('en-IN')}`;
+      const list = document.getElementById('receivedAmountsList');
+      if (!receivedAmounts.length) {
+        list.innerHTML = '<p class="text-xs text-gray-500">No received amounts added yet.</p>';
+        return;
+      }
+      list.innerHTML = receivedAmounts.map((entry, index) => `
+        <div class="flex items-center justify-between gap-2 bg-blue-50/60 border border-blue-100 rounded-lg px-3 py-2">
+          <span class="text-xs font-medium text-gray-700 truncate">${escapeHtml(entry.name)}</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-xs font-bold text-blue-700">₹${(Number(entry.amount) || 0).toLocaleString('en-IN')}</span>
+            <button type="button" onclick="removeReceivedAmount(${index})" class="text-red-600 hover:text-red-800" title="Remove">
+              <i class="fa-solid fa-trash text-xs"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+    }
+
+    function addReceivedAmount(event) {
+      event.preventDefault();
+      const nameInput = document.getElementById('receivedNameInput');
+      const amountInput = document.getElementById('receivedAmountInput');
+      const name = nameInput.value.trim();
+      const amount = Number(amountInput.value);
+      if (!name || !Number.isFinite(amount) || amount < 0) return;
+      receivedAmounts.push({ name, amount });
+      nameInput.value = '';
+      amountInput.value = '';
+      saveCollectionState();
+      renderReceivedAmounts();
+      renderDashboard();
+    }
+
+    function removeReceivedAmount(index) {
+      receivedAmounts.splice(index, 1);
+      saveCollectionState();
+      renderReceivedAmounts();
+      renderDashboard();
+    }
+
+    // Category Summary Banner
+    function updateCategoryBanner() {
+      const selectedCat = document.getElementById('categoryFilter').value;
+      const banner = document.getElementById('categorySummaryBanner');
+      if (selectedCat === 'ALL') {
+        banner.classList.add('hidden');
+      } else {
+        banner.classList.remove('hidden');
+        document.getElementById('activeCategoryText').textContent = `Category: ${selectedCat}`;
+        
+        let totalCat = 0;
+        let collectedCat = 0;
+        prizesData.forEach(p => {
+          if (normalizeCategory(p.prize_item) === selectedCat) {
+            totalCat++;
+            const track = getPrizeTracking(p.prize_no);
+            if (track.status === 'SPONSOR' || track.status === 'TRUST') collectedCat++;
+          }
+        });
+        document.getElementById('categorySummaryCounts').textContent = `Collected: ${collectedCat} / Total: ${totalCat}`;
+      }
+    }
+
+    // Filter Logic & Rendering Prizes
+    function getFilteredPrizes() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const catFilter = document.getElementById('categoryFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+
+      return prizesData.filter(p => {
+        const matchQuery = !query || 
+          p.prize_no.toLowerCase().includes(query) ||
+          p.prize_item.toLowerCase().includes(query) ||
+          p.display_sponsor.toLowerCase().includes(query) ||
+          p.origin_sponsor.toLowerCase().includes(query);
+
+        const matchCat = catFilter === 'ALL' || normalizeCategory(p.prize_item) === catFilter;
+
+        const track = getPrizeTracking(p.prize_no);
+        let matchStatus = true;
+        if (statusFilter === 'COLLECTED') matchStatus = (track.status === 'SPONSOR' || track.status === 'TRUST');
+        else if (statusFilter === 'PENDING') matchStatus = (track.status === 'PENDING');
+        else if (statusFilter === 'SPONSOR') matchStatus = (track.status === 'SPONSOR');
+        else if (statusFilter === 'TRUST') matchStatus = (track.status === 'TRUST');
+
+        return matchQuery && matchCat && matchStatus;
+      });
+    }
+
+    function renderPrizes() {
+      const filtered = getFilteredPrizes();
+      const gridElem = document.getElementById('prizeGridView');
+      const tableBody = document.getElementById('prizeTableBody');
+      const emptyState = document.getElementById('emptyState');
+      const resultsCount = document.getElementById('resultsCount');
+      const collectedInViewCount = document.getElementById('collectedInViewCount');
+
+      gridElem.innerHTML = '';
+      tableBody.innerHTML = '';
+
+      let collectedInCurrentView = 0;
+      filtered.forEach(p => {
+        const track = getPrizeTracking(p.prize_no);
+        if (track.status === 'SPONSOR' || track.status === 'TRUST') collectedInCurrentView++;
+      });
+
+      resultsCount.textContent = `Showing ${filtered.length} of ${prizesData.length} prizes`;
+      collectedInViewCount.textContent = `Collected in current view: ${collectedInCurrentView}`;
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      // Render Grid Cards
+      filtered.forEach(p => {
+        const safeKey = p.prize_no.replace(/'/g, "\\'");
+        const track = getPrizeTracking(p.prize_no);
+        const status = track.status; // 'PENDING' | 'SPONSOR' | 'TRUST'
+        const amount = Number(track.amount) || 0;
+
+        let cardCardClass = 'bg-red-50/60 border-red-300 ring-1 ring-red-300';
+        let statusSelectClass = 'bg-red-50 text-red-800 border-red-300';
+        let prizeNumberClass = 'bg-red-600';
+
+        if (status === 'SPONSOR') {
+          cardCardClass = 'bg-blue-50/60 border-blue-300 ring-1 ring-blue-300';
+          statusSelectClass = 'bg-blue-50 text-blue-800 border-blue-300';
+          prizeNumberClass = 'bg-blue-600';
+        } else if (status === 'TRUST') {
+          cardCardClass = 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-300';
+          statusSelectClass = 'bg-emerald-50 text-emerald-800 border-emerald-300';
+          prizeNumberClass = 'bg-emerald-600';
+        }
+
+        const cardHTML = `
+          <div class="rounded-xl border ${cardCardClass} shadow-sm p-4 flex flex-col justify-between transition-all duration-200">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="${prizeNumberClass} text-white text-xs font-bold px-2.5 py-1 rounded-md shrink-0">
+                  ${p.prize_no}
+                </span>
+                <select onchange="updatePrizeStatus('${safeKey}', this.value)" class="text-xs font-bold rounded-lg px-2.5 py-1 border shadow-2xs focus:outline-none focus:ring-1 focus:ring-accent ${statusSelectClass} cursor-pointer">
+                  <option value="PENDING" ${status === 'PENDING' ? 'selected' : ''}>⏳ Pending</option>
+                  <option value="SPONSOR" ${status === 'SPONSOR' ? 'selected' : ''}>🎁 Own / Sponsor</option>
+                  <option value="TRUST" ${status === 'TRUST' ? 'selected' : ''}>🛒 Trust Purchase</option>
+                </select>
+              </div>
+              <h3 class="font-bold text-gray-800 text-base mb-2">${p.prize_item}</h3>
+              <div class="text-xs space-y-1.5 bg-white/80 p-2.5 rounded-lg border border-borderColor/60">
+                <p class="font-medium text-gray-700"><span class="text-gray-400 font-normal">Display Sponsor:</span> <span class="malayalam-text text-primary font-semibold">${p.display_sponsor}</span></p>
+                <div class="pt-1.5 border-t border-gray-100">
+                  <span class="text-emerald-700 font-medium text-[11px] block mb-0.5">Original Sponsor Details:</span>
+                  <p class="text-gray-600 malayalam-text text-[11px] leading-relaxed">${p.origin_sponsor}</p>
+                </div>
+              </div>
+
+              ${status === 'TRUST' ? `
+                <div class="mt-2.5 bg-blue-50/90 border border-blue-200 rounded-lg p-2 flex items-center justify-between gap-2 shadow-2xs">
+                  <div class="flex items-center space-x-1 text-blue-900 font-bold text-xs shrink-0">
+                    <i class="fa-solid fa-receipt text-blue-600"></i>
+                    <span>Trust Cost:</span>
+                  </div>
+                  <div class="flex items-center space-x-1 flex-1 max-w-[140px]">
+                    <span class="text-xs font-bold text-blue-800">₹</span>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      step="any"
+                      placeholder="Enter amount" 
+                      value="${amount > 0 ? amount : ''}" 
+                      oninput="updateTrustAmount('${safeKey}', this.value)" 
+                      class="w-full text-xs font-bold px-2 py-1 bg-white border border-blue-300 rounded text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
+                    >
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        gridElem.insertAdjacentHTML('beforeend', cardHTML);
+
+        // Render Table Row
+        let rowClass = 'bg-white hover:bg-gray-50/80';
+        if (status === 'SPONSOR') rowClass = 'bg-blue-50/60';
+        else if (status === 'TRUST') rowClass = 'bg-emerald-50/60';
+
+        const rowHTML = `
+          <tr class="${rowClass} border-b border-gray-100 transition">
+            <td class="py-3 px-4 text-xs font-bold text-primary">${p.prize_no}</td>
+            <td class="py-3 px-4 text-xs font-bold text-gray-800">${p.prize_item}</td>
+            <td class="py-3 px-4 text-xs malayalam-text text-primary font-medium">${p.display_sponsor}</td>
+            <td class="py-3 px-4 text-xs malayalam-text text-gray-600 max-w-xs truncate" title="${p.origin_sponsor}">${p.origin_sponsor}</td>
+            <td class="py-2 px-3 text-center">
+              <div class="inline-flex flex-col items-center gap-1">
+                <select onchange="updatePrizeStatus('${safeKey}', this.value)" class="text-xs font-bold rounded px-2 py-1 border shadow-2xs focus:outline-none ${statusSelectClass} cursor-pointer">
+                  <option value="PENDING" ${status === 'PENDING' ? 'selected' : ''}>⏳ Pending</option>
+                  <option value="SPONSOR" ${status === 'SPONSOR' ? 'selected' : ''}>🎁 Sponsor</option>
+                  <option value="TRUST" ${status === 'TRUST' ? 'selected' : ''}>🛒 Trust</option>
+                </select>
+                ${status === 'TRUST' ? `
+                  <div class="flex items-center space-x-1">
+                    <span class="text-[10px] font-bold text-blue-800">₹</span>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      step="any"
+                      placeholder="Amount" 
+                      value="${amount > 0 ? amount : ''}" 
+                      oninput="updateTrustAmount('${safeKey}', this.value)" 
+                      class="w-20 text-[11px] font-bold px-1.5 py-0.5 border border-blue-300 rounded text-blue-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                  </div>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+        tableBody.insertAdjacentHTML('beforeend', rowHTML);
+      });
+    }
+
+    // Live Scrolling Ticker
+    function renderTicker() {
+      const track = document.getElementById('tickerTrack');
+      track.innerHTML = '';
+
+      const countsMap = {};
+      prizesData.forEach(p => {
+        const item = p.prize_item;
+        if (!countsMap[item]) countsMap[item] = { total: 0, collected: 0 };
+        countsMap[item].total++;
+        if (collectedPrizes[p.prize_no]) countsMap[item].collected++;
+      });
+
+      let tickerContent = '';
+      for (const [item, data] of Object.entries(countsMap)) {
+        tickerContent += `<span class="mx-4 inline-flex items-center space-x-1.5"><span class="font-bold text-white">${item}</span><span class="bg-emerald-800 text-emerald-200 px-1.5 py-0.5 rounded text-[11px]">${data.collected}/${data.total}</span><span class="text-emerald-400 mx-2">&bull;</span></span>`;
+      }
+
+      track.innerHTML = tickerContent + tickerContent;
+    }
+
+    function updateTickerSpeed(seconds, save = true) {
+      const track = document.getElementById('tickerTrack');
+      track.style.animationDuration = `${seconds}s`;
+      document.getElementById('speedValueLabel').textContent = `${seconds}s`;
+      if (save) {
+        localStorage.setItem('stCasimirLuckyDraw2026_tickerSpeed', seconds);
+      }
+    }
+
+    // Category Summary Drawer List
+    function renderCategorySummaryDrawer() {
+      const container = document.getElementById('categorySummaryDrawerList');
+      container.innerHTML = '';
+
+      const summaryMap = {};
+      prizesData.forEach(p => {
+        const cat = normalizeCategory(p.prize_item);
+        if (!summaryMap[cat]) summaryMap[cat] = { total: 0, collected: 0 };
+        summaryMap[cat].total++;
+        if (collectedPrizes[p.prize_no]) summaryMap[cat].collected++;
+      });
+
+      for (const [cat, data] of Object.entries(summaryMap)) {
+        const pct = Math.round((data.collected / data.total) * 100);
+        const itemHTML = `
+          <div class="flex items-center justify-between bg-gray-50 p-2 rounded-lg border border-borderColor">
+            <span class="font-medium text-gray-700 truncate max-w-[180px]" title="${cat}">${cat}</span>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-primary">${data.collected}/${data.total}</span>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">${pct}%</span>
+            </div>
+          </div>
+        `;
+        container.insertAdjacentHTML('beforeend', itemHTML);
+      }
+    }
+
+    function toggleCategorySummaryView() {
+      toggleSettingsDrawer(false);
+      document.getElementById('categoryFilter').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Settings Drawer Controls
+    function toggleSettingsDrawer(open) {
+      const drawer = document.getElementById('settingsDrawer');
+      const backdrop = document.getElementById('settingsDrawerBackdrop');
+      if (open) {
+        backdrop.classList.remove('hidden');
+        setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        drawer.classList.remove('translate-x-full');
+      } else {
+        drawer.classList.add('translate-x-full');
+        backdrop.classList.add('opacity-0');
+        setTimeout(() => backdrop.classList.add('hidden'), 300);
+      }
+    }
+
+    // PDF Reports Generation
+    function generatePDFReport(type) {
+      toggleSettingsDrawer(false);
+      const container = document.getElementById('pdfReportContainer');
+      
+      let title = "Full Prizes Report (111 Records)";
+      let filtered = prizesData;
+
+      if (type === 'collected') {
+        title = "Collected Items Report";
+        filtered = prizesData.filter(p => {
+          const track = getPrizeTracking(p.prize_no);
+          return track.status === 'SPONSOR' || track.status === 'TRUST';
+        });
+      } else if (type === 'pending') {
+        title = "Pending Items Report";
+        filtered = prizesData.filter(p => {
+          const track = getPrizeTracking(p.prize_no);
+          return track.status === 'PENDING';
+        });
+      }
+
+      const total = prizesData.length;
+      let collectedCount = 0;
+      let sponsorCount = 0;
+      let trustCount = 0;
+      let trustTotalAmount = 0;
+
+      prizesData.forEach(p => {
+        const track = getPrizeTracking(p.prize_no);
+        if (track.status === 'SPONSOR') {
+          collectedCount++;
+          sponsorCount++;
+        } else if (track.status === 'TRUST') {
+          collectedCount++;
+          trustCount++;
+          trustTotalAmount += (Number(track.amount) || 0);
+        }
+      });
+
+      const pendingCount = total - collectedCount;
+      const percent = Math.round((collectedCount / total) * 100);
+      const dateStr = new Date().toLocaleString();
+
+      let html = `
+        <div style="font-family: 'Inter', sans-serif; padding: 20px; color: #111;">
+          <div style="text-align: center; border-bottom: 2px solid #1B5E20; padding-bottom: 15px; margin-bottom: 20px;">
+            <h1 style="font-size: 20px; font-weight: bold; color: #1B5E20; margin: 0;">ST. CASIMIR CHARITABLE TRUST, KADAVOOR</h1>
+            <p style="font-size: 12px; color: #555; margin: 4px 0;">Kollam, Kerala &bull; Lucky Draw 2026</p>
+            <h2 style="font-size: 16px; font-weight: bold; color: #333; margin-top: 8px;">${title}</h2>
+            <p style="font-size: 10px; color: #777;">Generated on: ${dateStr}</p>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: #F4F7F4; padding: 10px; border-radius: 6px; font-size: 11px; margin-bottom: 20px;">
+            <div><strong>Total Prizes:</strong> ${total}</div>
+            <div><strong>Collected:</strong> ${collectedCount} (${sponsorCount} Sponsor + ${trustCount} Trust)</div>
+            <div><strong>Pending:</strong> ${pendingCount}</div>
+            <div><strong>Trust Expense:</strong> ₹${trustTotalAmount.toLocaleString('en-IN')}</div>
+            <div><strong>Progress:</strong> ${percent}%</div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+            <thead>
+              <tr style="background: #1B5E20; color: white;">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Prize No.</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Prize Item</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Display Sponsor</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Status / Expense</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      filtered.forEach(p => {
+        const track = getPrizeTracking(p.prize_no);
+        let statusLabel = 'Pending';
+        let statusColor = '#DC2626';
+        if (track.status === 'SPONSOR') {
+          statusLabel = 'Own / Sponsor';
+          statusColor = '#1D4ED8';
+        } else if (track.status === 'TRUST') {
+          statusLabel = `Trust Purchase (₹${Number(track.amount) || 0})`;
+          statusColor = '#059669';
+        }
+
+        html += `
+          <tr>
+            <td style="padding: 6px 8px; border: 1px solid #ddd; font-weight: bold;">${p.prize_no}</td>
+            <td style="padding: 6px 8px; border: 1px solid #ddd; font-weight: bold;">${p.prize_item}</td>
+            <td style="padding: 6px 8px; border: 1px solid #ddd; font-family: 'Anek Malayalam', sans-serif;">${p.display_sponsor}</td>
+            <td style="padding: 6px 8px; border: 1px solid #ddd; font-weight: bold; color: ${statusColor};">${statusLabel}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      container.classList.remove('hidden');
+
+      const opt = {
+        margin:       10,
+        filename:     `StCasimir_LuckyDraw_2026_${type}_report.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(container).set(opt).toPdf().get('pdf').then(function(pdf) {
+        container.classList.add('hidden');
+        if (window.AndroidBridge && window.AndroidBridge.sharePdfBase64) {
+          const base64Uri = pdf.output('datauristring');
+          window.AndroidBridge.sharePdfBase64(base64Uri, `StCasimir_LuckyDraw_2026_${type}_report.pdf`);
+        } else {
+          pdf.save(`StCasimir_LuckyDraw_2026_${type}_report.pdf`);
+        }
+      }).catch(function() {
+        html2pdf().from(container).set(opt).save().then(() => {
+          container.classList.add('hidden');
+        });
+      });
+    }
+
+    // JSON Backup & Restore
+    function exportJSONBackup() {
+      toggleSettingsDrawer(false);
+      const backupData = {
+        appName: "St. Casimir Charitable Trust — Lucky Draw 2026",
+        version: "2.7",
+        createdDate: new Date().toISOString(),
+        prizeTracking: prizeTracking,
+        collectedPrizes: collectedPrizes,
+        receivedAmounts: receivedAmounts,
+        tickerSpeed: document.getElementById('tickerSpeedRange').value,
+        prizesData: prizesData
+      };
+
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      if (window.AndroidBridge && window.AndroidBridge.shareJson) {
+        window.AndroidBridge.shareJson(jsonStr, `StCasimir_LuckyDraw_2026_Backup_${new Date().toISOString().slice(0,10)}.json`);
+        return;
+      }
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `StCasimir_LuckyDraw_2026_Backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importJSONBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if ((!parsed.collectedPrizes && !parsed.prizeTracking) || !parsed.prizesData) {
+            throw new Error("Invalid backup file structure.");
+          }
+
+          openConfirmModal(
+            "Restore Backup Data",
+            `Are you sure you want to restore backup created on ${new Date(parsed.createdDate || Date.now()).toLocaleString()}? This will replace your current collection progress.`,
+            () => {
+              if (parsed.prizeTracking) {
+                prizeTracking = parsed.prizeTracking;
+              } else if (parsed.collectedPrizes) {
+                prizeTracking = {};
+                Object.keys(parsed.collectedPrizes).forEach(k => {
+                  if (parsed.collectedPrizes[k]) {
+                    prizeTracking[k] = { status: 'SPONSOR', amount: 0 };
+                  }
+                });
+              }
+              collectedPrizes = parsed.collectedPrizes || {};
+              receivedAmounts = Array.isArray(parsed.receivedAmounts) ? parsed.receivedAmounts : [];
+              Object.keys(prizeTracking).forEach(k => {
+                const s = prizeTracking[k].status;
+                collectedPrizes[k] = (s === 'SPONSOR' || s === 'TRUST');
+              });
+
+              if (parsed.tickerSpeed) {
+                document.getElementById('tickerSpeedRange').value = parsed.tickerSpeed;
+                updateTickerSpeed(parsed.tickerSpeed);
+              }
+              saveCollectionState();
+              renderDashboard();
+              renderReceivedAmounts();
+              renderPrizes();
+              renderTicker();
+              renderCategorySummaryDrawer();
+              alert("Data restored successfully!");
+            }
+          );
+        } catch (err) {
+          alert("Error importing backup file: " + err.message);
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    // Reset Confirmation
+    function confirmResetCollection() {
+      toggleSettingsDrawer(false);
+      openConfirmModal(
+        "Reset All Collection Records",
+        "Are you absolutely sure you want to clear all collection statuses? All 111 prizes will be marked as pending.",
+        () => {
+          prizeTracking = {};
+          collectedPrizes = {};
+          saveCollectionState();
+          renderDashboard();
+          renderPrizes();
+          renderTicker();
+          renderCategorySummaryDrawer();
+          closeConfirmModal(true);
+        }
+      );
+    }
+
+    let confirmCallback = null;
+    function openConfirmModal(title, desc, callback) {
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalDesc').textContent = desc;
+      confirmCallback = callback;
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal(confirmed) {
+      document.getElementById('confirmModal').classList.add('hidden');
+      if (confirmed && confirmCallback) {
+        confirmCallback();
+      }
+      confirmCallback = null;
+    }
+
+    // PWA Service Worker & Install Prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btnText = document.getElementById('installBtnText');
+      btnText.textContent = "Install App (APK / PWA)";
+    });
+
+    function triggerPWAInstall() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then((choiceResult) => {
+          deferredInstallPrompt = null;
+          document.getElementById('installBtnText').textContent = "Installed";
+        });
+      } else {
+        alert("App installation prompt is not ready or already installed. You can also use Chrome's 'Add to Home screen' option.");
+      }
+    }
+
+    function checkStandaloneMode() {
+      if (window.AndroidBridge) {
+        const descElem = document.getElementById('installDescText');
+        const btnText = document.getElementById('installBtnText');
+        const btn = document.getElementById('drawerInstallBtn');
+        if (descElem) descElem.textContent = "Running as official Android Native App with offline prize database.";
+        if (btnText) btnText.textContent = "Android App Active ✓";
+        if (btn) btn.classList.add('opacity-80', 'pointer-events-none');
+        return;
+      }
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        document.getElementById('installDescText').textContent = "App is currently running in installed standalone mode.";
+        document.getElementById('drawerInstallBtn').classList.add('opacity-50', 'cursor-not-allowed');
+        document.getElementById('installBtnText').textContent = "App Already Installed";
+      }
+    }
+
+    // Android navigation helper functions
+    window.isDrawerOpen = function() {
+      const drawer = document.getElementById('settingsDrawer');
+      return drawer && !drawer.classList.contains('translate-x-full');
+    };
+    window.closeDrawer = function() {
+      toggleSettingsDrawer(false);
+    };
+    window.isConfirmModalOpen = function() {
+      const modal = document.getElementById('confirmModal');
+      return modal && !modal.classList.contains('hidden');
+    };
+    window.closeConfirmModalFromAndroid = function() {
+      closeConfirmModal(false);
+    };
+
+    if (window.location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('data:text/javascript;base64,' + btoa(`
+          self.addEventListener('install', (e) => { e.waitUntil(self.skipWaiting()); });
+          self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
+          self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });
+        `)).catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
