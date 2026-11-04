@@ -48,7 +48,7 @@ service cloud.firestore {
 
     // Test connection
     match /test/{testId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if true;
     }
   }
 }

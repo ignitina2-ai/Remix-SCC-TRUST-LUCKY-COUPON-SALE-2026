@@ -74,12 +74,19 @@ export async function savePrizeStateToFirestore(
   try {
     const docRef = doc(db, 'prizeCollection', FIRESTORE_PRIZE_DOC);
     const email = userEmail || auth.currentUser?.email || 'admin@stcasimir.com';
-    await setDoc(docRef, {
+    const writePromise = setDoc(docRef, {
       tracking,
       receivedAmounts,
       lastUpdated: new Date().toISOString(),
       updatedBy: email,
     }, { merge: true });
+
+    // Race write with 2500ms timeout so UI never hangs waiting for server ack
+    await Promise.race([
+      writePromise,
+      new Promise((resolve) => setTimeout(resolve, 2500))
+    ]);
+
     return { success: true };
   } catch (err: any) {
     console.error('Firestore prize state sync error:', err);

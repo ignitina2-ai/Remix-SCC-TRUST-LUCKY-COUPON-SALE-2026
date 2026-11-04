@@ -203,21 +203,22 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
     const unsub = subscribeToPrizeState(
       (cloudData) => {
         if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
-          setPrizeTracking(prev => {
-            const merged = { ...prev, ...cloudData.tracking };
-            try {
-              localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(merged));
-              const colMap: Record<string, boolean> = {};
-              (Object.entries(merged) as [string, PrizeTrackingInfo][]).forEach(([key, val]) => {
-                colMap[key] = (val.status === 'SPONSOR' || val.status === 'TRUST');
-              });
-              localStorage.setItem(STORAGE_KEY_COLLECTED, JSON.stringify(colMap));
-              localStorage.setItem(STORAGE_KEY_LEGACY, JSON.stringify(colMap));
-            } catch (e) {}
-            return merged;
+          const updatedMap: PrizeTrackingMap = {};
+          prizes.forEach(p => {
+            updatedMap[p.prize_no] = cloudData.tracking[p.prize_no] || { status: 'PENDING', amount: 0 };
           });
+          setPrizeTracking(updatedMap);
+          try {
+            localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(updatedMap));
+            const colMap: Record<string, boolean> = {};
+            (Object.entries(updatedMap) as [string, PrizeTrackingInfo][]).forEach(([key, val]) => {
+              colMap[key] = (val.status === 'SPONSOR' || val.status === 'TRUST');
+            });
+            localStorage.setItem(STORAGE_KEY_COLLECTED, JSON.stringify(colMap));
+            localStorage.setItem(STORAGE_KEY_LEGACY, JSON.stringify(colMap));
+          } catch (e) {}
         }
-        if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
+        if (Array.isArray(cloudData.receivedAmounts)) {
           setReceivedAmounts(cloudData.receivedAmounts);
           try {
             localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(cloudData.receivedAmounts));
@@ -225,13 +226,14 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
         }
       },
       () => {
-        // Document empty in cloud, seed with current local state
+        // Document empty in cloud, seed ONLY IF local actually has real collections
         try {
           const localTracking = localStorage.getItem(STORAGE_KEY_TRACKING);
           const localReceived = localStorage.getItem(STORAGE_KEY_RECEIVED);
           const parsedT: PrizeTrackingMap = localTracking ? JSON.parse(localTracking) : {};
           const parsedR: ReceivedAmountEntry[] = localReceived ? JSON.parse(localReceived) : [];
-          if (Object.keys(parsedT).length > 0 || parsedR.length > 0) {
+          const hasRealCollections = Object.values(parsedT).some(t => t.status === 'SPONSOR' || t.status === 'TRUST');
+          if (hasRealCollections || parsedR.length > 0) {
             savePrizeStateToFirestore(parsedT, parsedR, auth.currentUser?.email || undefined);
           }
         } catch (e) {}

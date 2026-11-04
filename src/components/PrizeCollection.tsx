@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { 
   savePrizeStateToFirestore, 
   subscribeToPrizeState, 
+  fetchPrizeStateFromFirestore,
   syncPrizeCollectionToGoogleSheet, 
   syncPrizeCollectionViaWebhook 
 } from '@/lib/prizeSync';
@@ -183,28 +184,30 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
       (cloudData) => {
         setCloudSyncStatus('synced');
         if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
-          setPrizeTracking(prev => {
-            const merged = { ...prev, ...cloudData.tracking };
-            try {
-              localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(merged));
-              const collectedMap: Record<string, boolean> = {};
-              Object.keys(merged).forEach(k => {
-                const s = merged[k]?.status;
-                collectedMap[k] = (s === 'SPONSOR' || s === 'TRUST');
-              });
-              localStorage.setItem(STORAGE_KEY_COLLECTED, JSON.stringify(collectedMap));
-            } catch (e) {}
-            return merged;
+          // Construct full tracking map based on INITIAL_PRIZES_DATA + cloudData.tracking
+          const updatedMap: PrizeTrackingMap = {};
+          INITIAL_PRIZES_DATA.forEach(p => {
+            updatedMap[p.prize_no] = cloudData.tracking[p.prize_no] || { status: 'PENDING', amount: 0 };
           });
+          setPrizeTracking(updatedMap);
+          try {
+            localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(updatedMap));
+            const collectedMap: Record<string, boolean> = {};
+            Object.keys(updatedMap).forEach(k => {
+              const s = updatedMap[k]?.status;
+              collectedMap[k] = (s === 'SPONSOR' || s === 'TRUST');
+            });
+            localStorage.setItem(STORAGE_KEY_COLLECTED, JSON.stringify(collectedMap));
+          } catch (e) {}
         }
-        if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
+        if (Array.isArray(cloudData.receivedAmounts)) {
           setReceivedAmounts(cloudData.receivedAmounts);
           try {
             localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(cloudData.receivedAmounts));
           } catch (e) {}
         }
       },
-      // On empty cloud document, seed Firestore with existing local data
+      // On empty cloud document, seed Firestore ONLY IF local actually has real collections!
       () => {
         setCloudSyncStatus('synced');
         try {
@@ -212,7 +215,8 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
           const localReceived = localStorage.getItem(STORAGE_KEY_RECEIVED);
           const parsedT: PrizeTrackingMap = localTracking ? JSON.parse(localTracking) : {};
           const parsedR: ReceivedAmountEntry[] = localReceived ? JSON.parse(localReceived) : [];
-          if (Object.keys(parsedT).length > 0 || parsedR.length > 0) {
+          const hasRealCollections = Object.values(parsedT).some(t => t.status === 'SPONSOR' || t.status === 'TRUST');
+          if (hasRealCollections || parsedR.length > 0) {
             savePrizeStateToFirestore(parsedT, parsedR, auth.currentUser?.email || undefined);
           }
         } catch (e) {}
@@ -225,6 +229,46 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
 
     return () => unsub();
   }, []);
+
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+
+  // Manual refresh from Firestore cloud
+  const handleManualCloudRefresh = async () => {
+    setIsManualRefreshing(true);
+    setCloudSyncStatus('connecting');
+    try {
+      const cloudState = await fetchPrizeStateFromFirestore();
+      if (cloudState.exists) {
+        const updatedMap: PrizeTrackingMap = {};
+        INITIAL_PRIZES_DATA.forEach(p => {
+          updatedMap[p.prize_no] = cloudState.tracking[p.prize_no] || { status: 'PENDING', amount: 0 };
+        });
+        setPrizeTracking(updatedMap);
+        setReceivedAmounts(cloudState.receivedAmounts);
+        try {
+          localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(updatedMap));
+          const colMap: Record<string, boolean> = {};
+          Object.keys(updatedMap).forEach(k => {
+            const s = updatedMap[k]?.status;
+            colMap[k] = (s === 'SPONSOR' || s === 'TRUST');
+          });
+          localStorage.setItem(STORAGE_KEY_COLLECTED, JSON.stringify(colMap));
+          localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(cloudState.receivedAmounts));
+        } catch (e) {}
+        setCloudSyncStatus('synced');
+        setSyncToast({ type: 'success', message: 'Cloud database fresh data loaded successfully!' });
+      } else {
+        setCloudSyncStatus('synced');
+        setSyncToast({ type: 'success', message: 'Cloud database connected (No remote changes).' });
+      }
+    } catch (err: any) {
+      setCloudSyncStatus('error');
+      setSyncToast({ type: 'error', message: err?.message || 'Failed connecting to Cloud' });
+    } finally {
+      setIsManualRefreshing(false);
+      setTimeout(() => setSyncToast(null), 3000);
+    }
+  };
 
   // 2. Persistent saving helpers - NEVER wipe entries & sync to Cloud Firestore
   const saveTrackingState = async (updatedTracking: PrizeTrackingMap) => {
@@ -729,6 +773,16 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
               Offline Cache
             </span>
           )}
+
+          <button
+            onClick={handleManualCloudRefresh}
+            disabled={isManualRefreshing}
+            title="Refresh from Firebase Cloud Database"
+            className="flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition-all border border-slate-200 cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw size={11} className={isManualRefreshing ? "animate-spin text-blue-600" : "text-slate-600"} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </div>
       </div>
 
