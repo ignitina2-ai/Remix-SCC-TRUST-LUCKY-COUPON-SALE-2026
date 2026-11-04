@@ -70,25 +70,55 @@ export async function savePrizeStateToFirestore(
   tracking: PrizeTrackingMap,
   receivedAmounts: ReceivedAmountEntry[],
   userEmail?: string
-): Promise<void> {
+): Promise<{ success: boolean; error?: string }> {
   try {
     const docRef = doc(db, 'prizeCollection', FIRESTORE_PRIZE_DOC);
+    const email = userEmail || auth.currentUser?.email || 'admin@stcasimir.com';
     await setDoc(docRef, {
       tracking,
       receivedAmounts,
       lastUpdated: new Date().toISOString(),
-      updatedBy: userEmail || 'system',
+      updatedBy: email,
     }, { merge: true });
-  } catch (err) {
-    console.warn('Firestore prize state sync warning:', err);
+    return { success: true };
+  } catch (err: any) {
+    console.error('Firestore prize state sync error:', err);
+    return { success: false, error: err?.message || 'Firestore write failed' };
   }
+}
+
+/**
+ * Fetch Prize Collection state once directly from Firestore.
+ */
+export async function fetchPrizeStateFromFirestore(): Promise<{
+  exists: boolean;
+  tracking: PrizeTrackingMap;
+  receivedAmounts: ReceivedAmountEntry[];
+}> {
+  try {
+    const docRef = doc(db, 'prizeCollection', FIRESTORE_PRIZE_DOC);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        exists: true,
+        tracking: data?.tracking || {},
+        receivedAmounts: Array.isArray(data?.receivedAmounts) ? data.receivedAmounts : []
+      };
+    }
+  } catch (err) {
+    console.warn('Error fetching prize state from Firestore:', err);
+  }
+  return { exists: false, tracking: {}, receivedAmounts: [] };
 }
 
 /**
  * Subscribe to realtime Firestore changes for Prize Collection state.
  */
 export function subscribeToPrizeState(
-  onUpdate: (data: { tracking: PrizeTrackingMap; receivedAmounts: ReceivedAmountEntry[] }) => void
+  onUpdate: (data: { tracking: PrizeTrackingMap; receivedAmounts: ReceivedAmountEntry[] }) => void,
+  onEmpty?: () => void,
+  onError?: (err: any) => void
 ): () => void {
   try {
     const docRef = doc(db, 'prizeCollection', FIRESTORE_PRIZE_DOC);
@@ -101,12 +131,23 @@ export function subscribeToPrizeState(
             receivedAmounts: Array.isArray(data.receivedAmounts) ? data.receivedAmounts : []
           });
         }
+      } else {
+        // Document does not exist yet on cloud
+        if (onEmpty) {
+          onEmpty();
+        }
       }
     }, (err) => {
-      console.warn('PrizeCollection firestore subscription notice:', err);
+      console.error('PrizeCollection firestore subscription error:', err);
+      if (onError) {
+        onError(err);
+      }
     });
   } catch (err) {
-    console.warn('Failed subscribing to prize state:', err);
+    console.error('Failed subscribing to prize state:', err);
+    if (onError) {
+      onError(err);
+    }
     return () => {};
   }
 }

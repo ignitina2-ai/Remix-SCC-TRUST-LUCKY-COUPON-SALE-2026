@@ -200,14 +200,43 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
       }
     }).catch(console.warn);
 
-    const unsub = subscribeToPrizeState((cloudData) => {
-      if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
-        setPrizeTracking(prev => ({ ...prev, ...cloudData.tracking }));
+    const unsub = subscribeToPrizeState(
+      (cloudData) => {
+        if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
+          setPrizeTracking(prev => {
+            const merged = { ...prev, ...cloudData.tracking };
+            try {
+              localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(merged));
+              const colMap: Record<string, boolean> = {};
+              (Object.entries(merged) as [string, PrizeTrackingInfo][]).forEach(([key, val]) => {
+                colMap[key] = (val.status === 'SPONSOR' || val.status === 'TRUST');
+              });
+              localStorage.setItem(STORAGE_KEY_COLLECTED, JSON.stringify(colMap));
+              localStorage.setItem(STORAGE_KEY_LEGACY, JSON.stringify(colMap));
+            } catch (e) {}
+            return merged;
+          });
+        }
+        if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
+          setReceivedAmounts(cloudData.receivedAmounts);
+          try {
+            localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(cloudData.receivedAmounts));
+          } catch (e) {}
+        }
+      },
+      () => {
+        // Document empty in cloud, seed with current local state
+        try {
+          const localTracking = localStorage.getItem(STORAGE_KEY_TRACKING);
+          const localReceived = localStorage.getItem(STORAGE_KEY_RECEIVED);
+          const parsedT: PrizeTrackingMap = localTracking ? JSON.parse(localTracking) : {};
+          const parsedR: ReceivedAmountEntry[] = localReceived ? JSON.parse(localReceived) : [];
+          if (Object.keys(parsedT).length > 0 || parsedR.length > 0) {
+            savePrizeStateToFirestore(parsedT, parsedR, auth.currentUser?.email || undefined);
+          }
+        } catch (e) {}
       }
-      if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
-        setReceivedAmounts(cloudData.receivedAmounts);
-      }
-    });
+    );
 
     return () => unsub();
   }, []);

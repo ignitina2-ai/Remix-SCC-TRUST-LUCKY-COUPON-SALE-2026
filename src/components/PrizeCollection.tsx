@@ -87,6 +87,7 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
   // Received amount form inputs
   const [newReceivedName, setNewReceivedName] = useState('');
   const [newReceivedAmount, setNewReceivedAmount] = useState('');
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'connecting' | 'synced' | 'error'>('connecting');
 
   // 1. Initial Load: Load saved collection state strictly without wiping existing entries
   useEffect(() => {
@@ -178,20 +179,55 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
       }
     }).catch(console.warn);
 
-    const unsub = subscribeToPrizeState((cloudData) => {
-      if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
-        setPrizeTracking(prev => ({ ...prev, ...cloudData.tracking }));
+    const unsub = subscribeToPrizeState(
+      (cloudData) => {
+        setCloudSyncStatus('synced');
+        if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
+          setPrizeTracking(prev => {
+            const merged = { ...prev, ...cloudData.tracking };
+            try {
+              localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(merged));
+              const collectedMap: Record<string, boolean> = {};
+              Object.keys(merged).forEach(k => {
+                const s = merged[k]?.status;
+                collectedMap[k] = (s === 'SPONSOR' || s === 'TRUST');
+              });
+              localStorage.setItem(STORAGE_KEY_COLLECTED, JSON.stringify(collectedMap));
+            } catch (e) {}
+            return merged;
+          });
+        }
+        if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
+          setReceivedAmounts(cloudData.receivedAmounts);
+          try {
+            localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(cloudData.receivedAmounts));
+          } catch (e) {}
+        }
+      },
+      // On empty cloud document, seed Firestore with existing local data
+      () => {
+        setCloudSyncStatus('synced');
+        try {
+          const localTracking = localStorage.getItem(STORAGE_KEY_TRACKING);
+          const localReceived = localStorage.getItem(STORAGE_KEY_RECEIVED);
+          const parsedT: PrizeTrackingMap = localTracking ? JSON.parse(localTracking) : {};
+          const parsedR: ReceivedAmountEntry[] = localReceived ? JSON.parse(localReceived) : [];
+          if (Object.keys(parsedT).length > 0 || parsedR.length > 0) {
+            savePrizeStateToFirestore(parsedT, parsedR, auth.currentUser?.email || undefined);
+          }
+        } catch (e) {}
+      },
+      (err) => {
+        console.warn('PrizeCollection subscription notice:', err);
+        setCloudSyncStatus('error');
       }
-      if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
-        setReceivedAmounts(cloudData.receivedAmounts);
-      }
-    });
+    );
 
     return () => unsub();
   }, []);
 
   // 2. Persistent saving helpers - NEVER wipe entries & sync to Cloud Firestore
-  const saveTrackingState = (updatedTracking: PrizeTrackingMap) => {
+  const saveTrackingState = async (updatedTracking: PrizeTrackingMap) => {
     setPrizeTracking(updatedTracking);
     try {
       localStorage.setItem(STORAGE_KEY_TRACKING, JSON.stringify(updatedTracking));
@@ -207,11 +243,16 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
       console.error('Failed saving tracking to localStorage', e);
     }
 
-    // Persist to Cloud Firestore
-    savePrizeStateToFirestore(updatedTracking, receivedAmounts, auth.currentUser?.email || undefined);
+    // Persist to Cloud Firestore with feedback
+    const res = await savePrizeStateToFirestore(updatedTracking, receivedAmounts, auth.currentUser?.email || undefined);
+    if (res.success) {
+      setCloudSyncStatus('synced');
+    } else {
+      setCloudSyncStatus('error');
+    }
   };
 
-  const saveReceivedState = (updatedReceived: ReceivedAmountEntry[]) => {
+  const saveReceivedState = async (updatedReceived: ReceivedAmountEntry[]) => {
     setReceivedAmounts(updatedReceived);
     try {
       localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(updatedReceived));
@@ -219,8 +260,13 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
       console.error('Failed saving received amounts to localStorage', e);
     }
 
-    // Persist to Cloud Firestore
-    savePrizeStateToFirestore(prizeTracking, updatedReceived, auth.currentUser?.email || undefined);
+    // Persist to Cloud Firestore with feedback
+    const res = await savePrizeStateToFirestore(prizeTracking, updatedReceived, auth.currentUser?.email || undefined);
+    if (res.success) {
+      setCloudSyncStatus('synced');
+    } else {
+      setCloudSyncStatus('error');
+    }
   };
 
   // 2.5 Direct & Webhook Google Sheets Synchronization Handler
@@ -657,6 +703,34 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
       )}
 
 
+
+      {/* Page Title & Cloud Sync Live Status */}
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-black text-slate-800 tracking-tight uppercase">Prize Collection</h1>
+          <span className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-slate-200">
+            {stats.total} Prizes
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {cloudSyncStatus === 'synced' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Firebase Live Synced
+            </span>
+          ) : cloudSyncStatus === 'connecting' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-spin"></span>
+              Connecting Cloud...
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+              Offline Cache
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Dashboard KPI Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
