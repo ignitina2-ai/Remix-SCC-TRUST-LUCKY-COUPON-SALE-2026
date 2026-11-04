@@ -23,12 +23,26 @@ import {
   Printer,
   Sparkles,
   Search,
-  ExternalLink
+  ExternalLink,
+  FileSpreadsheet,
+  Database,
+  Code2,
+  FolderSync,
+  X
 } from 'lucide-react';
 import { INITIAL_PRIZES_DATA, PrizeItem, PrizeTrackingInfo, PrizeTrackingMap, ReceivedAmountEntry } from '@/data/prizesData';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cn } from '@/lib/utils';
+import { 
+  savePrizeStateToFirestore, 
+  subscribeToPrizeState, 
+  syncPrizeCollectionToGoogleSheet, 
+  syncPrizeCollectionViaWebhook 
+} from '@/lib/prizeSync';
+import { getCachedAccessToken, auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { DEFAULT_WEBHOOK_URL, DriveSyncConfig, GOOGLE_APPS_SCRIPT_CODE } from '@/lib/googleDriveSheets';
 
 const STORAGE_KEY_TRACKING = 'stCasimirLuckyDraw2026_tracking';
 const STORAGE_KEY_COLLECTED = 'stCasimirLuckyDraw2026_collected';
@@ -66,6 +80,32 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
 
   // PDF Export loading indicator
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Google Sheet & Cloud Sync state
+  const [isSyncingSheet, setIsSyncingSheet] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('prize_last_sheet_sync_time');
+    } catch (e) {
+      return null;
+    }
+  });
+  const [sheetLink, setSheetLink] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('cached_prize_sheet_link');
+    } catch (e) {
+      return null;
+    }
+  });
+  const [webhookUrl, setWebhookUrl] = useState<string>(() => {
+    try {
+      const cached = localStorage.getItem('cached_gas_webhook_url');
+      if (cached && cached.trim()) return cached.trim();
+    } catch (e) {}
+    return DEFAULT_WEBHOOK_URL;
+  });
+  const [showScriptModal, setShowScriptModal] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
 
   // Load existing data from localStorage without wiping anything
   useEffect(() => {
@@ -144,7 +184,34 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
     }
   }, []);
 
-  // Sync tracking to storage
+  // 1.5 Load Google Sheet configuration & Realtime Firestore sync
+  useEffect(() => {
+    getDoc(doc(db, 'settings', 'driveSyncConfig')).then(snap => {
+      if (snap.exists()) {
+        const d = snap.data() as DriveSyncConfig;
+        if (d.sheetLink) {
+          setSheetLink(d.sheetLink);
+          try { localStorage.setItem('cached_prize_sheet_link', d.sheetLink); } catch (e) {}
+        }
+        if (d.webhookUrl) {
+          setWebhookUrl(d.webhookUrl);
+        }
+      }
+    }).catch(console.warn);
+
+    const unsub = subscribeToPrizeState((cloudData) => {
+      if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
+        setPrizeTracking(prev => ({ ...prev, ...cloudData.tracking }));
+      }
+      if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
+        setReceivedAmounts(cloudData.receivedAmounts);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  // Sync tracking to storage and Cloud Firestore
   const saveTrackingState = (updated: PrizeTrackingMap) => {
     setPrizeTracking(updated);
     try {
@@ -158,15 +225,81 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
     } catch (e) {
       console.error('Failed saving tracking to localStorage', e);
     }
+
+    // Persist to Cloud Firestore
+    savePrizeStateToFirestore(updated, receivedAmounts, auth.currentUser?.email || undefined);
   };
 
-  // Sync received state to storage
+  // Sync received state to storage and Cloud Firestore
   const saveReceivedState = (updatedReceived: ReceivedAmountEntry[]) => {
     setReceivedAmounts(updatedReceived);
     try {
       localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(updatedReceived));
     } catch (e) {
       console.error('Failed saving received amounts', e);
+    }
+
+    // Persist to Cloud Firestore
+    savePrizeStateToFirestore(prizeTracking, updatedReceived, auth.currentUser?.email || undefined);
+  };
+
+  // Google Sheets Synchronization Handler
+  const handleSyncToGoogleSheet = async () => {
+    setIsSyncingSheet(true);
+    let success = false;
+    let message = '';
+    const nowKolkata = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    try {
+      // 1. Cloud Firestore
+      await savePrizeStateToFirestore(prizeTracking, receivedAmounts, auth.currentUser?.email || undefined);
+
+      // 2. Direct REST API if authenticated
+      const token = getCachedAccessToken();
+      if (token) {
+        try {
+          const directRes = await syncPrizeCollectionToGoogleSheet(token, prizes, prizeTracking, receivedAmounts);
+          if (directRes.success) {
+            success = true;
+            message = directRes.message;
+            if (directRes.webViewLink) {
+              setSheetLink(directRes.webViewLink);
+              try { localStorage.setItem('cached_prize_sheet_link', directRes.webViewLink); } catch (e) {}
+            }
+          }
+        } catch (apiErr) {
+          console.warn('Direct Google Sheets API sync notice:', apiErr);
+        }
+      }
+
+      // 3. Webhook sync via Google Apps Script
+      const webhookRes = await syncPrizeCollectionViaWebhook(webhookUrl, prizes, prizeTracking, receivedAmounts);
+      if (webhookRes.success) {
+        success = true;
+        message = webhookRes.message || 'Prize Collection updated in Google Sheet!';
+      }
+
+      if (success) {
+        setLastSyncedTime(nowKolkata);
+        try { localStorage.setItem('prize_last_sheet_sync_time', nowKolkata); } catch (e) {}
+        setRestoreMessage({
+          type: 'success',
+          text: 'Google Sheet-ലേക്ക് സമ്മാന ശേഖരണ വിവരങ്ങൾ വിജയകരമായി അപ്‌ഡേറ്റ് ചെയ്തു (Synced to Google Sheet)!'
+        });
+      } else {
+        setRestoreMessage({
+          type: 'error',
+          text: message || 'Google Sheet സിങ്ക് പരാജയപ്പെട്ടു. ദയവായി കണക്ഷൻ പരിശോധിക്കുക.'
+        });
+      }
+    } catch (err: any) {
+      setRestoreMessage({
+        type: 'error',
+        text: err?.message || 'Google Sheet സിങ്ക് ചെയ്യുന്നതിൽ തടസ്സം നേരിട്ടു.'
+      });
+    } finally {
+      setIsSyncingSheet(false);
+      setTimeout(() => setRestoreMessage(null), 5000);
     }
   };
 
@@ -740,6 +873,94 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
 
       {/* Main Grid: 4 Core Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        {/* ========================================================================= */}
+        {/* GOOGLE SHEETS SYNC & LIVE CLOUD DATABASE (ഗൂഗിൾ ഷീറ്റ് സിങ്ക്) */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-emerald-950 via-slate-900 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-emerald-800/60 space-y-6 relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+                <FileSpreadsheet size={24} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-black text-white">
+                    Google Sheets & Cloud Database Live Sync
+                  </h2>
+                  <span className="bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                    Live
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                  സമ്മാന ശേഖരണ ഡാറ്റാബേസ് തത്സമയം ഗൂഗിൾ ഷീറ്റിലേക്കും ഫയർസ്റ്റോർ ക്ലൗഡിലേക്കും സിങ്ക് ചെയ്യപ്പെടുന്നു.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center flex-wrap gap-2.5 shrink-0">
+              {sheetLink && (
+                <a
+                  href={sheetLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition border border-white/10"
+                >
+                  <ExternalLink size={14} className="text-emerald-400" />
+                  <span>Open Google Sheet</span>
+                </a>
+              )}
+
+              <button
+                onClick={handleSyncToGoogleSheet}
+                disabled={isSyncingSheet}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/25 transition cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw size={15} className={isSyncingSheet ? "animate-spin" : ""} />
+                <span>{isSyncingSheet ? 'Syncing to Sheet...' : 'Sync to Google Sheet Now'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Status and details grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
+            <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10 space-y-1">
+              <span className="text-slate-400 font-bold uppercase text-[10px]">Cloud Database Status</span>
+              <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Firestore Multi-Device Active</span>
+              </div>
+              <p className="text-[11px] text-slate-300">Changes sync across authorized admin screens in real time.</p>
+            </div>
+
+            <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10 space-y-1">
+              <span className="text-slate-400 font-bold uppercase text-[10px]">Google Sheet Tab</span>
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <FileSpreadsheet size={16} className="text-emerald-400" />
+                <span>Tab: PRIZE COLLECTION</span>
+              </div>
+              <p className="text-[11px] text-slate-300">
+                {lastSyncedTime ? `Last Synced: ${lastSyncedTime}` : 'Ready for synchronization'}
+              </p>
+            </div>
+
+            <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10 space-y-1">
+              <span className="text-slate-400 font-bold uppercase text-[10px]">Apps Script Webhook</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-emerald-300 text-xs truncate max-w-[170px]" title={webhookUrl}>
+                  {webhookUrl ? 'Connected & Operational' : 'Default Webhook'}
+                </span>
+                <button
+                  onClick={() => setShowScriptModal(true)}
+                  className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition cursor-pointer"
+                >
+                  View Code
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-300">Zero-lag background sync for all team members.</p>
+            </div>
+          </div>
+        </div>
         
         {/* ========================================================================= */}
         {/* SECTION 1: CATEGORY SUMMARY (കാറ്റഗറി സംഗ്രഹം) */}
@@ -1200,6 +1421,51 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
         </div>
 
       </div>
+
+      {/* Google Apps Script Modal */}
+      {showScriptModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 text-white space-y-4 shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <Code2 size={20} className="text-emerald-400" />
+                <h3 className="font-bold text-base text-white">Google Apps Script Webhook Code</h3>
+              </div>
+              <button 
+                onClick={() => setShowScriptModal(false)}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-xs text-slate-300">
+              Google Sheet-ൽ <strong>Extensions &gt; Apps Script</strong> തുറന്ന് ഈ കോഡ് പേസ്റ്റ് ചെയ്ത് <strong>Deploy &gt; New deployment &gt; Web app (Anyone)</strong> വഴി സേവ് ചെയ്യുക.
+            </p>
+            <pre className="bg-slate-950 p-4 rounded-xl text-xs font-mono text-emerald-300 overflow-auto flex-1 border border-slate-800/80 max-h-72">
+              {GOOGLE_APPS_SCRIPT_CODE}
+            </pre>
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
+                  setCopiedScript(true);
+                  setTimeout(() => setCopiedScript(false), 3000);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                {copiedScript ? <Check size={15} /> : <Copy size={15} />}
+                <span>{copiedScript ? 'Copied to Clipboard!' : 'Copy Script Code'}</span>
+              </button>
+              <button
+                onClick={() => setShowScriptModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

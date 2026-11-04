@@ -715,6 +715,15 @@ function doPost(e) {
       }
     }
 
+    // 6. PRIZE COLLECTION SYNC
+    if (payload.action === 'syncPrizes') {
+      writePrizeCollectionTab(setup.ss, payload);
+      return jsonResponse({
+        status: 'success',
+        message: 'Prize Collection synchronized to Google Sheet tab successfully!'
+      });
+    }
+
     return jsonResponse({ status: 'success', message: 'Sync successful for action: ' + payload.action });
   } catch (err) {
     return jsonResponse({ status: 'error', message: err.toString() });
@@ -833,6 +842,75 @@ function saveBackupJson(targetFolder, fullBackup) {
   } else {
     targetFolder.createFile(fileName, content, MimeType.PLAIN_TEXT);
   }
+}
+
+function writePrizeCollectionTab(ss, payload) {
+  var tabName = 'PRIZE COLLECTION';
+  var pSheet = ss.getSheetByName(tabName);
+  if (!pSheet) {
+    pSheet = ss.insertSheet(tabName);
+  }
+  pSheet.clear();
+
+  var tracking = payload.prizesTracking || {};
+  var received = payload.receivedAmounts || [];
+  var prizes = payload.prizesData || [];
+
+  var headers = [
+    'Sl No', 'Prize No', 'Prize Item', 'Display Sponsor / Donor',
+    'Origin Sponsor / Remarks', 'Status', 'Trust Cost (₹)', 'Last Updated'
+  ];
+
+  var rows = [];
+  rows.push(['ST. CASIMIR CHARITABLE TRUST — LUCKY DRAW 2026 PRIZE COLLECTION', '', '', '', '', '', '', '']);
+  rows.push(['Last Updated: ' + new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), '', '', '', '', '', '', '']);
+  rows.push(['', '', '', '', '', '', '', '']);
+  rows.push(headers);
+
+  prizes.forEach(function(p, idx) {
+    var track = tracking[p.prize_no] || { status: 'PENDING', amount: 0 };
+    var statusLabel = track.status === 'SPONSOR' ? 'SPONSOR (Collected)' : (track.status === 'TRUST' ? 'TRUST (Purchased)' : 'PENDING');
+    var cost = track.status === 'TRUST' ? (Number(track.amount) || 0) : 0;
+    rows.push([
+      idx + 1,
+      p.prize_no || '',
+      p.prize_item || '',
+      p.display_sponsor || '',
+      p.origin_sponsor || '',
+      statusLabel,
+      cost,
+      new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+    ]);
+  });
+
+  if (received && received.length > 0) {
+    rows.push(['', '', '', '', '', '', '', '']);
+    rows.push(['=== RECEIVED CASH DONATIONS FOR PRIZES ===', '', '', '', '', '', '', '']);
+    rows.push(['Sl No', 'Donor / Contributor Name', 'Donation Amount (₹)', 'Date & Time', '', '', '', '']);
+    received.forEach(function(r, rIdx) {
+      rows.push([
+        rIdx + 1,
+        r.name || '',
+        Number(r.amount) || 0,
+        r.date ? new Date(r.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
+        '', '', '', ''
+      ]);
+    });
+  }
+
+  pSheet.getRange(1, 1, rows.length, 8).setValues(rows);
+
+  try {
+    pSheet.getRange(1, 1, 1, 8)
+      .setBackground('#0f172a')
+      .setFontColor('#ffffff')
+      .setFontWeight('bold');
+    pSheet.getRange(4, 1, 1, 8)
+      .setBackground('#1e293b')
+      .setFontColor('#f8fafc')
+      .setFontWeight('bold');
+    pSheet.setFrozenRows(4);
+  } catch (e) {}
 }
 
 function jsonResponse(obj) {

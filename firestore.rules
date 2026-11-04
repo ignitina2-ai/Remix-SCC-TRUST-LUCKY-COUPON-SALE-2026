@@ -41,6 +41,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Prize Collection (Tracking & Received Amounts)
+    match /prizeCollection/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
     // Test connection
     match /test/{testId} {
       allow read, write: if isAuthenticated();

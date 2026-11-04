@@ -12,7 +12,8 @@ import {
   History,
   Users,
   Share2,
-  Ticket
+  Ticket,
+  Gift
 } from 'lucide-react';
 import { shareDailySalesCard, shareUPIReceiptCard } from '../utils/shareUtils';
 import { 
@@ -366,26 +367,38 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           
-          <button 
-            disabled={permissions?.canShareReport === false}
-            onClick={() => permissions?.canShareReport !== false && setIsShareModalOpen(true)}
-            className={cn(
-              "hidden md:flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all cursor-pointer shrink-0",
-              permissions?.canShareReport === false
-                ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-65"
-                : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white shadow-md shadow-indigo-600/20"
-            )}
-          >
-            <Share2 size={13} className={permissions?.canShareReport === false ? "" : "animate-pulse"} />
-            <span>Share Report</span>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Quick Access Prize Collection Icon Button */}
+            <button 
+              onClick={() => (window as any).setActiveTab?.('prize-collection')}
+              title="Open Prize Collection"
+              className="flex items-center gap-1.5 px-2.5 py-1 md:px-3 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white shadow-md shadow-amber-500/20"
+            >
+              <Gift size={14} className="text-white" />
+              <span className="hidden sm:inline">Prizes</span>
+            </button>
+
+            <button 
+              disabled={permissions?.canShareReport === false}
+              onClick={() => permissions?.canShareReport !== false && setIsShareModalOpen(true)}
+              className={cn(
+                "hidden md:flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all cursor-pointer shrink-0",
+                permissions?.canShareReport === false
+                  ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-65"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white shadow-md shadow-indigo-600/20"
+              )}
+            >
+              <Share2 size={13} className={permissions?.canShareReport === false ? "" : "animate-pulse"} />
+              <span>Share Report</span>
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Mobile-only Share Daily Report button moved to between Each UPI Receipts and Add New Sale */}
 
       {/* Quick Actions (Requested by user) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 md:gap-3">
         <button 
           onClick={() => {
             const el = document.getElementById('dashboard-add-sale-form-container');
@@ -413,6 +426,13 @@ const Dashboard: React.FC<DashboardProps> = ({
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Credit</span>
         </button>
         <button 
+          onClick={() => (window as any).setActiveTab?.('prize-collection')}
+          className="flex flex-col items-center justify-center p-3 md:p-4 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-xl md:rounded-2xl shadow-md hover:from-amber-600 hover:to-amber-700 transition-all active:scale-95 cursor-pointer text-center"
+        >
+          <Gift className="mb-1.5 w-5 h-5" />
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Prize Collection</span>
+        </button>
+        <button 
           onClick={() => (window as any).setActiveTab?.('income-expense')}
           className="flex flex-col items-center justify-center p-3 md:p-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer text-center"
         >
@@ -421,7 +441,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
         <button 
           onClick={() => (window as any).setActiveTab?.('secretary-handover')}
-          className="hidden sm:flex flex-col items-center justify-center p-3 md:p-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 cursor-pointer text-center col-span-2 sm:col-span-1"
+          className="flex flex-col items-center justify-center p-3 md:p-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 cursor-pointer text-center"
         >
           <Users className="mb-1.5 w-5 h-5" />
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Tre Handover</span>
