@@ -40,8 +40,9 @@ import {
   syncPrizeCollectionToGoogleSheet, 
   syncPrizeCollectionViaWebhook 
 } from '@/lib/prizeSync';
-import { getCachedAccessToken, auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { getCachedAccessToken, setCachedAccessToken, driveGoogleProvider, auth, db } from '@/lib/firebase';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { DEFAULT_WEBHOOK_URL, DriveSyncConfig, GOOGLE_APPS_SCRIPT_CODE } from '@/lib/googleDriveSheets';
 
 const STORAGE_KEY_TRACKING = 'stCasimirLuckyDraw2026_tracking';
@@ -251,14 +252,48 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
     const nowKolkata = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     try {
-      // 1. Cloud Firestore
+      // 1. Cloud Firestore realtime backup
       await savePrizeStateToFirestore(prizeTracking, receivedAmounts, auth.currentUser?.email || undefined);
 
-      // 2. Direct REST API if authenticated
-      const token = getCachedAccessToken();
+      // 2. Query configured Drive Sync configuration
+      let preferredSheetId: string | undefined = undefined;
+      let driveConfig: DriveSyncConfig | null = null;
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'driveSyncConfig'));
+        if (snap.exists()) {
+          driveConfig = snap.data() as DriveSyncConfig;
+          preferredSheetId = driveConfig.sheetId;
+        }
+      } catch (e) {}
+
+      // 3. Acquire OAuth token if available, or prompt Drive sign-in popup
+      let token = getCachedAccessToken();
+      if (!token && driveConfig?.activeAccessToken) {
+        token = driveConfig.activeAccessToken;
+      }
+
+      if (!token) {
+        try {
+          const authResult = await signInWithPopup(auth, driveGoogleProvider);
+          const credential = GoogleAuthProvider.credentialFromResult(authResult);
+          if (credential?.accessToken) {
+            token = credential.accessToken;
+            setCachedAccessToken(token);
+            setDoc(doc(db, 'settings', 'driveSyncConfig'), {
+              activeAccessToken: token,
+              connectedEmail: authResult.user.email,
+              tokenUpdatedAt: new Date().toISOString()
+            }, { merge: true }).catch(console.warn);
+          }
+        } catch (popupErr: any) {
+          console.warn("Direct OAuth login popup dismissed:", popupErr);
+        }
+      }
+
+      // If token is available, write directly to Google Sheets REST API
       if (token) {
         try {
-          const directRes = await syncPrizeCollectionToGoogleSheet(token, prizes, prizeTracking, receivedAmounts);
+          const directRes = await syncPrizeCollectionToGoogleSheet(token, prizes, prizeTracking, receivedAmounts, preferredSheetId);
           if (directRes.success) {
             success = true;
             message = directRes.message;
@@ -267,16 +302,17 @@ export default function PrizeCollectionSettings({ setActiveTab }: PrizeCollectio
               try { localStorage.setItem('cached_prize_sheet_link', directRes.webViewLink); } catch (e) {}
             }
           }
-        } catch (apiErr) {
-          console.warn('Direct Google Sheets API sync notice:', apiErr);
+        } catch (directErr: any) {
+          console.warn("Direct Sheets API sync notice:", directErr);
         }
       }
 
-      // 3. Webhook sync via Google Apps Script
-      const webhookRes = await syncPrizeCollectionViaWebhook(webhookUrl, prizes, prizeTracking, receivedAmounts);
+      // 4. Also dispatch to Apps Script Webhook
+      let currentWebhook = webhookUrl || DEFAULT_WEBHOOK_URL;
+      const webhookRes = await syncPrizeCollectionViaWebhook(currentWebhook, prizes, prizeTracking, receivedAmounts);
       if (webhookRes.success) {
         success = true;
-        message = webhookRes.message || 'Prize Collection updated in Google Sheet!';
+        message = message || webhookRes.message;
       }
 
       if (success) {

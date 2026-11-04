@@ -815,34 +815,46 @@ export default function App() {
 
     // Run completely in background without blocking UI
     setTimeout(() => {
-      // 1. Webhook sync (Google Apps Script - 24/7 zero token expiration for ignitina2@gmail.com)
-      const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
-      if (webhookUrl) {
-        syncViaWebhook(webhookUrl, {
-          action,
-          transaction: tx,
-          transactions: action === 'delete' ? currentAppData.transactions : [tx],
-          syncBackup: false, // Don't rewrite multi-MB json on every single tx; keeps Apps Script < 200ms
-        }).then(res => {
-          if (res.success) {
-            setDriveSyncConfig(prev => ({
-              ...prev,
-              lastSyncedAt: new Date().toISOString(),
-              lastSyncedBy: user?.email || 'Authorized Team Member',
-              lastSyncStatus: 'success',
-              lastSyncMessage: `Transaction ${tx.id || ''} saved to Sheet`,
-            }));
-          }
-        }).catch(console.warn);
-      }
-
-      // 2. Direct Google Drive & Sheet REST API with active OAuth token (local or shared)
       const token = getCachedAccessToken() || driveAccessToken || driveSyncConfig.activeAccessToken;
+      
+      // If direct Google Sheets OAuth token is available, use direct Sheets REST API
       if (token) {
         if (action === 'delete') {
           syncAllTransactionsToSheet(token, currentAppData.transactions).catch(console.warn);
         } else {
-          recordOrUpdateTransactionInSheet(token, tx).catch(console.warn);
+          recordOrUpdateTransactionInSheet(token, tx).catch(err => {
+            console.warn("Direct Sheet sync error, using webhook fallback:", err);
+            const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
+            if (webhookUrl) {
+              syncViaWebhook(webhookUrl, {
+                action,
+                transaction: tx,
+                transactions: [tx],
+                syncBackup: false,
+              }).catch(console.warn);
+            }
+          });
+        }
+      } else {
+        // Otherwise, use Webhook sync (Google Apps Script)
+        const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
+        if (webhookUrl) {
+          syncViaWebhook(webhookUrl, {
+            action,
+            transaction: tx,
+            transactions: action === 'delete' ? currentAppData.transactions : [tx],
+            syncBackup: false,
+          }).then(res => {
+            if (res.success) {
+              setDriveSyncConfig(prev => ({
+                ...prev,
+                lastSyncedAt: new Date().toISOString(),
+                lastSyncedBy: user?.email || 'Authorized Team Member',
+                lastSyncStatus: 'success',
+                lastSyncMessage: `Transaction ${tx.id || ''} saved to Sheet`,
+              }));
+            }
+          }).catch(console.warn);
         }
       }
     }, 10);

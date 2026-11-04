@@ -279,7 +279,7 @@ export async function recordOrUpdateTransactionInSheet(
     const rows = colBData.values || [];
     totalRows = Math.max(1, rows.length);
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i] && rows[i][0] === tx.id) {
+      if (rows[i] && String(rows[i][0]).trim() === String(tx.id).trim()) {
         existingRow = i + 1; // 1-indexed row number
         break;
       }
@@ -347,10 +347,30 @@ export async function syncAllTransactionsToSheet(
 
   const safeTab = encodeURIComponent(sheet.tabTitle);
 
+  // Deduplicate transactions by id to guarantee zero duplicates in sheet
+  const seenTx = new Set<string>();
+  const uniqueTransactions: Transaction[] = [];
+  for (const t of transactions) {
+    const tid = String(t.id || '').trim();
+    if (!tid || !seenTx.has(tid)) {
+      if (tid) seenTx.add(tid);
+      uniqueTransactions.push(t);
+    }
+  }
+
+  // Clear existing data up to row 3000 to eliminate any old duplicate rows
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheet.id}/values/'${safeTab}'!A2:P3000:clear`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  ).catch(console.warn);
+
   // Prepare header + all rows
   const allRows: (string | number)[][] = [
     SHEET_HEADERS,
-    ...transactions.map((tx, idx) => formatTransactionRow(tx, idx + 1)),
+    ...uniqueTransactions.map((tx, idx) => formatTransactionRow(tx, idx + 1)),
   ];
 
   // Overwrite starting from A1
@@ -373,7 +393,7 @@ export async function syncAllTransactionsToSheet(
     throw new Error(`Failed to sync all transactions to sheet: ${updateRes.status} ${err}`);
   }
 
-  return { count: transactions.length, sheetId: sheet.id, webViewLink: sheet.webViewLink };
+  return { count: uniqueTransactions.length, sheetId: sheet.id, webViewLink: sheet.webViewLink };
 }
 
 /**
@@ -648,10 +668,12 @@ function doPost(e) {
       }
 
       var rowIndex = -1;
-      if (payload.action === 'update') {
-        var idColumnValues = sheet.getRange(1, 2, Math.max(1, lastRow), 1).getValues();
+      // ALWAYS search Column B (Transaction IDs) to avoid duplicate rows whether action is 'add' or 'update'!
+      if (lastRow > 1 && tx.id) {
+        var idColumnValues = sheet.getRange(1, 2, lastRow, 1).getValues();
+        var targetTxId = String(tx.id).trim();
         for (var i = 1; i < idColumnValues.length; i++) {
-          if (String(idColumnValues[i][0]) === String(tx.id)) {
+          if (String(idColumnValues[i][0]).trim() === targetTxId) {
             rowIndex = i + 1;
             break;
           }
@@ -808,10 +830,17 @@ function formatHeaders(sheet) {
 
 function writeAllRows(sheet, transactions) {
   if (!transactions || transactions.length === 0) return;
+  var seenIds = {};
   var rows = [];
-  transactions.forEach(function(tx, idx) {
+  var serialNo = 1;
+  transactions.forEach(function(tx) {
+    if (!tx) return;
+    var txKey = String(tx.id || '').trim();
+    if (txKey && seenIds[txKey]) return; // Skip duplicate transaction!
+    if (txKey) seenIds[txKey] = true;
+
     rows.push([
-      idx + 1,
+      serialNo++,
       tx.id || '',
       tx.date ? new Date(tx.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       tx.name || '',
@@ -829,7 +858,9 @@ function writeAllRows(sheet, transactions) {
       new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
     ]);
   });
-  sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  }
 }
 
 function saveBackupJson(targetFolder, fullBackup) {
