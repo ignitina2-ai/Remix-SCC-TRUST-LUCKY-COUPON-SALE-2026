@@ -9,7 +9,7 @@ export const TARGET_DRIVE_EMAIL = 'ignitina2@gmail.com';
 export const FOLDER_NAME = 'LUCKY COUPON SALE 2026';
 export const SHEET_NAME = 'COUPON SALE 2026';
 export const BACKUP_FILE_NAME = 'SCC_TRUST_LUCKY_COUPON_2026_BACKUP.json';
-export const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwo4Eu7L0TU85LkEsyLfoql81bY_amPwtfn0djqgttXt7PXu0fbdd76Kutr8dHtB0A7jw/exec';
+export const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyBvDLd_e2OkEpGCj1TpmeebExzU0wTpkGbAgHNROEzJOsjr7g8Kr6qpXYgWFMu8mI/exec';
 
 export interface DriveFolderInfo {
   id: string;
@@ -525,12 +525,16 @@ export async function syncViaWebhook(
     transaction?: Transaction;
     transactions?: Transaction[];
     fullBackup?: AppData;
+    syncBackup?: boolean;
   }
 ): Promise<{ success: boolean; message?: string }> {
   const url = (webhookUrl || DEFAULT_WEBHOOK_URL).trim();
   if (!url) return { success: false, message: 'No webhook URL provided' };
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -538,7 +542,9 @@ export async function syncViaWebhook(
       },
       body: JSON.stringify(payload),
       redirect: 'follow',
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (res.ok || res.type === 'opaque') {
       return { success: true };
@@ -547,8 +553,10 @@ export async function syncViaWebhook(
     return { success: true, message: errText };
   } catch (err: any) {
     // If browser CORS blocked the cross-origin 302 redirect from Google Apps Script,
-    // dispatch with mode: 'no-cors' to ensure Google's servers receive and process the payload
+    // dispatch with mode: 'no-cors' so Google's servers receive and process the payload
     try {
+      const fallbackController = new AbortController();
+      const fbTimeoutId = setTimeout(() => fallbackController.abort(), 5000);
       await fetch(url, {
         method: 'POST',
         mode: 'no-cors',
@@ -556,10 +564,12 @@ export async function syncViaWebhook(
           'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(payload),
+        signal: fallbackController.signal,
       });
+      clearTimeout(fbTimeoutId);
       return { success: true };
     } catch (fallbackErr: any) {
-      console.error('Webhook sync failed:', fallbackErr);
+      console.warn('Webhook sync notice:', fallbackErr);
       return { success: false, message: fallbackErr.message || String(fallbackErr) };
     }
   }
@@ -571,7 +581,7 @@ export async function syncViaWebhook(
 export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * ============================================================================
  * ST. CASIMIR CHARITABLE TRUST - LUCKY COUPON SALE 2026
- * 100% AUTOMATED GOOGLE SHEET & DRIVE BACKUP SYNC SCRIPT (FRESH RESTRUCTURED)
+ * 100% AUTOMATED GOOGLE SHEET & DRIVE BACKUP SYNC SCRIPT (FAST-SYNC ENGINE)
  * ============================================================================
  * 
  * SETUP INSTRUCTIONS:
@@ -579,11 +589,11 @@ export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * 2. Paste this entire code into the code editor and click Save (💾).
  * 3. Click "Deploy" > "New deployment"
  * 4. Select type: "Web app"
- * 5. Configuration:
- *    - Description: "Lucky Coupon Sale 2026 Live Sync"
+ * 5. Configuration (CRITICAL):
+ *    - Description: "Lucky Coupon Sale 2026 Fast Sync"
  *    - Execute as: "Me (ignitina2@gmail.com)"
- *    - Who has access: "Anyone"  <--- (IMPORTANT: MUST BE "Anyone")
- * 6. Click "Deploy", copy the Web App URL, and paste it into the App Settings!
+ *    - Who has access: "Anyone"  <--- (MUST BE "Anyone". DO NOT choose "Only myself"!)
+ * 6. Click "Deploy", copy the Web App URL, and paste it into App Settings!
  */
 
 function doGet(e) {
@@ -626,30 +636,31 @@ function doPost(e) {
       });
     }
 
-    // 2. SINGLE TRANSACTION (ADD / UPDATE)
+    // 2. ULTRA-FAST SINGLE TRANSACTION ADD / UPDATE (Zero Lag)
     if (payload.action === 'add' || payload.action === 'update') {
       var tx = payload.transaction;
       if (!tx) throw new Error('Transaction data missing in payload');
 
-      var data = sheet.getDataRange().getValues();
-      var rowIndex = -1;
-
-      // Format headers if sheet is empty
-      if (data.length === 0 || (data.length === 1 && !data[0][0])) {
+      var lastRow = sheet.getLastRow();
+      if (lastRow === 0) {
         formatHeaders(sheet);
-        data = sheet.getDataRange().getValues();
+        lastRow = 1;
       }
 
-      // Match existing transaction by ID (Column B)
-      for (var i = 1; i < data.length; i++) {
-        if (data[i] && String(data[i][1]) === String(tx.id)) {
-          rowIndex = i + 1;
-          break;
+      var rowIndex = -1;
+      if (payload.action === 'update') {
+        var idColumnValues = sheet.getRange(1, 2, Math.max(1, lastRow), 1).getValues();
+        for (var i = 1; i < idColumnValues.length; i++) {
+          if (String(idColumnValues[i][0]) === String(tx.id)) {
+            rowIndex = i + 1;
+            break;
+          }
         }
       }
 
+      var slNo = rowIndex > 1 ? rowIndex - 1 : Math.max(1, lastRow);
       var row = [
-        rowIndex > 1 ? rowIndex - 1 : Math.max(1, data.length),
+        slNo,
         tx.id || '',
         tx.date ? new Date(tx.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
         tx.name || '',
@@ -677,11 +688,14 @@ function doPost(e) {
     else if (payload.action === 'delete') {
       var txId = (payload.transaction && payload.transaction.id) ? payload.transaction.id : (payload.transactionId || '');
       if (txId) {
-        var data = sheet.getDataRange().getValues();
-        for (var i = 1; i < data.length; i++) {
-          if (data[i] && String(data[i][1]) === String(txId)) {
-            sheet.deleteRow(i + 1);
-            break;
+        var lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+          var idColumnValues = sheet.getRange(1, 2, lastRow, 1).getValues();
+          for (var i = 1; i < idColumnValues.length; i++) {
+            if (String(idColumnValues[i][0]) === String(txId)) {
+              sheet.deleteRow(i + 1);
+              break;
+            }
           }
         }
       }
@@ -691,11 +705,14 @@ function doPost(e) {
       sheet.clear();
       formatHeaders(sheet);
       writeAllRows(sheet, payload.transactions);
+      saveBackupJson(targetFolder, payload.fullBackup);
     }
 
-    // 5. AUTO-UPDATE JSON BACKUP IN SAME "LUCKY COUPON SALE 2026" FOLDER
-    if (payload.fullBackup) {
-      saveBackupJson(targetFolder, payload.fullBackup);
+    // 5. UPDATE JSON BACKUP ONLY WHEN REQUESTED OR BULK SYNC
+    if (payload.syncBackup || payload.action === 'syncAll' || payload.action === 'restructure') {
+      if (payload.fullBackup) {
+        saveBackupJson(targetFolder, payload.fullBackup);
+      }
     }
 
     return jsonResponse({ status: 'success', message: 'Sync successful for action: ' + payload.action });

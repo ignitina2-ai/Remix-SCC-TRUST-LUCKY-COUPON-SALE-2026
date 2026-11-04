@@ -40,8 +40,9 @@ export async function shareDailySalesCard(options: {
   totalUPI: number;
   totalHandover: number;
   upiBreakdown: { label: string; amount: number }[];
+  totalCoupons?: number;
 }) {
-  const { date, totalSales, totalCredit, totalCashSale, totalUPI, totalHandover, upiBreakdown } = options;
+  const { date, totalSales, totalCredit, totalCashSale, totalUPI, totalHandover, upiBreakdown, totalCoupons } = options;
 
   const formattedDate = date && !isNaN(new Date(date).getTime()) ? (() => {
     const parts = date.split('-');
@@ -93,6 +94,7 @@ export async function shareDailySalesCard(options: {
       <div style="background-color: rgba(59, 130, 246, 0.08); border: 2px solid #3b82f6; padding: 18px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px;">
         <span style="color: #cbd5e1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Total Sales (ആകെ വില്പന)</span>
         <span style="font-size: 26px; font-weight: 900; color: #60a5fa; font-family: monospace;">₹${totalSales.toLocaleString('en-IN')}</span>
+        ${totalCoupons !== undefined && totalCoupons > 0 ? `<span style="color: #93c5fd; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">🎟️ ${totalCoupons.toLocaleString('en-IN')} Coupons (${Math.floor(totalCoupons / 25)} Books)</span>` : ''}
       </div>
       <div style="background-color: rgba(245, 158, 11, 0.08); border: 2px solid #f59e0b; padding: 18px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px;">
         <span style="color: #cbd5e1; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Total Credits (ബാക്കി പത്രം)</span>

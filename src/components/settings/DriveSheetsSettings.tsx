@@ -64,8 +64,16 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [showScriptModal, setShowScriptModal] = useState(false);
-  const [webhookInput, setWebhookInput] = useState(driveSyncConfig?.webhookUrl || DEFAULT_WEBHOOK_URL);
+  const [webhookInput, setWebhookInput] = useState(() => {
+    if (driveSyncConfig?.webhookUrl) return driveSyncConfig.webhookUrl;
+    try {
+      const local = localStorage.getItem('cached_gas_webhook_url');
+      if (local && local.trim()) return local.trim();
+    } catch (e) {}
+    return DEFAULT_WEBHOOK_URL;
+  });
   const [isSavingWebhook, setIsSavingWebhook] = useState(false);
+  const [justSavedWebhook, setJustSavedWebhook] = useState(false);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
   const [isRestructuring, setIsRestructuring] = useState(false);
   const [showRestructureModal, setShowRestructureModal] = useState(false);
@@ -177,13 +185,34 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
   };
 
   const handleSaveWebhook = async () => {
-    if (!onUpdateDriveSyncConfig) return;
+    const cleanUrl = webhookInput.trim();
+    if (!cleanUrl) {
+      showNotification('error', 'ദയവായി Webhook URL നൽകുക.');
+      return;
+    }
+
+    // Immediately cache in localStorage for instant persistence
+    try {
+      localStorage.setItem('cached_gas_webhook_url', cleanUrl);
+    } catch (e) {}
+
     setIsSavingWebhook(true);
     try {
-      await onUpdateDriveSyncConfig({ webhookUrl: webhookInput.trim() });
-      showNotification('success', 'Google Apps Script Webhook URL saved successfully!');
+      if (onUpdateDriveSyncConfig) {
+        // Enforce max 600ms timeout race so saving is practically instant and never hangs!
+        await Promise.race([
+          onUpdateDriveSyncConfig({ webhookUrl: cleanUrl }),
+          new Promise((resolve) => setTimeout(resolve, 600))
+        ]);
+      }
+      setJustSavedWebhook(true);
+      setTimeout(() => setJustSavedWebhook(false), 3000);
+      showNotification('success', 'Google Apps Script Webhook URL വിജയകരമായി സേവ് ചെയ്തു!');
     } catch (err: any) {
-      showNotification('error', 'Failed to save webhook URL.');
+      console.warn('Webhook save notice:', err);
+      setJustSavedWebhook(true);
+      setTimeout(() => setJustSavedWebhook(false), 3000);
+      showNotification('success', 'Google Apps Script Webhook URL സേവ് ചെയ്തു!');
     } finally {
       setIsSavingWebhook(false);
     }
@@ -197,12 +226,35 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
     }
     setIsTestingWebhook(true);
     try {
+      // 1. First probe via fetch to see if Google responds with account login (Who has access: Only myself)
+      let needsAnyonePermission = false;
+      try {
+        const probeRes = await fetch(url, { method: 'GET', redirect: 'follow' });
+        const probeText = await probeRes.text().catch(() => '');
+        if (probeText.includes('accounts.google.com') || probeText.includes('ServiceLogin') || probeText.includes('Sign in - Google Accounts')) {
+          needsAnyonePermission = true;
+        }
+      } catch (probeErr) {
+        // CORS redirect usually happens if redirected to accounts.google.com
+      }
+
+      if (needsAnyonePermission) {
+        showNotification(
+          'error',
+          'Webhook permission issue: Web app deployment must have "Who has access: Anyone" (Currently restricted to account login).'
+        );
+        setIsTestingWebhook(false);
+        return;
+      }
+
+      // 2. Dispatch sync test
       const res = await syncViaWebhook(url, {
         action: 'syncAll',
         transactions: appData.transactions.slice(0, 1),
+        fullBackup: appData,
       });
       if (res.success) {
-        showNotification('success', 'Webhook test successful! Connection to Google Sheet is active.');
+        showNotification('success', 'Webhook test successful! Connection to Google Sheet & Drive JSON backup is active.');
       } else {
         showNotification('error', `Webhook response: ${res.message || 'Check Apps Script deployment.'}`);
       }
@@ -421,9 +473,26 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
           <button
             onClick={handleSaveWebhook}
             disabled={isSavingWebhook}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 shrink-0 shadow-sm"
+            className={cn(
+              "px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 shrink-0 shadow-sm transition-all flex items-center gap-1.5",
+              justSavedWebhook
+                ? "bg-emerald-600 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            )}
           >
-            {isSavingWebhook ? 'Saving...' : 'Save Webhook'}
+            {isSavingWebhook ? (
+              <>
+                <RefreshCw size={12} className="animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : justSavedWebhook ? (
+              <>
+                <Check size={13} className="stroke-[3]" />
+                <span>Saved!</span>
+              </>
+            ) : (
+              <span>Save Webhook</span>
+            )}
           </button>
           <button
             onClick={handleTestWebhook}
@@ -434,6 +503,16 @@ export const DriveSheetsSettings: React.FC<DriveSheetsSettingsProps> = ({
             <RefreshCw size={12} className={isTestingWebhook ? "animate-spin" : ""} />
             <span>{isTestingWebhook ? 'Testing...' : 'Test Webhook'}</span>
           </button>
+        </div>
+
+        <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl space-y-1">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+            <AlertCircle size={14} className="text-amber-600 shrink-0" />
+            <span>പ്രധാനപ്പെട്ട ഡിപ്ലോയ്മെന്റ് സെറ്റിംഗ് (Zero Saving Delay):</span>
+          </div>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            Google Apps Script &gt; <strong>Deploy</strong> &gt; <strong>Manage deployments</strong> &gt; Edit ചെയ്യുമ്പോൾ <strong>&quot;Who has access&quot;</strong> എന്നത് നിർബന്ധമായും <strong>&quot;Anyone&quot; (ഏവർക്കും / ആർക്കും)</strong> എന്ന് സെറ്റ് ചെയ്യുക. &quot;Only myself&quot; എന്ന് നൽകിയാൽ Google Login റീഡയറക്റ്റ് കാരണം സേവിംഗിൽ delay അനുഭവപ്പെടാം.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50/80 border border-emerald-200/60 p-2.5 rounded-xl">

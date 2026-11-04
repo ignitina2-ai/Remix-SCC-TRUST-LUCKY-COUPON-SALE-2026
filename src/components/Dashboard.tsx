@@ -11,7 +11,8 @@ import {
   PlusCircle,
   History,
   Users,
-  Share2
+  Share2,
+  Ticket
 } from 'lucide-react';
 import { shareDailySalesCard, shareUPIReceiptCard } from '../utils/shareUtils';
 import { 
@@ -24,7 +25,7 @@ import {
   Tooltip, 
   Legend 
 } from 'recharts';
-import { Transaction, Sponsor, IncomeExpense, SecretaryHandover, PaymentMethod, DEFAULT_PAYMENT_LABELS, CustomPaymentMethod, getDefaultPaymentMethodsList } from '@/types';
+import { Transaction, Sponsor, IncomeExpense, SecretaryHandover, PaymentMethod, DEFAULT_PAYMENT_LABELS, CustomPaymentMethod, getDefaultPaymentMethodsList, COUPONS_PER_BOOK, COUPON_PRICE } from '@/types';
 import { cn } from '@/lib/utils';
 import TransactionList from './TransactionList';
 import TransactionForm from './TransactionForm';
@@ -121,6 +122,15 @@ const Dashboard: React.FC<DashboardProps> = ({
       amount: getAmountByMethod(m.id, selectedTimeframe),
     })).filter(item => item.amount > 0);
 
+    const couponsSum = (txList || []).reduce((acc, t) => {
+      const fromFields = (t.books || 0) * COUPONS_PER_BOOK + (t.coupons || 0);
+      if (fromFields > 0) return acc + fromFields;
+      if (t.totalAmount && COUPON_PRICE > 0) {
+        return acc + Math.round(t.totalAmount / COUPON_PRICE);
+      }
+      return acc;
+    }, 0);
+
     await shareDailySalesCard({
       date: selectedTimeframe === 'today' ? todayIST : 'Overall',
       totalSales: salesSum,
@@ -129,6 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       totalUPI: upiSum,
       totalHandover: handoverSum,
       upiBreakdown,
+      totalCoupons: couponsSum,
     });
   };
 
@@ -201,6 +212,15 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // Calculations
   const totalSales = (filteredTransactionsList || []).reduce((acc, t) => acc + t.totalAmount, 0);
+  const totalCoupons = (filteredTransactionsList || []).reduce((acc, t) => {
+    const fromFields = (t.books || 0) * COUPONS_PER_BOOK + (t.coupons || 0);
+    if (fromFields > 0) return acc + fromFields;
+    if (t.totalAmount && COUPON_PRICE > 0) {
+      return acc + Math.round(t.totalAmount / COUPON_PRICE);
+    }
+    return acc;
+  }, 0);
+  const totalBooks = (filteredTransactionsList || []).reduce((acc, t) => acc + (t.books || 0), 0);
   const totalCredit = (filteredTransactionsList || []).reduce((acc, t) => acc + t.creditAmount, 0);
   const totalCash = getAmountByMethod('CASH', timeframe);
   
@@ -285,18 +305,22 @@ const Dashboard: React.FC<DashboardProps> = ({
     return null;
   };
 
-  const StatCard = ({ title, value, icon: Icon, color, subValue, subLabel, className }: any) => (
+  const StatCard = ({ title, value, icon: Icon, color, subValue, subLabel, className, isCurrency = true, subIsCurrency = true }: any) => (
     <div className={cn("bg-white p-2.5 sm:p-3 rounded-xl shadow-xs border border-slate-100/90 flex items-center gap-2 sm:gap-3 transition-all hover:shadow-md", className)}>
       <div className={cn("p-1.5 sm:p-2 rounded-lg shrink-0", color)}>
         <Icon className="text-white w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </div>
       <div className="min-w-0 flex-1 text-left">
         <span className="text-slate-500 text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider block truncate">{title}</span>
-        <h3 className="text-xs sm:text-sm md:text-base font-black text-slate-900 tracking-tight">₹{value.toLocaleString('en-IN')}</h3>
+        <h3 className="text-xs sm:text-sm md:text-base font-black text-slate-900 tracking-tight">
+          {isCurrency ? `₹${typeof value === 'number' ? value.toLocaleString('en-IN') : value}` : (typeof value === 'number' ? value.toLocaleString('en-IN') : value)}
+        </h3>
         {subValue !== undefined && subLabel && (
           <p className="text-[8px] sm:text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
             <span>{subLabel}:</span>
-            <span className="text-slate-705 font-extrabold">₹{subValue.toLocaleString('en-IN')}</span>
+            <span className="text-slate-700 font-extrabold">
+              {subIsCurrency ? `₹${typeof subValue === 'number' ? subValue.toLocaleString('en-IN') : subValue}` : subValue}
+            </span>
           </p>
         )}
       </div>
@@ -409,12 +433,22 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex items-center gap-2 border-l-4 border-blue-600 pl-2">
           <h3 className="font-black text-slate-800 text-xs md:text-sm uppercase tracking-widest">Coupon Sales</h3>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           <StatCard 
             title="Total Coupon Sale" 
             value={totalSales} 
             icon={IndianRupee} 
             color="bg-blue-600" 
+          />
+          <StatCard 
+            title="No of Coupons" 
+            value={totalCoupons} 
+            icon={Ticket} 
+            color="bg-amber-500" 
+            isCurrency={false}
+            subLabel="Books"
+            subValue={totalBooks > 0 ? `${totalBooks} Books` : undefined}
+            subIsCurrency={false}
           />
           <StatCard 
             title="Total Credits" 
@@ -439,7 +473,6 @@ const Dashboard: React.FC<DashboardProps> = ({
             value={totalHandover} 
             icon={Users} 
             color="bg-teal-600" 
-            className="col-span-2 lg:col-span-1"
           />
         </div>
 

@@ -60,6 +60,7 @@ import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { AllowedUser } from './components/settings/AdminSettings';
 import { 
   recordTransactionAndBackupToDrive, 
+  recordOrUpdateTransactionInSheet,
   saveBackupJsonToDrive, 
   syncAllTransactionsToSheet, 
   getOrCreateDriveFolder, 
@@ -97,9 +98,18 @@ export default function App() {
   const [firestoreError, setFirestoreError] = useState<string | null>(null);
   const [driveAccessToken, setDriveAccessToken] = useState<string | null>(() => getCachedAccessToken());
   const [isDriveAutoSyncEnabled, setIsDriveAutoSyncEnabled] = useState(true);
-  const [driveSyncConfig, setDriveSyncConfig] = useState<DriveSyncConfig>({
-    autoSyncEnabled: true,
-    webhookUrl: DEFAULT_WEBHOOK_URL,
+  const [driveSyncConfig, setDriveSyncConfig] = useState<DriveSyncConfig>(() => {
+    let cachedUrl = DEFAULT_WEBHOOK_URL;
+    try {
+      const local = localStorage.getItem('cached_gas_webhook_url');
+      if (local && local.trim()) {
+        cachedUrl = local.trim();
+      }
+    } catch (e) {}
+    return {
+      autoSyncEnabled: true,
+      webhookUrl: cachedUrl,
+    };
   });
 
   const [userPermissions, setUserPermissions] = useState({
@@ -498,9 +508,11 @@ export default function App() {
       const unsubDriveConfig = onSnapshot(doc(db, 'settings', 'driveSyncConfig'), (snap) => {
         if (snap.exists()) {
           const d = snap.data() as DriveSyncConfig;
-          const activeWebhook = (!d.webhookUrl || d.webhookUrl.includes('AKfycbyH12BF9zsSX5guESELutMdbmEUPKXvjQL3sZDq01ayQ1nFukzua3bfaGns1Jdo-J_X'))
-            ? DEFAULT_WEBHOOK_URL
-            : d.webhookUrl;
+          const isOldWebhook = !d.webhookUrl || 
+            d.webhookUrl.includes('AKfycbyH12BF9zsSX5guESELutMdbmEUPKXvjQL3sZDq01ayQ1nFukzua3bfaGns1Jdo-J_X') ||
+            d.webhookUrl.includes('AKfycbwo4Eu7L0TU85LkEsyLfoql81bY_amPwtfn0djqgttXt7PXu0fbdd76Kutr8dHtB0A7jw') ||
+            d.webhookUrl.includes('AKfycbxpjHYoRfno3ank4ChMO0f4lDm_muJMU3ESw8q3ugJZdqt4tBrN7D3CH1AmfxcGYqwZ');
+          const activeWebhook = isOldWebhook ? DEFAULT_WEBHOOK_URL : d.webhookUrl;
           const merged: DriveSyncConfig = {
             ...d,
             webhookUrl: activeWebhook,
@@ -612,11 +624,23 @@ export default function App() {
   };
 
   const handleUpdateDriveSyncConfig = async (partialConfig: Partial<DriveSyncConfig>) => {
+    // 1. Immediately update local React state (0ms latency)
+    setDriveSyncConfig(prev => ({ ...prev, ...partialConfig }));
+    if (partialConfig.webhookUrl) {
+      try {
+        localStorage.setItem('cached_gas_webhook_url', partialConfig.webhookUrl);
+      } catch (e) {}
+    }
+
+    // 2. Persist to Firestore with a fast timeout race so UI never gets stuck on Saving
     try {
-      await setDoc(doc(db, 'settings', 'driveSyncConfig'), cleanUndefined(partialConfig), { merge: true });
-      setDriveSyncConfig(prev => ({ ...prev, ...partialConfig }));
+      const savePromise = setDoc(doc(db, 'settings', 'driveSyncConfig'), cleanUndefined(partialConfig), { merge: true });
+      await Promise.race([
+        savePromise,
+        new Promise(resolve => setTimeout(resolve, 800))
+      ]);
     } catch (err) {
-      console.error("Failed to update driveSyncConfig:", err);
+      console.warn("Background update driveSyncConfig warning:", err);
     }
   };
 
@@ -777,7 +801,8 @@ export default function App() {
   };
 
   // Automated live sync to Google Drive & Google Sheet for ANY permitted team member
-  const syncTransactionToDriveAndSheet = async (
+  // Automated live sync to Google Drive & Google Sheet for ANY permitted team member (Non-blocking background)
+  const syncTransactionToDriveAndSheet = (
     action: 'add' | 'update' | 'delete',
     tx: Transaction,
     currentAppData: AppData
@@ -786,51 +811,42 @@ export default function App() {
       return;
     }
 
-    // 1. Webhook sync (Google Apps Script - 24/7 zero token expiration for ignitina2@gmail.com)
-    const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
-    if (webhookUrl) {
-      syncViaWebhook(webhookUrl, {
-        action,
-        transaction: tx,
-        transactions: currentAppData.transactions,
-        fullBackup: currentAppData,
-      }).then(res => {
-        if (res.success) {
-          setDoc(doc(db, 'settings', 'driveSyncConfig'), {
-            lastSyncedAt: new Date().toISOString(),
-            lastSyncedBy: user?.email || 'Authorized Team Member',
-            lastSyncStatus: 'success',
-            lastSyncMessage: `Transaction ${tx.id || ''} saved to Sheet & Drive JSON Backup`,
-          }, { merge: true }).catch(console.warn);
-        }
-      }).catch(console.warn);
-    }
-
-    // 2. Direct Google Drive & Sheet REST API with active OAuth token (local or shared)
-    const token = getCachedAccessToken() || driveAccessToken || driveSyncConfig.activeAccessToken;
-    if (token) {
-      if (action === 'delete') {
-        syncAllTransactionsToSheet(token, currentAppData.transactions).catch(console.warn);
-        saveBackupJsonToDrive(token, currentAppData).catch(console.warn);
-      } else {
-        recordTransactionAndBackupToDrive(token, tx, currentAppData).then(res => {
-          setDoc(doc(db, 'settings', 'driveSyncConfig'), {
-            sheetId: res.sheetResult.sheetId,
-            sheetLink: res.sheetResult.webViewLink,
-            backupFileId: res.backupResult.fileId,
-            lastSyncedAt: new Date().toISOString(),
-            lastSyncedBy: user?.email || 'Authorized Team Member',
-            lastSyncStatus: 'success',
-            lastSyncMessage: `Transaction ${tx.id} ${res.sheetResult.action} in Sheet & JSON backup updated`,
-          }, { merge: true }).catch(console.warn);
-        }).catch(err => {
-          console.warn("Drive auto-sync notice:", err);
-        });
+    // Run completely in background without blocking UI
+    setTimeout(() => {
+      // 1. Webhook sync (Google Apps Script - 24/7 zero token expiration for ignitina2@gmail.com)
+      const webhookUrl = (driveSyncConfig.webhookUrl || DEFAULT_WEBHOOK_URL).trim();
+      if (webhookUrl) {
+        syncViaWebhook(webhookUrl, {
+          action,
+          transaction: tx,
+          transactions: action === 'delete' ? currentAppData.transactions : [tx],
+          syncBackup: false, // Don't rewrite multi-MB json on every single tx; keeps Apps Script < 200ms
+        }).then(res => {
+          if (res.success) {
+            setDriveSyncConfig(prev => ({
+              ...prev,
+              lastSyncedAt: new Date().toISOString(),
+              lastSyncedBy: user?.email || 'Authorized Team Member',
+              lastSyncStatus: 'success',
+              lastSyncMessage: `Transaction ${tx.id || ''} saved to Sheet`,
+            }));
+          }
+        }).catch(console.warn);
       }
-    }
+
+      // 2. Direct Google Drive & Sheet REST API with active OAuth token (local or shared)
+      const token = getCachedAccessToken() || driveAccessToken || driveSyncConfig.activeAccessToken;
+      if (token) {
+        if (action === 'delete') {
+          syncAllTransactionsToSheet(token, currentAppData.transactions).catch(console.warn);
+        } else {
+          recordOrUpdateTransactionInSheet(token, tx).catch(console.warn);
+        }
+      }
+    }, 10);
   };
 
-  // 100% Secure cloud synchronised operations writing to multi-tab cache
+  // 100% Instant optimistic transaction creation + background cloud sync (0ms latency for user)
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     if (!userPermissions.canAdd) {
       setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ചേർക്കാൻ (Add) അനുവാദമില്ല! (You do not have permission to add transactions.)");
@@ -842,22 +858,26 @@ export default function App() {
       id: transactionId,
     };
 
-    try {
-      await setDoc(doc(db, 'transactions', transactionId), cleanUndefined(docData));
+    // 1. Instant Optimistic UI Update (0ms delay)
+    setAppData(prev => ({
+      ...prev,
+      transactions: [docData, ...prev.transactions.filter(t => t.id !== transactionId)]
+    }));
 
-      // Automated Sync to Google Drive ("LUCKY COUPON SALE 2026") & Google Sheet ("COUPON SALE 2026")
-      // Works for ANY team member / ID permitted by Trust Admin Team
-      const updatedList = [docData, ...appData.transactions.filter(t => t.id !== transactionId)];
-      syncTransactionToDriveAndSheet('add', docData, { ...appData, transactions: updatedList });
-
-      if (appData.notificationsEnabled) {
-        sendNotification('New Transaction Added', {
-          body: `${docData.name} - ₹${docData.totalAmount.toLocaleString('en-IN')}`,
-        });
-      }
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, `transactions/${transactionId}`);
+    if (appData.notificationsEnabled) {
+      sendNotification('New Transaction Added', {
+        body: `${docData.name} - ₹${docData.totalAmount.toLocaleString('en-IN')}`,
+      });
     }
+
+    // 2. Background Firestore write
+    setDoc(doc(db, 'transactions', transactionId), cleanUndefined(docData)).catch(err => {
+      handleFirestoreError(err, OperationType.CREATE, `transactions/${transactionId}`);
+    });
+
+    // 3. Background non-blocking Google Drive & Google Sheet sync
+    const updatedList = [docData, ...appData.transactions.filter(t => t.id !== transactionId)];
+    syncTransactionToDriveAndSheet('add', docData, { ...appData, transactions: updatedList });
   };
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
@@ -865,18 +885,28 @@ export default function App() {
       setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല! (You do not have permission to edit transactions.)");
       return;
     }
-    try {
-      await updateDoc(doc(db, 'transactions', id), cleanUndefined(updates));
 
-      // Automated Sync to Google Drive & Google Sheet on update for ANY permitted team member
-      const existingTx = appData.transactions.find(t => t.id === id);
-      if (existingTx) {
-        const updatedTx: Transaction = { ...existingTx, ...updates };
-        const updatedList = appData.transactions.map(t => t.id === id ? updatedTx : t);
-        syncTransactionToDriveAndSheet('update', updatedTx, { ...appData, transactions: updatedList });
-      }
-    } catch (err) {
+    // 1. Instant Optimistic UI Update (0ms delay)
+    let updatedTx: Transaction | null = null;
+    setAppData(prev => {
+      const existing = prev.transactions.find(t => t.id === id);
+      if (!existing) return prev;
+      updatedTx = { ...existing, ...updates };
+      return {
+        ...prev,
+        transactions: prev.transactions.map(t => t.id === id ? updatedTx! : t)
+      };
+    });
+
+    // 2. Background Firestore update
+    updateDoc(doc(db, 'transactions', id), cleanUndefined(updates)).catch(err => {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
+    });
+
+    // 3. Background Google Drive & Sheet sync
+    if (updatedTx) {
+      const updatedList = appData.transactions.map(t => t.id === id ? updatedTx! : t);
+      syncTransactionToDriveAndSheet('update', updatedTx, { ...appData, transactions: updatedList });
     }
   };
 
@@ -885,17 +915,23 @@ export default function App() {
       setFirestoreError("നിങ്ങൾക്ക് ഡാറ്റ ഇല്ലാതാക്കാൻ (Delete) അനുവാദമില്ല! (You do not have permission to delete Transactions.)");
       return;
     }
-    try {
-      for (const id of ids) {
-        await deleteDoc(doc(db, 'transactions', id));
-      }
 
-      // Automated Sync to Google Drive & Google Sheet on deletion for ANY permitted team member
-      const remainingTx = appData.transactions.filter(t => !ids.includes(t.id));
-      syncTransactionToDriveAndSheet('delete', { id: ids[0] } as any, { ...appData, transactions: remainingTx });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `transactions/${ids.join(',')}`);
+    // 1. Instant Optimistic UI Update
+    setAppData(prev => ({
+      ...prev,
+      transactions: prev.transactions.filter(t => !ids.includes(t.id))
+    }));
+
+    // 2. Background Firestore delete
+    for (const id of ids) {
+      deleteDoc(doc(db, 'transactions', id)).catch(err => {
+        handleFirestoreError(err, OperationType.DELETE, `transactions/${id}`);
+      });
     }
+
+    // 3. Background Google Drive & Sheet sync
+    const remainingTx = appData.transactions.filter(t => !ids.includes(t.id));
+    syncTransactionToDriveAndSheet('delete', { id: ids[0] } as any, { ...appData, transactions: remainingTx });
   };
 
   const toggleTreasurer = async (id: string) => {
@@ -909,23 +945,29 @@ export default function App() {
     const paidToTreasurer = !tx.paidToTreasurer;
     const treasurerPaidDate = paidToTreasurer ? new Date().toISOString() : null;
 
-    try {
-      const updatedTx: Transaction = {
-        ...tx,
-        paidToTreasurer,
-        treasurerPaidDate
-      };
-      await updateDoc(doc(db, 'transactions', id), cleanUndefined({
-        paidToTreasurer,
-        treasurerPaidDate
-      }));
+    const updatedTx: Transaction = {
+      ...tx,
+      paidToTreasurer,
+      treasurerPaidDate
+    };
 
-      // Automated Sync to Google Drive & Google Sheet on treasurer update
-      const updatedList = appData.transactions.map(t => t.id === id ? updatedTx : t);
-      syncTransactionToDriveAndSheet('update', updatedTx, { ...appData, transactions: updatedList });
-    } catch (err) {
+    // 1. Instant Optimistic UI Update
+    setAppData(prev => ({
+      ...prev,
+      transactions: prev.transactions.map(t => t.id === id ? updatedTx : t)
+    }));
+
+    // 2. Background Firestore update
+    updateDoc(doc(db, 'transactions', id), cleanUndefined({
+      paidToTreasurer,
+      treasurerPaidDate
+    })).catch(err => {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${id}`);
-    }
+    });
+
+    // 3. Background Google Drive & Sheet sync
+    const updatedList = appData.transactions.map(t => t.id === id ? updatedTx : t);
+    syncTransactionToDriveAndSheet('update', updatedTx, { ...appData, transactions: updatedList });
   };
 
   const addSponsor = async (sponsor: Omit<Sponsor, 'id'>) => {
