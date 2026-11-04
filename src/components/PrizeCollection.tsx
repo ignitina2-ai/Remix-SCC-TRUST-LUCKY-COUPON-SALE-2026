@@ -9,6 +9,8 @@ import {
   Scale, 
   LayoutGrid, 
   Table as TableIcon, 
+  Download, 
+  Upload, 
   RotateCcw, 
   FileText, 
   Filter, 
@@ -22,24 +24,12 @@ import {
   ChevronUp,
   AlertTriangle,
   Receipt,
-  FileSpreadsheet,
-  ExternalLink,
-  RefreshCw,
-  ShieldCheck
+  SlidersHorizontal
 } from 'lucide-react';
 import { INITIAL_PRIZES_DATA, PrizeItem, PrizeTrackingInfo, PrizeTrackingMap, ReceivedAmountEntry } from '@/data/prizesData';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cn } from '@/lib/utils';
-import { 
-  savePrizeStateToFirestore, 
-  subscribeToPrizeState, 
-  syncPrizeCollectionToGoogleSheet, 
-  syncPrizeCollectionViaWebhook 
-} from '@/lib/prizeSync';
-import { getCachedAccessToken, auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { DEFAULT_WEBHOOK_URL, DriveSyncConfig } from '@/lib/googleDriveSheets';
 
 const STORAGE_KEY_TRACKING = 'stCasimirLuckyDraw2026_tracking';
 const STORAGE_KEY_COLLECTED = 'stCasimirLuckyDraw2026_collected';
@@ -53,24 +43,6 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
   const [receivedAmounts, setReceivedAmounts] = useState<ReceivedAmountEntry[]>([]);
   const [tickerSpeed, setTickerSpeed] = useState<number>(35);
   const [isLoaded, setIsLoaded] = useState(false);
-
-  // Google Sheets & Cloud Sync state
-  const [isSyncingSheet, setIsSyncingSheet] = useState(false);
-  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('prize_last_sheet_sync_time');
-    } catch (e) {
-      return null;
-    }
-  });
-  const [sheetLink, setSheetLink] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('cached_prize_sheet_link');
-    } catch (e) {
-      return null;
-    }
-  });
-  const [syncToast, setSyncToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Filters & Views
   const [searchTerm, setSearchTerm] = useState('');
@@ -162,38 +134,7 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
     }
   }, []);
 
-  // 1.5 Load cloud Google Sheet configuration & Realtime Firestore subscriber
-  useEffect(() => {
-    // Load cached Google Sheet link from drive config
-    getDoc(doc(db, 'settings', 'driveSyncConfig')).then(snap => {
-      if (snap.exists()) {
-        const d = snap.data() as DriveSyncConfig;
-        if (d.sheetLink) {
-          setSheetLink(d.sheetLink);
-          try {
-            localStorage.setItem('cached_prize_sheet_link', d.sheetLink);
-          } catch (e) {}
-        }
-      }
-    }).catch(console.warn);
-
-    // Subscribe to multi-user Firestore updates for prizes
-    const unsub = subscribeToPrizeState((cloudData) => {
-      if (cloudData.tracking && Object.keys(cloudData.tracking).length > 0) {
-        setPrizeTracking(prev => ({
-          ...prev,
-          ...cloudData.tracking
-        }));
-      }
-      if (cloudData.receivedAmounts && cloudData.receivedAmounts.length > 0) {
-        setReceivedAmounts(cloudData.receivedAmounts);
-      }
-    });
-
-    return () => unsub();
-  }, []);
-
-  // 2. Persistent saving helpers - NEVER wipe entries & sync to Cloud Firestore
+  // 2. Persistent saving helpers - NEVER wipe entries
   const saveTrackingState = (updatedTracking: PrizeTrackingMap) => {
     setPrizeTracking(updatedTracking);
     try {
@@ -209,9 +150,6 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
     } catch (e) {
       console.error('Failed saving tracking to localStorage', e);
     }
-
-    // Persist to Cloud Firestore
-    savePrizeStateToFirestore(updatedTracking, receivedAmounts, auth.currentUser?.email || undefined);
   };
 
   const saveReceivedState = (updatedReceived: ReceivedAmountEntry[]) => {
@@ -220,88 +158,6 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
       localStorage.setItem(STORAGE_KEY_RECEIVED, JSON.stringify(updatedReceived));
     } catch (e) {
       console.error('Failed saving received amounts to localStorage', e);
-    }
-
-    // Persist to Cloud Firestore
-    savePrizeStateToFirestore(prizeTracking, updatedReceived, auth.currentUser?.email || undefined);
-  };
-
-  // 2.5 Google Sheets Synchronization Trigger
-  const handleSyncToGoogleSheet = async (showNotification = true) => {
-    setIsSyncingSheet(true);
-    let success = false;
-    let message = '';
-    const nowKolkata = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-    try {
-      // 1. Sync to Cloud Firestore first
-      await savePrizeStateToFirestore(prizeTracking, receivedAmounts, auth.currentUser?.email || undefined);
-
-      // 2. Try direct Google Sheets REST API if access token is available
-      const token = getCachedAccessToken();
-      if (token) {
-        try {
-          const directRes = await syncPrizeCollectionToGoogleSheet(token, prizes, prizeTracking, receivedAmounts);
-          if (directRes.success) {
-            success = true;
-            message = directRes.message;
-            if (directRes.webViewLink) {
-              setSheetLink(directRes.webViewLink);
-              try {
-                localStorage.setItem('cached_prize_sheet_link', directRes.webViewLink);
-              } catch (e) {}
-            }
-          }
-        } catch (apiErr) {
-          console.warn('Direct Google Sheets API sync warning:', apiErr);
-        }
-      }
-
-      // 3. Sync via Google Apps Script Webhook (works seamlessly across all devices and team accounts)
-      let webhookUrl = DEFAULT_WEBHOOK_URL;
-      try {
-        const cachedUrl = localStorage.getItem('cached_gas_webhook_url');
-        if (cachedUrl && cachedUrl.trim()) webhookUrl = cachedUrl.trim();
-      } catch (e) {}
-
-      const webhookRes = await syncPrizeCollectionViaWebhook(webhookUrl, prizes, prizeTracking, receivedAmounts);
-      if (webhookRes.success) {
-        success = true;
-        message = webhookRes.message || 'Prize collection updated in Google Sheet!';
-      }
-
-      if (success) {
-        setLastSyncedTime(nowKolkata);
-        try {
-          localStorage.setItem('prize_last_sheet_sync_time', nowKolkata);
-        } catch (e) {}
-        if (showNotification) {
-          setSyncToast({
-            type: 'success',
-            message: 'Google Sheet-ലേക്ക് സമ്മാന വിവരങ്ങൾ വിജയകരമായി അപ്‌ഡേറ്റ് ചെയ്തു (Synced to Google Sheet)!'
-          });
-          setTimeout(() => setSyncToast(null), 3500);
-        }
-      } else {
-        if (showNotification) {
-          setSyncToast({
-            type: 'error',
-            message: message || 'Google Sheet സിങ്ക് ചെയ്യുന്നതിൽ തടസ്സം നേരിട്ടു. ദയവായി വീണ്ടും ശ്രമിക്കുക.'
-          });
-          setTimeout(() => setSyncToast(null), 4000);
-        }
-      }
-    } catch (err: any) {
-      console.error('Sheet sync error:', err);
-      if (showNotification) {
-        setSyncToast({
-          type: 'error',
-          message: err?.message || 'Google Sheet സിങ്ക് പരാജയപ്പെട്ടു'
-        });
-        setTimeout(() => setSyncToast(null), 4000);
-      }
-    } finally {
-      setIsSyncingSheet(false);
     }
   };
 
@@ -604,29 +460,6 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans animate-in fade-in-50 duration-300">
-      {/* Toast Notification */}
-      {syncToast && (
-        <div className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border text-xs font-bold animate-in fade-in slide-in-from-bottom-2",
-          syncToast.type === 'success' 
-            ? "bg-emerald-50 text-emerald-900 border-emerald-300" 
-            : "bg-rose-50 text-rose-900 border-rose-300"
-        )}>
-          {syncToast.type === 'success' ? (
-            <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
-          ) : (
-            <AlertTriangle size={18} className="text-rose-600 shrink-0" />
-          )}
-          <span>{syncToast.message}</span>
-          <button 
-            onClick={() => setSyncToast(null)}
-            className="p-1 hover:bg-slate-200/50 rounded-lg text-slate-500 cursor-pointer"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
       {/* Title & Actions Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div className="flex items-center gap-3">
@@ -635,7 +468,7 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Prize Collection Dashboard</h1>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Prize Collection</h1>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-300">
                 111 Prizes
               </span>
@@ -646,37 +479,51 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
           </div>
         </div>
 
-        {/* Google Sheet Sync Actions */}
-        <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end">
-          {lastSyncedTime && (
-            <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Sheet Synced: {lastSyncedTime}
-            </span>
-          )}
-
-          {sheetLink && (
-            <a
-              href={sheetLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all border border-slate-200"
-              title="Open Google Sheet"
-            >
-              <ExternalLink size={14} className="text-emerald-700" />
-              <span>Open Sheet</span>
-            </a>
-          )}
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setShowCategoryDrawer(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer"
+            title="Category Summary"
+          >
+            <Filter size={14} className="text-emerald-700" />
+            <span>Category Summary</span>
+          </button>
 
           <button
-            onClick={() => handleSyncToGoogleSheet(true)}
-            disabled={isSyncingSheet}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-700/20 transition-all cursor-pointer disabled:opacity-50"
-            title="Sync all prize records and donations to Google Sheet"
+            onClick={handleExportJSON}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer"
+            title="Download JSON Backup"
           >
-            <FileSpreadsheet size={15} className={isSyncingSheet ? "animate-spin" : ""} />
-            <span>{isSyncingSheet ? 'Syncing...' : 'Sync to Google Sheet'}</span>
+            <Download size={14} className="text-blue-600" />
+            <span>Backup</span>
           </button>
+
+          <label className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer">
+            <Upload size={14} className="text-indigo-600" />
+            <span>Restore</span>
+            <input type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
+          </label>
+
+          <button
+            onClick={() => handleExportPDF('all')}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+            title="Export PDF Report"
+          >
+            <FileText size={14} />
+            <span>Export PDF</span>
+          </button>
+
+          {setActiveTab && (
+            <button
+              onClick={() => setActiveTab('prize-settings')}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl text-xs font-bold transition-all border border-emerald-300 cursor-pointer"
+              title="Open Prize Collection Settings Page"
+            >
+              <SlidersHorizontal size={14} className="text-emerald-800" />
+              <span>Prize Settings</span>
+            </button>
+          )}
         </div>
       </div>
 
