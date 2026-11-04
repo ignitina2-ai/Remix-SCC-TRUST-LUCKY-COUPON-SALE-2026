@@ -9,8 +9,6 @@ import {
   Scale, 
   LayoutGrid, 
   Table as TableIcon, 
-  Download, 
-  Upload, 
   RotateCcw, 
   FileText, 
   Filter, 
@@ -23,8 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
-  Receipt,
-  SlidersHorizontal
+  Receipt
 } from 'lucide-react';
 import { INITIAL_PRIZES_DATA, PrizeItem, PrizeTrackingInfo, PrizeTrackingMap, ReceivedAmountEntry } from '@/data/prizesData';
 import { jsPDF } from 'jspdf';
@@ -477,53 +474,6 @@ export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab:
               സമ്മാനങ്ങളുടെ ലഭ്യത, സ്പോൺസർ വിവരങ്ങൾ, ട്രസ്റ്റ് പർച്ചേസ് ചെലവുകൾ
             </p>
           </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => setShowCategoryDrawer(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer"
-            title="Category Summary"
-          >
-            <Filter size={14} className="text-emerald-700" />
-            <span>Category Summary</span>
-          </button>
-
-          <button
-            onClick={handleExportJSON}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer"
-            title="Download JSON Backup"
-          >
-            <Download size={14} className="text-blue-600" />
-            <span>Backup</span>
-          </button>
-
-          <label className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer">
-            <Upload size={14} className="text-indigo-600" />
-            <span>Restore</span>
-            <input type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
-          </label>
-
-          <button
-            onClick={() => handleExportPDF('all')}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
-            title="Export PDF Report"
-          >
-            <FileText size={14} />
-            <span>Export PDF</span>
-          </button>
-
-          {setActiveTab && (
-            <button
-              onClick={() => setActiveTab('prize-settings')}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl text-xs font-bold transition-all border border-emerald-300 cursor-pointer"
-              title="Open Prize Collection Settings Page"
-            >
-              <SlidersHorizontal size={14} className="text-emerald-800" />
-              <span>Prize Settings</span>
-            </button>
-          )}
         </div>
       </div>
 
