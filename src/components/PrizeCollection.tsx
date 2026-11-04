@@ -23,7 +23,8 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
-  Receipt
+  Receipt,
+  SlidersHorizontal
 } from 'lucide-react';
 import { INITIAL_PRIZES_DATA, PrizeItem, PrizeTrackingInfo, PrizeTrackingMap, ReceivedAmountEntry } from '@/data/prizesData';
 import { jsPDF } from 'jspdf';
@@ -36,7 +37,7 @@ const STORAGE_KEY_RECEIVED = 'stCasimirLuckyDraw2026_receivedAmounts';
 const STORAGE_KEY_SPEED = 'stCasimirLuckyDraw2026_tickerSpeed';
 const STORAGE_KEY_LEGACY = 'luckyDrawCollectedPrizesV11';
 
-export default function PrizeCollection() {
+export default function PrizeCollection({ setActiveTab }: { setActiveTab?: (tab: string) => void } = {}) {
   const [prizes] = useState<PrizeItem[]>(INITIAL_PRIZES_DATA);
   const [prizeTracking, setPrizeTracking] = useState<PrizeTrackingMap>({});
   const [receivedAmounts, setReceivedAmounts] = useState<ReceivedAmountEntry[]>([]);
@@ -512,6 +513,17 @@ export default function PrizeCollection() {
             <FileText size={14} />
             <span>Export PDF</span>
           </button>
+
+          {setActiveTab && (
+            <button
+              onClick={() => setActiveTab('prize-settings')}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl text-xs font-bold transition-all border border-emerald-300 cursor-pointer"
+              title="Open Prize Collection Settings Page"
+            >
+              <SlidersHorizontal size={14} className="text-emerald-800" />
+              <span>Prize Settings</span>
+            </button>
+          )}
         </div>
       </div>
 

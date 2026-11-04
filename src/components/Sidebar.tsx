@@ -12,6 +12,7 @@ import {
   CreditCard,
   Trophy,
   Gift,
+  SlidersHorizontal,
   Banknote,
   LogOut
 } from 'lucide-react';
@@ -51,6 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'income-expense', label: 'Income & Expense', icon: Banknote },
     { id: 'secretary-handover', label: 'Treasury Handover', icon: Users },
     { id: 'prize-collection', label: 'Prize Collection', icon: Gift },
+    { id: 'prize-settings', label: 'Prize Settings', icon: SlidersHorizontal },
     { id: 'sponsors', label: 'Prize Sponsors', icon: Trophy },
     { id: 'settings', label: 'Settings & Backup', icon: SettingsIcon },
   ].filter((item) => {

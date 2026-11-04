@@ -12,6 +12,7 @@ import TransactionList from './components/TransactionList';
 import CreditManagement from './components/CreditManagement';
 import SponsorsList from './components/SponsorsList';
 import PrizeCollection from './components/PrizeCollection';
+import PrizeCollectionSettings from './components/PrizeCollectionSettings';
 import IncomeExpenseManagement from './components/IncomeExpenseManagement';
 import TreasuryHandoverManagement from './components/TreasuryHandoverManagement';
 import Settings from './components/Settings';
@@ -1332,7 +1333,9 @@ export default function App() {
           />
         );
       case 'prize-collection':
-        return <PrizeCollection />;
+        return <PrizeCollection setActiveTab={setActiveTab} />;
+      case 'prize-settings':
+        return <PrizeCollectionSettings setActiveTab={setActiveTab} />;
       case 'sponsors':
         return (
           <SponsorsList 
